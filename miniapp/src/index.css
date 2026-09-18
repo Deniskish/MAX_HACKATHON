@@ -1,0 +1,5 @@
+/* Сначала компоновка, затем тема MAX и более точные стили виджетов. */
+@import './business/plata-layout.css';
+@import './business/max-theme.css';
+@import './business/widgets.css';
+@import './business/agent-experience.css';

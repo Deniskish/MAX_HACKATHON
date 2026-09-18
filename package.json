@@ -1,0 +1,18 @@
+{
+  "name": "opora",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Business support assistant for MAX",
+  "scripts": {
+    "dev": "npm --prefix miniapp run dev",
+    "build": "npm run build:api && npm run build:miniapp && npm run build:chatbot",
+    "test": "npm --prefix miniapp test && npm --prefix miniapp/api-server test",
+    "build:chatbot": "npm --prefix chatbot run build",
+    "start:chatbot": "npm --prefix chatbot start",
+    "dev:chatbot": "npm --prefix chatbot run dev",
+    "build:miniapp": "npm --prefix miniapp run build",
+    "build:api": "npm --prefix miniapp/api-server run build",
+    "api:dev": "npm --prefix miniapp/api-server run dev",
+    "api:server": "npm --prefix miniapp/api-server start"
+  }
+}

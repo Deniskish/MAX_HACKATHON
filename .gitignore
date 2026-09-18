@@ -1,0 +1,34 @@
+# Зависимости и результаты сборки восстанавливаются командами npm.
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+*.tsbuildinfo
+
+# Локальные ключи не должны попадать в репозиторий.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Необязательные скрипты, временные данные и логи.
+/tools-local/
+tmp/
+*.db
+*.db-journal
+*.log
+debug/
+deploy-package/
+
+# Настройки редакторов и служебные файлы системы.
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

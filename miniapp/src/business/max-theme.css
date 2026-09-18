@@ -1,0 +1,185 @@
+/* Настраиваем публичные переменные и классы MAX UI, не внутреннюю разметку. */
+.opora-theme.opora-theme {
+  --family-base: 'Manrope Variable', Manrope, Arial, sans-serif;
+  --family-accent: 'Manrope Variable', Manrope, Arial, sans-serif;
+  --background-accent-themed: #2401fe;
+  --background-button-secondary: #f2f4f8;
+  --background-button-secondary-hovered: #e8ebf2;
+  --background-button-secondary-pressed: #dfe3eb;
+  --background-surface-primary: #fff;
+  --background-surface-secondary: #f2f4f8;
+  --background-surface-ground: #f7f8fb;
+  --background-surface-card: #fff;
+  --text-primary: #121416;
+  --text-secondary: #69707b;
+  --text-tertiary: #737c89;
+  --text-themed: #2401fe;
+  --icon-themed: #2401fe;
+  --stroke-themed: #2401fe;
+  --stroke-separator-primary: rgba(33, 60, 112, 0.11);
+  min-height: 100dvh;
+  color: #121416;
+  background: #f7f8fb;
+  font-family: 'Manrope Variable', Manrope, Arial, sans-serif;
+}
+.opora-theme .opora-action {
+  font-family: inherit;
+  letter-spacing: normal;
+  border-radius: 16px;
+  box-shadow: none;
+  height: auto;
+  min-height: 46px;
+  flex-shrink: 0;
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+.opora-theme .opora-action-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: inherit;
+  font-weight: inherit;
+  white-space: inherit;
+}
+.opora-theme .opora-action.primary {
+  background: linear-gradient(110deg, #833bfc, #2401fe);
+  color: #fff;
+  border: 0;
+}
+.opora-theme .opora-action.secondary {
+  background: #fff;
+  color: #121416;
+  border: 1px solid rgba(33, 60, 112, 0.07);
+}
+.opora-theme .opora-action.lime-button {
+  background: #ff5000;
+  color: #121416;
+  border: 0;
+}
+.opora-theme .opora-action.text-button {
+  min-height: 36px;
+  padding: 0;
+  background: transparent;
+  color: #2401fe;
+  border: 0;
+}
+.opora-theme .opora-action.hero-link {
+  background: transparent;
+  color: #121416;
+  border: 0;
+}
+.opora-theme .opora-action.goal-chip {
+  background: #fff;
+  border: 0;
+  color: #626b79;
+}
+.opora-theme .opora-action.goal-chip.chosen {
+  background: #eeeaff;
+  color: #2401fe;
+  box-shadow: inset 0 0 0 1px #2401fe33;
+}
+.opora-theme .opora-action:disabled {
+  opacity: 0.45;
+}
+.opora-theme .opora-input {
+  min-width: 0;
+  width: 100%;
+  background: transparent;
+  padding: 0;
+  border: 0;
+}
+.opora-theme .opora-input-body {
+  min-width: 0;
+  background: #fff;
+  border: 0;
+  border-radius: 16px;
+  padding: 0;
+  box-shadow: none;
+}
+.opora-theme .opora-native-input {
+  font: inherit;
+  font-size: 14px;
+  color: #121416;
+  min-height: 48px;
+  background: transparent;
+  border: 0;
+  border-radius: 16px;
+  padding: 14px;
+}
+.opora-theme .field .opora-native-input {
+  border: 0;
+  padding: 14px;
+}
+.opora-theme .search-box .opora-input {
+  flex: 1;
+}
+.opora-theme .search-box .opora-input-body {
+  border: 0;
+}
+.opora-theme .chat-input .opora-input {
+  flex: 1;
+}
+.opora-theme .chat-input .opora-input-body {
+  background: #f2f4f8;
+}
+.opora-theme .chat-input .opora-native-input {
+  border: 0;
+}
+.opora-theme .opora-textarea {
+  width: 100%;
+  background: transparent;
+}
+.opora-theme .opora-native-textarea {
+  font: inherit;
+  font-size: 14px;
+  border: 0;
+  border-radius: 18px;
+  padding: 16px;
+  background: #fff;
+  color: #121416;
+  resize: vertical;
+}
+.opora-theme .message-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+@media (hover: hover) {
+  .opora-theme .opora-action.lime-button:hover {
+    background: #ff6e14;
+  }
+  .opora-theme .opora-action.secondary:hover {
+    background: #f2f4f8;
+  }
+  .opora-theme .opora-action.primary:hover {
+    background: linear-gradient(110deg, #7030e9, #1502c0);
+  }
+}
+/* На телефоне карточки и действия идут в одну колонку. */
+@media (max-width: 600px) {
+  .opora-theme .opora-action {
+    min-height: 48px;
+  }
+  .opora-theme .opora-native-input,
+  .opora-theme .opora-native-textarea {
+    font-size: 16px;
+  }
+  .opora-theme .opora-action.text-button {
+    min-height: 36px;
+  }
+  .opora-theme .modal-actions .opora-action.primary {
+    min-height: 52px;
+  }
+  .opora-theme .opora-action.secondary {
+    background: #f2f4f8;
+    border: 0;
+  }
+  .opora-theme .hero-buttons .opora-action.hero-link {
+    min-height: 36px;
+  }
+  .opora-theme .chat-input .opora-action {
+    min-height: 48px;
+  }
+}

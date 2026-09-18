@@ -1,0 +1,26 @@
+{
+  "name": "opora-miniapp",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "tsx --test src/business/domain.test.ts src/business/agent.test.ts src/business/business-analysis.test.ts dev-server.test.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/manrope": "5.3.0",
+    "@maxhub/max-ui": "0.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.5",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.0"
+  },
+  "version": "0.1.0",
+  "private": true
+}
