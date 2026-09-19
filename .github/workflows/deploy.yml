@@ -1,0 +1,37 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to server
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/deploy_key "$SERVER_USER@$SERVER_HOST" '
+            set -e
+            cd /opt/app
+            git fetch origin main
+            git reset --hard origin/main
+
+            npm ci --prefix miniapp
+            npm ci --prefix miniapp/api-server
+            npm ci --prefix chatbot
+
+            pm2 restart opora-frontend
+            pm2 restart opora-api
+            pm2 save
+          '
