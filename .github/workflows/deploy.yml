@@ -14,16 +14,19 @@ jobs:
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_SSH_KEY_B64: ${{ secrets.SERVER_SSH_KEY_B64 }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s' "$SERVER_SSH_KEY_B64" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-          ssh -i ~/.ssh/deploy_key "$SERVER_USER@$SERVER_HOST" '
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$SERVER_USER@$SERVER_HOST" '
             set -e
+
             cd /opt/app
+
             git fetch origin main
             git reset --hard origin/main
 
@@ -34,4 +37,6 @@ jobs:
             pm2 restart opora-frontend
             pm2 restart opora-api
             pm2 save
+
+            curl -fsS http://localhost:3000/api/health
           '
