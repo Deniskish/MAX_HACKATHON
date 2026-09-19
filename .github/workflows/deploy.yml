@@ -38,5 +38,15 @@ jobs:
             pm2 restart opora-api
             pm2 save
 
-            curl -fsS http://localhost:3000/api/health
+            for i in {1..15}; do
+              if curl -fsS http://localhost:3000/api/health; then
+                exit 0
+              fi
+              echo "Waiting for app... $i/15"
+              sleep 2
+            done
+
+            echo "Health check failed"
+            pm2 status
+            exit 1
           '
