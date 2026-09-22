@@ -9,17 +9,7 @@ import {
   shortlist,
 } from '../../api-server/support-model';
 export * from '../../api-server/support-model';
-// Проверяем контрольные цифры ИНН, но не существование компании в реестре.
-export function validInn(inn: string): boolean {
-  if (!/^(\d{10}|\d{12})$/.test(inn) || /^0+$/.test(inn)) return false;
-  const d = [...inn].map(Number);
-  const checksum = (weights: number[]) =>
-    (weights.reduce((sum, w, i) => sum + w * d[i], 0) % 11) % 10;
-  return d.length === 10
-    ? checksum([2, 4, 10, 3, 5, 9, 4, 6, 8]) === d[9]
-    : checksum([7, 2, 4, 10, 3, 5, 9, 4, 6, 8]) === d[10] &&
-        checksum([3, 7, 2, 4, 10, 3, 5, 9, 4, 6, 8]) === d[11];
-}
+export { validInn } from '../../api-server/company-data/inn';
 // Выгружаем рабочий черновик с текущими отметками пользователя.
 export function draftText(app: Application, program: Program, profile: Profile) {
   const result = evaluate(program, profile);

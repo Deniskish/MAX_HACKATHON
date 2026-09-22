@@ -4,7 +4,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "tsx --test src/business/domain.test.ts src/business/agent.test.ts src/business/business-analysis.test.ts dev-server.test.ts"
+    "test": "tsx --test src/business/domain.test.ts src/business/agent.test.ts src/business/business-analysis.test.ts dev-server.test.ts src/business/company-data.test.ts"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "5.3.0",

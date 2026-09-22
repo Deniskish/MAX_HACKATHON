@@ -104,7 +104,7 @@ export function preparePrivateRequest(input: unknown) {
   ])
     identifiers[key] = token(profile[key]);
   const facts = {
-    companyType: allowed(profile.companyType, ['ООО', 'ИП']),
+    companyType: allowed(profile.companyType, ['ООО', 'ИП', 'КФХ', 'другое']),
     region: allowed(profile.region, REGIONS),
     okved:
       typeof profile.okved === 'string' && /^\d{2}(\.\d{1,2}){0,2}$/.test(profile.okved)
@@ -124,7 +124,7 @@ export function preparePrivateRequest(input: unknown) {
   if (context.programId !== undefined && !selected) throw new PrivacyError('INVALID_PROGRAM');
   const normalizedProfile: Profile = {
     ...emptyProfile,
-    companyType: facts.companyType === 'UNKNOWN' ? '' : facts.companyType === 'ИП' ? 'ИП' : 'ООО',
+    companyType: facts.companyType === 'UNKNOWN' ? '' : (facts.companyType as Profile['companyType']),
     region: facts.region === 'UNKNOWN' ? '' : facts.region,
     okved: facts.okved === 'UNKNOWN' ? '' : facts.okved,
     ageMonths: typeof facts.ageMonths === 'number' ? facts.ageMonths : null,

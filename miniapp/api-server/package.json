@@ -5,7 +5,7 @@
     "start": "tsx server.ts",
     "build": "tsc",
     "start:prod": "node dist/server.js",
-    "test": "tsx --test privacy.test.ts gigachat.test.ts"
+    "test": "tsx --test privacy.test.ts gigachat.test.ts company-data/*.test.ts"
   },
   "dependencies": {
     "express": "^4.18.2",

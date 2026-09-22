@@ -6,6 +6,7 @@ import path from 'node:path';
 import { PrivacyError } from './privacy';
 import { createGigaChatClient } from './gigachat';
 import { demoProfile, programs, shortlist, monitorChanges } from './support-model';
+import { companyDataRouter } from './company-data/router';
 
 config({ path: path.resolve(process.cwd(), '../../.env') });
 config();
@@ -25,6 +26,7 @@ app.use((_req, res, next) => {
 });
 app.use(cors({ origin: process.env.APP_ORIGIN || 'http://localhost:3000' }));
 app.use(express.json({ limit: '48kb' }));
+app.use('/api/company', companyDataRouter());
 const requests = new Map<string, { count: number; reset: number }>();
 app.get('/api/health', (_req, res) =>
   res.json({

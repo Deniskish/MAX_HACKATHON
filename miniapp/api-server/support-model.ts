@@ -1,11 +1,12 @@
 // Общие правила для браузера и API, чтобы оценки и суммы не расходились.
 import catalog from './trusted-programs.json';
+import type { FieldProvenance } from './company-data/types';
 
-export type Profile = {
+export type ProfileValues = {
   inn: string;
   name: string;
   region: string;
-  companyType: 'ООО' | 'ИП' | '';
+  companyType: 'ООО' | 'ИП' | 'КФХ' | 'другое' | '';
   okved: string;
   ageMonths: number | null;
   employees: number | null;
@@ -13,6 +14,9 @@ export type Profile = {
   isSme: 'yes' | 'no' | 'unknown';
   tax: string;
   goals: string[];
+};
+export type Profile = ProfileValues & {
+  provenance?: Partial<Record<keyof ProfileValues, FieldProvenance>>;
 };
 export type Rule = {
   field:

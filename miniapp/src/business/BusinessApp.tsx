@@ -1,4 +1,6 @@
 // Общее состояние экранов, профиля и заявок. Условия программ считаются в domain.
+import { CompanySources, FieldSource } from './CompanySource';
+import { editCompanyProfile, mergeCompanyProfile, requestCompanyData } from './company-data';
 import { useBusinessAnalysis } from './useBusinessAnalysis';
 import {
   AgentDashboard,
@@ -13,6 +15,7 @@ import { ActionButton, BusinessInput, BusinessTextarea } from './MaxControls';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   type Profile,
+  type ProfileValues,
   type Program,
   type Application,
   emptyProfile,
@@ -89,6 +92,54 @@ export default function BusinessApp() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<Profile>(emptyProfile);
   const [error, setError] = useState('');
+  const [companyLoading, setCompanyLoading] = useState(false);
+  const companyRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => companyRequest.current?.abort(), []);
+  const cancelCompanyRequest = () => {
+    companyRequest.current?.abort();
+    companyRequest.current = null;
+    setCompanyLoading(false);
+  };
+  const editForm = (next: Profile) => {
+    if (next.inn !== form.inn) {
+      cancelCompanyRequest();
+      setError('');
+    }
+    setForm((previous) => editCompanyProfile(previous, next));
+  };
+  async function loadCompany() {
+    if (!validInn(form.inn)) {
+      setError('Проверьте ИНН: нужны 10 или 12 цифр с верной контрольной суммой.');
+      return;
+    }
+    cancelCompanyRequest();
+    const controller = new AbortController();
+    companyRequest.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    setCompanyLoading(true);
+    setError('');
+    try {
+      const data = await requestCompanyData(form.inn, controller.signal);
+      if (controller.signal.aborted || companyRequest.current !== controller) return;
+      setForm((previous) => mergeCompanyProfile(previous, data));
+      setStep(1);
+    } catch (error) {
+      if (companyRequest.current === controller)
+        setError(
+          controller.signal.aborted
+            ? 'Время ожидания истекло. Попробуйте ещё раз или заполните сведения вручную.'
+            : error instanceof Error
+              ? error.message
+              : 'Не удалось получить данные компании.',
+        );
+    } finally {
+      clearTimeout(timeout);
+      if (companyRequest.current === controller) {
+        companyRequest.current = null;
+        setCompanyLoading(false);
+      }
+    }
+  }
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('Все меры');
   const [toast, setToast] = useState('');
@@ -158,12 +209,14 @@ export default function BusinessApp() {
   );
   const activeApp = selected ? apps.find((a) => a.programId === selected.id) : undefined;
   const openProfile = () => {
+    cancelCompanyRequest();
     setForm(profile || emptyProfile);
     setStep(profile ? 1 : 0);
     setError('');
     setOnboard(true);
   };
   const close = () => {
+    cancelCompanyRequest();
     setSelected(null);
     setOnboard(false);
     setError('');
@@ -196,13 +249,13 @@ export default function BusinessApp() {
   // Сначала проверяем ИНН, затем остальные сведения для персонального подбора.
   function saveProfile(e: FormEvent) {
     e.preventDefault();
+    if (companyLoading) return;
     if (!validInn(form.inn)) {
       setError('Проверьте ИНН: нужны 10 или 12 цифр с верной контрольной суммой.');
       return;
     }
     if (step === 0) {
       setStep(1);
-      setForm({ ...form, companyType: form.inn.length === 12 ? 'ИП' : 'ООО' });
       setError('');
       return;
     }
@@ -219,7 +272,6 @@ export default function BusinessApp() {
       ...form,
       name: form.name.trim(),
       region: form.region.trim(),
-      companyType: form.inn.length === 12 ? 'ИП' : 'ООО',
     });
     close();
     setPage('overview');
@@ -678,43 +730,51 @@ export default function BusinessApp() {
               <section className="profile-panel">
                 <div className="section-title">
                   <div>
-                    <span className="tag">Данные пользователя · без проверки по реестру</span>
+                    <span className="tag">Профиль бизнеса · источники и ручной ввод</span>
                     <h2>{profile.name}</h2>
                   </div>
                   <ActionButton className="secondary" onClick={openProfile}>
                     Редактировать
                   </ActionButton>
                 </div>
+                <CompanySources profile={profile} />
+                <FieldSource profile={profile} field="name" />
                 <dl className="profile-grid">
                   {[
-                    ['ИНН', profile.inn],
-                    ['Форма бизнеса', profile.companyType],
-                    ['Регион', profile.region],
-                    ['Основной ОКВЭД', profile.okved],
+                    ['ИНН', profile.inn, 'inn'],
+                    ['Форма бизнеса', profile.companyType || 'Не указана', 'companyType'],
+                    ['Регион', profile.region, 'region'],
+                    ['Основной ОКВЭД', profile.okved, 'okved'],
                     [
                       'Возраст компании',
                       profile.ageMonths === null ? 'Не указан' : `${profile.ageMonths} мес.`,
+                      'ageMonths',
                     ],
-                    ['Сотрудники', profile.employees ?? 'Не указано'],
+                    ['Сотрудники', profile.employees ?? 'Не указано', 'employees'],
                     [
                       'Годовой оборот',
                       profile.revenue === null
                         ? 'Не указан'
                         : `${profile.revenue.toLocaleString('ru-RU')} ₽`,
+                      'revenue',
                     ],
-                    ['Налоговый режим', profile.tax || 'Не указан'],
+                    ['Налоговый режим', profile.tax || 'Не указан', 'tax'],
                     [
                       'Статус МСП',
                       profile.isSme === 'yes'
-                        ? 'Да, со слов пользователя'
+                        ? 'Да'
                         : profile.isSme === 'no'
                           ? 'Нет'
                           : 'Неизвестно',
+                      'isSme',
                     ],
-                  ].map(([k, v]) => (
+                  ].map(([k, v, field]) => (
                     <div key={k}>
                       <dt>{k}</dt>
-                      <dd>{v}</dd>
+                      <dd>
+                        {v}
+                        <FieldSource profile={profile} field={field as keyof ProfileValues} />
+                      </dd>
                     </div>
                   ))}
                 </dl>
@@ -838,161 +898,196 @@ export default function BusinessApp() {
             <form onSubmit={saveProfile}>
               <span className="eyebrow">ПРОФИЛЬ БИЗНЕСА · ШАГ {step + 1} ИЗ 2</span>
               <h2>{step === 0 ? 'ИНН вашего бизнеса' : 'Данные для AI-анализа'}</h2>
-              <p className="muted">{'Данные заполняются вручную, без запроса в ФНС.'}</p>
-              {step === 0 ? (
-                <label className="field">
-                  ИНН
-                  <BusinessInput
-                    autoFocus
-                    inputMode="numeric"
-                    maxLength={12}
-                    placeholder="10 или 12 цифр"
-                    value={form.inn}
-                    onChange={(e) => setForm({ ...form, inn: e.target.value.replace(/\D/g, '') })}
-                  />
-                </label>
-              ) : (
-                <>
-                  <div className="form-grid">
-                    <label className="field">
-                      Название
-                      <BusinessInput
-                        required
-                        value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        placeholder="ООО «Название»"
-                        maxLength={120}
-                      />
-                    </label>
-                    <label className="field">
-                      ИНН
-                      <BusinessInput
-                        required
-                        inputMode="numeric"
-                        maxLength={12}
-                        value={form.inn}
-                        onChange={(e) => {
-                          const inn = e.target.value.replace(/\D/g, '');
-                          setForm({ ...form, inn, companyType: inn.length === 12 ? 'ИП' : 'ООО' });
-                        }}
-                      />
-                    </label>
-                    <label className="field">
-                      Регион
-                      <BusinessInput
-                        required
-                        list="regions"
-                        value={form.region}
-                        onChange={(e) => setForm({ ...form, region: e.target.value })}
-                      />
-                      <datalist id="regions">
-                        <option>Москва</option>
-                        <option>Санкт-Петербург</option>
-                        <option>Республика Татарстан</option>
-                        <option>Московская область</option>
-                      </datalist>
-                    </label>
-                    <label className="field">
-                      Основной ОКВЭД
-                      <BusinessInput
-                        required
-                        placeholder="62.01"
-                        value={form.okved}
-                        onChange={(e) => setForm({ ...form, okved: e.target.value })}
-                      />
-                    </label>
-                    {(['ageMonths', 'employees', 'revenue'] as const).map((key, i) => (
-                      <label className="field" key={key}>
-                        {
-                          [
-                            'Возраст компании, месяцев',
-                            'Количество сотрудников',
-                            'Годовой оборот, ₽',
-                          ][i]
-                        }
+              <p className="muted">Доступен учебный источник «Опора». Реестры ФНС пока не подключены.</p>
+              <details className="context-info">
+                <summary>ИНН учебных примеров</summary>
+                <p>ООО: 9900000017 · ИП: 990000000041 · КФХ: 9900000024 · IT: 9900000031.</p>
+                <p>Все сведения вымышлены. Для другого ИНН доступно ручное заполнение.</p>
+              </details>
+              <CompanySources profile={form} />
+              <fieldset className="company-form-fields" disabled={companyLoading}>
+                {step === 0 ? (
+                  <label className="field">
+                    ИНН
+                    <FieldSource profile={form} field="inn" />
+                    <BusinessInput
+                      autoFocus
+                      inputMode="numeric"
+                      maxLength={12}
+                      placeholder="10 или 12 цифр"
+                      value={form.inn}
+                      onChange={(e) => editForm({ ...form, inn: e.target.value.replace(/\D/g, '') })}
+                    />
+                  </label>
+                ) : (
+                  <>
+                    <div className="form-grid">
+                      <label className="field">
+                        Название
+                        <FieldSource profile={form} field="name" />
                         <BusinessInput
-                          type="number"
-                          min="0"
-                          max={key === 'revenue' ? 1e15 : key === 'employees' ? 1e7 : 3000}
-                          step="1"
-                          placeholder="Пока неизвестно"
-                          value={form[key] ?? ''}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              [key]: e.target.value === '' ? null : Number(e.target.value),
-                            })
-                          }
+                          required
+                          value={form.name}
+                          onChange={(e) => editForm({ ...form, name: e.target.value })}
+                          placeholder="ООО «Название»"
+                          maxLength={120}
                         />
                       </label>
-                    ))}
-                    <label className="field">
-                      Статус МСП
-                      <select
-                        value={form.isSme}
-                        onChange={(e) =>
-                          setForm({ ...form, isSme: e.target.value as Profile['isSme'] })
-                        }
-                      >
-                        <option value="unknown">Не знаю</option>
-                        <option value="yes">Есть в реестре</option>
-                        <option value="no">Нет в реестре</option>
-                      </select>
-                    </label>
-                    <label className="field">
-                      Налоговый режим
-                      <select
-                        value={form.tax}
-                        onChange={(e) => setForm({ ...form, tax: e.target.value })}
-                      >
-                        {['', 'УСН', 'ОСНО', 'ПСН', 'ЕСХН', 'АУСН'].map((t) => (
-                          <option key={t} value={t}>
-                            {t || 'Не указан'}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                  <h3>Что вы планируете?</h3>
-                  <div className="goal-chips">
-                    {goals.map((g) => (
-                      <ActionButton
-                        type="button"
-                        aria-pressed={form.goals.includes(g)}
-                        className={'goal-chip ' + (form.goals.includes(g) ? 'chosen' : '')}
-                        key={g}
-                        onClick={() =>
-                          setForm({
-                            ...form,
-                            goals: form.goals.includes(g)
-                              ? form.goals.filter((x) => x !== g)
-                              : [...form.goals, g],
-                          })
-                        }
-                      >
-                        {form.goals.includes(g) ? '✓ ' : '+ '}
-                        {g}
-                      </ActionButton>
-                    ))}
-                  </div>
-                </>
-              )}
-              {error && (
-                <p className="error" role="alert">
-                  {error}
-                </p>
-              )}
-              <div className="modal-actions">
-                {step === 1 && (
-                  <ActionButton type="button" className="secondary" onClick={() => setStep(0)}>
-                    Назад
+                      <label className="field">
+                        ИНН
+                        <FieldSource profile={form} field="inn" />
+                        <BusinessInput
+                          required
+                          inputMode="numeric"
+                          maxLength={12}
+                          value={form.inn}
+                          onChange={(e) => {
+                            const inn = e.target.value.replace(/\D/g, '');
+                            editForm({ ...form, inn });
+                          }}
+                        />
+                      </label>
+                      <label className="field">
+                        Форма бизнеса
+                        <FieldSource profile={form} field="companyType" />
+                        <select
+                          value={form.companyType}
+                          onChange={(e) =>
+                            editForm({ ...form, companyType: e.target.value as Profile['companyType'] })
+                          }
+                        >
+                          {['', 'ООО', 'ИП', 'КФХ', 'другое'].map((value) => (
+                            <option key={value} value={value}>{value || 'Не указана'}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        Регион
+                        <FieldSource profile={form} field="region" />
+                        <BusinessInput
+                          required
+                          list="regions"
+                          value={form.region}
+                          onChange={(e) => editForm({ ...form, region: e.target.value })}
+                        />
+                        <datalist id="regions">
+                          <option>Москва</option>
+                          <option>Санкт-Петербург</option>
+                          <option>Республика Татарстан</option>
+                          <option>Московская область</option>
+                        </datalist>
+                      </label>
+                      <label className="field">
+                        Основной ОКВЭД
+                        <FieldSource profile={form} field="okved" />
+                        <BusinessInput
+                          required
+                          placeholder="62.01"
+                          value={form.okved}
+                          onChange={(e) => editForm({ ...form, okved: e.target.value })}
+                        />
+                      </label>
+                      {(['ageMonths', 'employees', 'revenue'] as const).map((key, i) => (
+                        <label className="field" key={key}>
+                          {
+                            [
+                              'Возраст компании, месяцев',
+                              'Количество сотрудников',
+                              'Годовой оборот, ₽',
+                            ][i]
+                          }
+                          <FieldSource profile={form} field={key} />
+                          <BusinessInput
+                            type="number"
+                            min="0"
+                            max={key === 'revenue' ? 1e15 : key === 'employees' ? 1e7 : 3000}
+                            step="1"
+                            placeholder="Пока неизвестно"
+                            value={form[key] ?? ''}
+                            onChange={(e) =>
+                              editForm({
+                                ...form,
+                                [key]: e.target.value === '' ? null : Number(e.target.value),
+                              })
+                            }
+                          />
+                        </label>
+                      ))}
+                      <label className="field">
+                        Статус МСП
+                        <FieldSource profile={form} field="isSme" />
+                        <select
+                          value={form.isSme}
+                          onChange={(e) =>
+                            editForm({ ...form, isSme: e.target.value as Profile['isSme'] })
+                          }
+                        >
+                          <option value="unknown">Не знаю</option>
+                          <option value="yes">Есть в реестре</option>
+                          <option value="no">Нет в реестре</option>
+                        </select>
+                      </label>
+                      <label className="field">
+                        Налоговый режим
+                        <FieldSource profile={form} field="tax" />
+                        <select
+                          value={form.tax}
+                          onChange={(e) => editForm({ ...form, tax: e.target.value })}
+                        >
+                          {['', 'УСН', 'ОСНО', 'ПСН', 'ЕСХН', 'АУСН'].map((t) => (
+                            <option key={t} value={t}>
+                              {t || 'Не указан'}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <h3>Что вы планируете?</h3>
+                    <div className="goal-chips">
+                      {goals.map((g) => (
+                        <ActionButton
+                          type="button"
+                          aria-pressed={form.goals.includes(g)}
+                          className={'goal-chip ' + (form.goals.includes(g) ? 'chosen' : '')}
+                          key={g}
+                          onClick={() =>
+                            editForm({
+                              ...form,
+                              goals: form.goals.includes(g)
+                                ? form.goals.filter((x) => x !== g)
+                                : [...form.goals, g],
+                            })
+                          }
+                        >
+                          {form.goals.includes(g) ? '✓ ' : '+ '}
+                          {g}
+                        </ActionButton>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {form.inn && (
+                  <ActionButton type="button" className="secondary" onClick={() => void loadCompany()}>
+                    {companyLoading ? 'Получаем данные…' : 'Получить данные компании'}
                   </ActionButton>
                 )}
-                <ActionButton className="primary" type="submit">
-                  {step === 0 ? 'Продолжить' : 'Запустить AI-анализ'}
-                  <Icon name="arrow" size={17} />
-                </ActionButton>
-              </div>
+                {error && (
+                  <p className="error" role="alert">
+                    {error}
+                  </p>
+                )}
+                <div className="modal-actions">
+                  {step === 1 && (
+                    <ActionButton type="button" className="secondary" onClick={() => setStep(0)}>
+                      Назад
+                    </ActionButton>
+                  )}
+                  <ActionButton className="primary" type="submit">
+                    {step === 0 ? 'Продолжить' : 'Запустить AI-анализ'}
+                    <Icon name="arrow" size={17} />
+                  </ActionButton>
+                </div>
+              </fieldset>
             </form>
           )}
           {selected && (
