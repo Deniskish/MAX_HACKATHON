@@ -1,9 +1,8 @@
+import { demoProfile, programs } from '../../api-server/tests/fixtures/profiles';
 // Проверяем объяснимость подбора, расчёт сумм и подготовку документов.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  programs,
-  demoProfile,
   emptyProfile,
   analyzeOpportunity,
   shortlist,

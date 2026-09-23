@@ -1,11 +1,10 @@
+import { demoProfile, programs } from '../../api-server/tests/fixtures/profiles';
 // Проверяем ИНН, границы условий и содержание экспортируемого черновика.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   validInn,
   evaluate,
-  programs,
-  demoProfile,
   emptyProfile,
   draftText,
   localAnswer,
@@ -88,5 +87,5 @@ test('draft preserves project and document state and identifies simulation', () 
 });
 test('assistant asks for missing profile and explains demo evidence', () => {
   assert.match(localAnswer('Помоги', null), /Начните с профиля/);
-  assert.match(localAnswer('Какие документы?', demoProfile), /документ|актуализация/i);
+  assert.match(localAnswer('Какие документы?', demoProfile, 'equipment', [], programs), /документ|актуализация/i);
 });

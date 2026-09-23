@@ -36,10 +36,13 @@ jobs:
 
             pm2 restart opora-frontend
             pm2 restart opora-api
+            if pm2 describe opora-bot >/dev/null 2>&1; then
+              pm2 restart opora-bot
+            fi
             pm2 save
 
             for i in {1..15}; do
-              if curl -fsS http://localhost:3000/api/health; then
+              if curl -fsS http://localhost:3000/ >/dev/null && curl -fsS http://localhost:3000/api/health && curl -fsS http://localhost:3002/api/health; then
                 exit 0
               fi
               echo "Waiting for app... $i/15"

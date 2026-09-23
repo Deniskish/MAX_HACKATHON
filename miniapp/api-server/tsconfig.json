@@ -15,7 +15,8 @@
     "moduleResolution": "node"
   },
   "include": [
-    "server.ts"
+    "server.ts",
+    "company-data/sync.ts"
   ],
   "exclude": [
     "node_modules",

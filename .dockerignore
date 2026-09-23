@@ -1,0 +1,15 @@
+.git
+**/node_modules
+**/dist
+.env
+.env.*
+!.env.example
+fns-data
+**/*.sqlite*
+**/*.pem
+**/*.key
+**/*.log
+**/*.test.ts
+**/tests/fixtures
+.codex
+.DS_Store

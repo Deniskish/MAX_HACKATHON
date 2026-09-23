@@ -32,3 +32,9 @@ deploy-package/
 *~
 .DS_Store
 Thumbs.db
+
+# Official FNS datasets and local index
+fns-data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

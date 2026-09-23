@@ -3,13 +3,14 @@ import {
   Button,
   Input,
   Textarea,
-  type ButtonProps,
   type InputProps,
   type TextareaProps,
 } from '@maxhub/max-ui';
 
+import React from 'react';
+
 // Настраиваем MAX UI через публичные свойства, чтобы обновления не ломали тему.
-export function ActionButton({ className = '', type = 'button', ...props }: ButtonProps) {
+export function ActionButton({ className = '', type = 'button', ...props }: React.ComponentProps<typeof Button>) {
   const variant =
     className.includes('primary') || className.includes('lime-button')
       ? 'primary'

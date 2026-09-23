@@ -1,12 +1,12 @@
 // Общие правила для браузера и API, чтобы оценки и суммы не расходились.
-import catalog from './trusted-programs.json';
+import { legacyPrograms } from './funding-catalog/legacy-adapter';
 import type { FieldProvenance } from './company-data/types';
 
 export type ProfileValues = {
   inn: string;
   name: string;
   region: string;
-  companyType: 'ООО' | 'ИП' | 'КФХ' | 'другое' | '';
+  companyType: 'ООО' | 'АО' | 'ИП' | 'КФХ' | 'другое' | '';
   okved: string;
   ageMonths: number | null;
   employees: number | null;
@@ -16,7 +16,9 @@ export type ProfileValues = {
   goals: string[];
 };
 export type Profile = ProfileValues & {
-  provenance?: Partial<Record<keyof ProfileValues, FieldProvenance>>;
+  companyStatus?: string | null;
+  applicantType?: 'legal_entity' | 'individual_entrepreneur' | 'individual' | 'team' | 'project';
+  provenance?: Partial<Record<keyof ProfileValues | 'applicantType' | 'companyStatus', FieldProvenance>>;
 };
 export type Rule = {
   field:
@@ -55,6 +57,8 @@ export type Program = {
   updatedAt: string;
 };
 export type Application = {
+  reviewConfirmed?: boolean;
+  status?: 'draft' | 'collecting_documents' | 'ready_for_review';
   id: string;
   programId: string;
   createdAt: string;
@@ -65,7 +69,7 @@ export type Application = {
   draftOrigin?: string;
   documentFiles?: Record<string, string>;
 };
-export const programs = catalog as Program[];
+export const programs = legacyPrograms;
 export const goals = [
   'Разработка продукта',
   'Покупка оборудования',
@@ -90,19 +94,7 @@ export const emptyProfile: Profile = {
   tax: '',
   goals: [],
 };
-export const demoProfile: Profile = {
-  inn: '7707083893',
-  name: 'ООО «Новая идея» · учебный профиль',
-  region: 'Москва',
-  companyType: 'ООО',
-  okved: '62.01',
-  ageMonths: 26,
-  employees: 12,
-  revenue: 18000000,
-  isSme: 'yes',
-  tax: 'УСН',
-  goals: ['Разработка продукта', 'Покупка оборудования'],
-};
+
 // Пустое значение — это «неизвестно», а не выполненное условие.
 export function evaluate(program: Program, profile: Profile, now = new Date()) {
   const checks = program.rules.map((rule) => {
@@ -323,7 +315,7 @@ export function benefitSummary(items: ReturnType<typeof shortlist>) {
 }
 
 export type DocumentGuide = { why: string; where: string; contents: string; sections: string[] };
-// Подсказки относятся к учебным документам; официальную форму задаёт оператор.
+// Подсказки помогают подготовить документы; официальную форму задаёт оператор.
 export function documentGuide(name: string): DocumentGuide {
   if (/ЕГРЮЛ|ЕГРИП/.test(name))
     return {
@@ -423,7 +415,7 @@ export function generateDraft(
   profile: Profile,
   app: Application,
 ) {
-  const header = `АВТОМАТИЧЕСКИЙ ШАБЛОН — ПРОВЕРЬТЕ И ОТРЕДАКТИРУЙТЕ\nУчебная программа: ${program.title}\nЗаявитель: ${profile.name}\nИНН: ${profile.inn}\n`;
+  const header = `АВТОМАТИЧЕСКИЙ ШАБЛОН — ПРОВЕРЬТЕ И ОТРЕДАКТИРУЙТЕ\nПрограмма: ${program.title}\nЗаявитель: ${profile.name}\nИНН: ${profile.inn}\n`;
   const sections =
     kind === 'cover'
       ? [
@@ -493,7 +485,7 @@ export function monitorChanges(
               : kind === 'updated'
                 ? 'Условия обновились'
                 : 'Приближается дедлайн',
-          text: `${p.title}\n${r.benefit.label}\nПодтверждено ${r.confirmed} из ${r.total} условий и документов (${r.score}%).\nДо окончания: ${r.daysLeft} дн.\nУчебная программа. Совпадение не гарантирует одобрение.`,
+          text: `${p.title}\n${r.benefit.label}\nПодтверждено ${r.confirmed} из ${r.total} условий и документов (${r.score}%).\nДо окончания: ${r.daysLeft} дн.\nСовпадение не гарантирует одобрение.`,
         },
       ];
     });

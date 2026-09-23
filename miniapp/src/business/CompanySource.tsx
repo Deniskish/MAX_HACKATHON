@@ -7,7 +7,7 @@ export function FieldSource({ profile, field }: { profile: Profile; field: keyof
     {origin.kind === 'manual' ? 'Ручной ввод' : <>
       {origin.mode === 'demo' ? 'Демо · ' : ''}
       {origin.kind === 'derived' ? 'Рассчитано по данным: ' : 'Из источника: '}
-      {origin.source}
+      {origin.source} · {origin.updatedAt.slice(0, 10)}{origin.period ? ` · период ${origin.period}` : ''}
     </>}
   </small>;
 }

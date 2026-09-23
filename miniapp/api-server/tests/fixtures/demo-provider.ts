@@ -1,4 +1,4 @@
-import type { CompanyData, CompanyDataProvider, CompanyDataResult, CompanyField, CompanySource } from './types';
+import type { CompanyData, CompanyDataProvider, CompanyDataResult, CompanyField, CompanySource } from '../../company-data/types';
 
 const source: CompanySource = {
   id: 'opora-demo-v1',

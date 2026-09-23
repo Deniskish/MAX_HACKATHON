@@ -1,14 +1,15 @@
+import { demoProfile } from '../../api-server/tests/fixtures/profiles';
 // Проверяем запрос анализа, локальный ответ при сбое и отмену устаревших запросов.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { requestBusinessAnalysis, analysisContext } from './business-analysis';
-import { demoProfile, type Application } from './domain';
+import { type Application } from './domain';
 const apps: Application[] = [
   {
     id: 'x',
-    programId: 'equipment',
+    programId: 'frp-development',
     createdAt: '',
-    documents: { 'Подтверждение статуса МСП': 'secret-filename.pdf' },
+    documents: { 'Бизнес-план': 'secret-filename.pdf' },
     project: 'PRIVATE_PROJECT',
     budget: '1700000',
     generatedDraft: 'PRIVATE_DRAFT',

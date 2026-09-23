@@ -17,12 +17,13 @@ export type FieldProvenance = {
   kind: 'source' | 'derived' | 'manual';
   derivedFrom?: string[];
   computedAt?: string;
+  period?: number;
 };
 export type CompanyData = {
   inn: string;
   ogrn: string | null;
   name: string | null;
-  companyType: 'ООО' | 'ИП' | 'КФХ' | 'другое' | null;
+  companyType: 'ООО' | 'АО' | 'ИП' | 'КФХ' | 'другое' | null;
   region: string | null;
   registrationDate: string | null;
   ageMonths: number | null;
@@ -32,6 +33,12 @@ export type CompanyData = {
   employees: number | null;
   revenue: number | null;
   taxRegime: string | null;
+  status?: string | null;
+  income?: number | null;
+  expenses?: number | null;
+  employeesPeriod?: number | null;
+  reportingPeriod?: number | null;
+  smeRegistryUpdatedAt?: string | null;
   isSme: boolean | null;
   smeCategory: 'micro' | 'small' | 'medium' | null;
   source: string;

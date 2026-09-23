@@ -1,0 +1,42 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: miniapp/api-server/Dockerfile
+    environment:
+      PORT: 3002
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+      FNS_DATA_DIR: /data/fns
+      GIGACHAT_AUTH_KEY: ${GIGACHAT_AUTH_KEY:-}
+      GIGACHAT_SCOPE: ${GIGACHAT_SCOPE:-GIGACHAT_API_PERS}
+      GIGACHAT_MODEL: ${GIGACHAT_MODEL:-GigaChat-2-Pro}
+    volumes:
+      - ${FNS_DATA_DIR:-./fns-data}:/data/fns:ro
+    ports:
+      - "127.0.0.1:3002:3002"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+  miniapp:
+    build:
+      context: .
+      dockerfile: miniapp/Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+  chatbot:
+    profiles: ["bot"]
+    build:
+      context: .
+      dockerfile: chatbot/Dockerfile
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN:-}
+      MINIAPP_URL: ${MINIAPP_URL:-}
+      MAX_BOT_USERNAME: ${MAX_BOT_USERNAME:-}
+    restart: unless-stopped

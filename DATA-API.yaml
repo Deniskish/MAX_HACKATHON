@@ -1,0 +1,114 @@
+# Перед передачей организаторам укажите публичный HTTPS origin в api.baseUrl.
+# Сейчас адрес не предоставлен; этот файл не утверждает доступность deployment.
+# Company lookup не включён: реальный индекс ФНС ещё не наполнен.
+schemaVersion: '1.0'
+solution:
+  name: Опора / MAX_HACKATHON
+api:
+  baseUrl: https://your-public-domain.example
+  openapi: ./openapi.yaml
+  defaultHeaders:
+    Accept: application/json
+checks:
+- id: health
+  name: health
+  method: GET
+  path: /api/health
+  role: public
+  expected:
+    statusCodes:
+    - 200
+    contentType: application/json
+    requiredFields:
+    - status
+    - service
+  timeoutMs: 5000
+  repeatable: true
+- id: providers
+  name: providers
+  method: GET
+  path: /api/providers/status
+  role: public
+  expected:
+    statusCodes:
+    - 200
+    contentType: application/json
+    requiredFields:
+    - company
+    - funding
+    - ai
+  timeoutMs: 5000
+  repeatable: true
+- id: funding-status
+  name: funding-status
+  method: GET
+  path: /api/funding/status
+  role: public
+  expected:
+    statusCodes:
+    - 200
+    contentType: application/json
+    requiredFields:
+    - total
+    - active
+    - closed
+    - snapshotVersion
+    - verifiedAt
+    - sources
+  timeoutMs: 5000
+  repeatable: true
+- id: funding-catalog
+  name: funding-catalog
+  method: GET
+  path: /api/funding/catalog
+  role: public
+  expected:
+    statusCodes:
+    - 200
+    contentType: application/json
+    requiredFields:
+    - mode
+    - opportunities
+  timeoutMs: 5000
+  repeatable: true
+- id: funding-match
+  name: funding-match
+  method: POST
+  path: /api/funding/match
+  role: public
+  expected:
+    statusCodes:
+    - 200
+    contentType: application/json
+    requiredFields:
+    - mode
+    - need
+    - matches
+    - strategy
+  timeoutMs: 5000
+  repeatable: true
+  request:
+    headers:
+      Content-Type: application/json
+    body:
+      profile: {}
+      need:
+        purpose: покупка оборудования
+        amount: 10000000
+        preferredTermMonths: 60
+- id: ai-status
+  name: ai-status
+  method: GET
+  path: /api/ai/status
+  role: public
+  expected:
+    statusCodes:
+    - 200
+    contentType: application/json
+    requiredFields:
+    - configured
+    - provider
+    - model
+    - status
+  timeoutMs: 5000
+  repeatable: true

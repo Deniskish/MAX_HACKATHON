@@ -1,7 +1,11 @@
 // Проверяем, что личные данные и подставленные инструкции не попадают в запрос модели.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { preparePrivateRequest, privateCompletion, detectSensitiveText } from './privacy';
+import { preparePrivateRequest as prepare, privateCompletion as complete, detectSensitiveText } from './privacy';
+
+import { programs } from './tests/fixtures/profiles';
+const preparePrivateRequest = (input: unknown) => prepare(input, programs);
+const privateCompletion = (input: unknown, config: Parameters<typeof complete>[1], transport?: typeof fetch) => complete(input, config, transport, programs);
 
 const profile = {
   inn: '123456789012',

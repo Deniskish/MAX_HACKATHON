@@ -1,0 +1,12 @@
+.funding-experience, .funding-results { display: grid; gap: 16px; min-width: 0; }
+.funding-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.funding-card { min-width: 0; overflow-wrap: anywhere; }
+.funding-card-heading { display: flex; gap: 8px; flex-wrap: wrap; }
+.funding-card p, .funding-strategy p { line-height: 1.55; }
+.funding-card details, .funding-strategy details { margin-top: 12px; }
+.funding-card summary, .funding-strategy summary { cursor: pointer; }
+.funding-card li, .funding-strategy li { margin-bottom: 8px; line-height: 1.5; }
+.funding-status { display: inline-block; padding: 6px 10px; border-radius: 8px; background: #edf3ed; color: #30563b; }
+.funding-status-not_eligible, .funding-status-expired { background: #f5ebea; color: #88433d; }
+.funding-status-need_more_data { background: #f6f1e4; color: #795c21; }
+@media (max-width: 760px) { .funding-grid { grid-template-columns: 1fr; } }

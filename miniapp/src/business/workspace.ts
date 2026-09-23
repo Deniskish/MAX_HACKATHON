@@ -1,0 +1,73 @@
+import { emptyProfile, type Profile, type Application } from './domain';
+import type { FundingNeed, FundingOpportunity, FundingMatch, ProjectProfile } from '../../api-server/funding-catalog/types';
+import { emptyFundingNeed } from '../../api-server/funding-catalog/types';
+import { restoreFundingNeed } from './funding';
+import { parseFundingProfile } from '../../api-server/funding-catalog/input';
+export type Workspace = { profile: Profile | null; projectProfile: ProjectProfile | null; fundingNeed: FundingNeed; saved: string[]; applications: Application[] };
+export const workspaceKey = 'opora.workspace';
+const blank = (): Workspace => ({ profile: null, projectProfile: null, fundingNeed: { ...emptyFundingNeed }, saved: [], applications: [] });
+const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
+const stringMap = (value: unknown) => record(value) ? Object.fromEntries(Object.entries(value).filter(([, v]) => typeof v === 'string')) as Record<string, string> : {};
+const nullableNumber = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
+export function loadWorkspace(storage: Pick<Storage, 'getItem'>, ids: string[]): Workspace {
+  const read = (key: string) => { try { return JSON.parse(storage.getItem(key) ?? 'null'); } catch { return null; } };
+  const current = read(workspaceKey);
+  const oldProfile = read('opora.profile.v1');
+  const raw = current?.version === 2 ? current.data : { profile: oldProfile, saved: read('opora.saved.v1'), applications: read('opora.apps.v1'),
+    fundingNeed: read(`opora.funding-need.v1.${oldProfile?.inn ?? ''}`) };
+  const result = blank();
+  if (!raw || typeof raw !== 'object') return result;
+  const p = raw.profile;
+  if (p && typeof p.inn === 'string' && typeof p.name === 'string' && Array.isArray(p.goals)
+    && !/учебн|демо/i.test(p.name) && !Object.values(p.provenance ?? {}).some((x) => (x as { mode?: string })?.mode === 'demo')) {
+    try {
+      const provenance = record(p.provenance) ? Object.fromEntries(Object.entries(p.provenance).filter(([, v]) => record(v)
+        && ['sourceId', 'source', 'updatedAt'].every((key) => typeof v[key] === 'string')
+        && (v.sourceUrl === null || typeof v.sourceUrl === 'string') && ['official', 'manual'].includes(String(v.mode))
+        && ['source', 'derived', 'manual'].includes(String(v.kind)))) : undefined;
+      result.profile = { ...emptyProfile, ...parseFundingProfile(p), inn: p.inn, name: p.name, provenance: provenance as Profile['provenance'] };
+    } catch { /* Malformed stored values must not crash React or become matching facts. */ }
+  }
+  const project = raw.projectProfile;
+  if (project?.hasLegalEntity === false && typeof project.name === 'string' && typeof project.region === 'string'
+    && typeof project.industry === 'string' && ['idea', 'prototype', 'mvp', 'revenue'].includes(project.stage)) result.projectProfile = {
+      name: project.name, region: project.region, industry: project.industry, stage: project.stage, hasLegalEntity: false,
+      teamSize: nullableNumber(project.teamSize), fundingNeed: nullableNumber(project.fundingNeed), fundingPurpose: typeof project.fundingPurpose === 'string' ? project.fundingPurpose : '',
+    };
+  result.fundingNeed = restoreFundingNeed(JSON.stringify(raw.fundingNeed));
+  if (Array.isArray(raw.saved)) result.saved = [...new Set(raw.saved.filter((id: unknown): id is string => typeof id === 'string' && ids.includes(id)))] as string[];
+  if (Array.isArray(raw.applications)) result.applications = raw.applications.filter((a: Application) => a && ids.includes(a.programId) && typeof a.id === 'string'
+    && typeof a.project === 'string' && typeof a.budget === 'string' && record(a.documents)).map((a: Application) => ({
+      id: a.id, programId: a.programId, project: a.project, budget: a.budget, createdAt: typeof a.createdAt === 'string' ? a.createdAt : '',
+      documents: stringMap(a.documents), documentFiles: stringMap(a.documentFiles), reviewConfirmed: a.reviewConfirmed === true,
+      ...(typeof a.generatedDraft === 'string' ? { generatedDraft: a.generatedDraft } : {}),
+      ...(typeof a.draftOrigin === 'string' ? { draftOrigin: a.draftOrigin } : {}),
+    }));
+  return result;
+}
+export function saveWorkspace(storage: Pick<Storage, 'setItem'>, data: Workspace) { storage.setItem(workspaceKey, JSON.stringify({ version: 2, data })); }
+export function projectAsProfile(project: ProjectProfile): Profile {
+  return { ...emptyProfile, name: project.name, region: project.region, applicantType: 'project', goals: project.fundingPurpose ? [project.fundingPurpose] : [] };
+}
+export function applicationStatus(app: Application, opportunity: FundingOpportunity) {
+  if (app.reviewConfirmed && app.project.trim() && opportunity.requiredDocuments.every((d) => app.documents[d])) return 'ready_for_review';
+  return app.project.trim() || Object.values(app.documents).some(Boolean) ? 'collecting_documents' : 'draft';
+}
+export const applicationLabels = { draft: 'Черновик', collecting_documents: 'Сбор документов', ready_for_review: 'Комплект готов к проверке перед подачей' };
+export function filterFunding(catalog: FundingOpportunity[], query: string, kind: string, status: string, saved?: string[]) {
+  return catalog.filter((o) => (!kind || o.kind === kind) && (!status || o.status === status) && (!saved || saved.includes(o.id))
+    && `${o.title} ${o.description} ${o.providerName} ${o.purposes.join(' ')}`.toLocaleLowerCase('ru-RU').includes(query.trim().toLocaleLowerCase('ru-RU')));
+}
+export { calendarICS } from '../../api-server/funding-catalog/calendar';
+export type FundingEvent = { id: string; opportunityId: string; text: string };
+export function fundingEvents(catalog: FundingOpportunity[], saved: string[], previous: Record<string, string>, matches: FundingMatch[], now = new Date()): FundingEvent[] {
+  const events: FundingEvent[] = [];
+  for (const o of catalog) {
+    const days = o.deadline ? (new Date(`${o.deadline}T23:59:59+03:00`).getTime() - now.getTime()) / 86400000 : null;
+    if (saved.includes(o.id) && o.status === 'closed') events.push({ id: `closed:${o.id}:${o.version}`, opportunityId: o.id, text: `Прием завершен: ${o.title}` });
+    if (saved.includes(o.id) && days !== null && days >= 0 && days <= 14) events.push({ id: `deadline:${o.id}:${o.deadline}`, opportunityId: o.id, text: `Приближается срок: ${o.title} — ${o.deadline}` });
+    if (previous[o.id] && previous[o.id] !== o.version) events.push({ id: `updated:${o.id}:${o.version}`, opportunityId: o.id, text: `Обновлены условия: ${o.title}` });
+    if (!previous[o.id] && Object.keys(previous).length && matches.some((m) => m.opportunity.id === o.id && m.status === 'eligible')) events.push({ id: `new:${o.id}`, opportunityId: o.id, text: `Новая возможность для рассмотрения: ${o.title}` });
+  }
+  return events;
+}

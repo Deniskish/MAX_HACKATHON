@@ -13,6 +13,7 @@
     "build:miniapp": "npm --prefix miniapp run build",
     "build:api": "npm --prefix miniapp/api-server run build",
     "api:dev": "npm --prefix miniapp/api-server run dev",
-    "api:server": "npm --prefix miniapp/api-server start"
+    "api:server": "npm --prefix miniapp/api-server start",
+    "sync:fns": "npm --prefix miniapp/api-server run sync:fns --"
   }
 }

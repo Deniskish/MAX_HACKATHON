@@ -1,0 +1,151 @@
+import React, { useEffect, useState, type FormEvent } from 'react';
+import { ActionButton, BusinessInput } from './MaxControls';
+import type { FundingProfile } from '../../api-server/funding-catalog/types';
+import { emptyFundingNeed, fundingPurposes, type FundingMatch, type FundingNeed,
+  type FundingResponse } from '../../api-server/funding-catalog/types';
+import { amountLabel, fundingKindLabels, fundingSourceLabel, fundingStatusLabels,
+  rateLabel, scoreNotice, termLabel } from '../../api-server/funding-catalog/presentation';
+import { fundingFingerprint, requestFunding, restoreFundingNeed } from './funding';
+
+export function FundingOpportunityCard({ match, onOpen, onSave, saved }: { match: FundingMatch; onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: boolean }) {
+  const o = match.opportunity;
+  const rate = rateLabel(o), term = termLabel(o);
+  return <article className="widget funding-card">
+    <div className="funding-card-heading">
+      <span className="tag">{fundingKindLabels[o.kind]}</span>
+      <span className="tag">{o.source.type === 'demo' ? 'Учебные данные' : 'Официальный источник'}</span>
+    </div>
+    <h3>{o.title}</h3>
+    {onSave && <button className="secondary" aria-pressed={saved} onClick={() => onSave(o.id)}>{saved ? "В сохранённых" : "Сохранить"}</button>}
+    <p className="muted">{o.providerName}</p>
+    <strong>{amountLabel(o)}</strong>
+    {rate && <p>{rate}</p>}
+    {term && <p>Срок: {term}</p>}
+    <p>{o.description}</p>
+    <p className="widget-footnote">Регион: {o.regions === "all" ? "Вся Россия" : o.regions.join(", ")}</p>
+    <span className={`funding-status funding-status-${match.status}`}>{fundingStatusLabels[match.status]}</span>
+    <p>Соответствие: {match.score}% · {scoreNotice}</p>
+
+    <details>
+      <summary>Почему такой результат:</summary>
+      <p>{match.explanation}</p>
+      {match.missingRequirements.length > 0 && <p>Не выполнено: {match.missingRequirements.map((r) => r.label).join('; ')}.</p>}
+      {match.unknownRequirements.length > 0 && <p>Нужно уточнить: {match.unknownRequirements.map((r) => r.label).join('; ')}.</p>}
+      {match.missingDocuments.length > 0 && <p>Документы: {match.missingDocuments.join('; ')}.</p>}
+      <ul>{match.nextActions.map((action) => <li key={action}>{action}</li>)}</ul>
+      <p>Подготовка: {o.preparationDays === null ? 'не указана' : `${o.preparationDays} дн.`}.
+        {' '}Сложность: {{ low: 'низкая', medium: 'средняя', high: 'высокая' }[o.difficulty]}.</p>
+    </details>
+    <p className="widget-footnote">{fundingSourceLabel(o)} · версия {o.version} · {o.source.verifiedAt ?? o.source.updatedAt}.
+      {' '}Срок приёма: {o.deadline ?? 'не указан'}.</p>
+    {o.source.url && /^https:\/\//.test(o.source.url) &&
+      <a href={o.source.url} target="_blank" rel="noreferrer">Источник условий</a>}
+    {onOpen && <ActionButton className="primary" onClick={() => onOpen(o.id)}>Подробнее</ActionButton>}
+  </article>;
+}
+
+export function FundingResults({ result, onOpen, onSave, saved = [] }: { result: FundingResponse; onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: string[] }) {
+  const groups: { title: string; matches: FundingMatch[] }[] = [
+    { title: 'Подходит сейчас', matches: result.matches.filter((m) => m.status === 'eligible').slice(0, 3) },
+    { title: 'Почти подходит', matches: result.matches.filter((m) => m.status === 'almost_eligible') },
+    { title: 'Нужно уточнить', matches: result.matches.filter((m) => m.status === 'need_more_data') },
+    { title: 'Следить за открытием', matches: result.matches.filter((m) => ['expired', 'upcoming'].includes(m.status)) },
+  ];
+  return <div className="funding-results" aria-live="polite">
+    <section className="widget funding-strategy"><span className="tag">{result.mode === 'demo' ? 'Учебные данные' : 'Официальные источники'} · подбор по правилам</span>
+      <h2>Стратегия финансирования</h2><p>{result.strategy.summary}</p>
+      <ol>{result.strategy.options.map((option) => <li key={option.opportunityId}>{option.role === 'support' ? 'Сопутствующая поддержка: ' : 'Вариант финансирования: '}{onOpen ? <button className="text-button" onClick={() => onOpen(option.opportunityId)}>{option.text}</button> : option.text}</li>)}</ol>
+      {result.strategy.notices.map((notice) => <p className="widget-footnote" key={notice}>{notice}</p>)}
+    </section>
+    {groups.map((group) => <section key={group.title}><h2>{group.title}</h2>
+      {!group.matches.length && <p className="muted">Нет вариантов с этим статусом. Уточните профиль или посмотрите другие группы.</p>}
+      <div className="funding-grid">{group.matches.map((match) => <FundingOpportunityCard key={match.opportunity.id} match={match} onOpen={onOpen} onSave={onSave} saved={saved.includes(match.opportunity.id)} />)}</div>
+    </section>)}
+    <details className="widget"><summary>Есть несоответствия</summary><div className="funding-grid">{result.matches.filter((m) => m.status === 'not_eligible').map((match) => <FundingOpportunityCard key={match.opportunity.id} match={match} onOpen={onOpen} />)}</div></details>
+  </div>;
+}
+
+// key по ИНН задаётся в родителе только для локального хранения; matching ИНН не получает.
+export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onSave, saved, storageId = '' }: {
+  profile: FundingProfile; initialNeed?: FundingNeed; onNeed?: (need: FundingNeed) => void;
+  onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: string[]; storageId?: string;
+}) {
+  const storageKey = `opora.funding-need.v1.${storageId}`;
+  const [need, setNeed] = useState<FundingNeed>(() => {
+    if (initialNeed) return initialNeed;
+    try { return restoreFundingNeed(localStorage.getItem(storageKey)); }
+    catch { return { ...emptyFundingNeed }; }
+  });
+  const [result, setResult] = useState<{ fingerprint: string; data: FundingResponse } | null>(null);
+  const [error, setError] = useState('');
+  const [storageNotice, setStorageNotice] = useState('');
+  const [loading, setLoading] = useState(false);
+  const pending = React.useRef<AbortController | null>(null);
+  const fingerprint = fundingFingerprint(profile, need);
+  useEffect(() => {
+    pending.current?.abort();
+    pending.current = null;
+    setLoading(false);
+    setError('');
+    return () => { pending.current?.abort(); pending.current = null; };
+  }, [fingerprint]);
+  useEffect(() => {
+    onNeed?.(need);
+    try { if (!onNeed) localStorage.setItem(storageKey, JSON.stringify(need)); setStorageNotice(''); }
+    catch { setStorageNotice('Не удалось сохранить потребность в браузере.'); }
+  }, [need, storageKey]);
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    pending.current?.abort();
+    const controller = new AbortController();
+    pending.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    setLoading(true);
+    setResult(null);
+    setError('');
+    try {
+      const data = await requestFunding(profile, need, controller.signal);
+      if (!controller.signal.aborted && pending.current === controller) setResult({ fingerprint, data });
+    } catch (err) {
+      if (pending.current === controller) setError(controller.signal.aborted
+        ? 'Время ожидания истекло. Повторите подбор.'
+        : err instanceof Error ? err.message : 'Не удалось выполнить подбор.');
+    } finally {
+      clearTimeout(timeout);
+      if (pending.current === controller) { pending.current = null; setLoading(false); }
+    }
+  }
+  return <section className="funding-experience">
+    <form className="widget" onSubmit={submit}>
+      <h2>Что нужно вашему бизнесу?</h2>
+      <p>Укажите цель — система сравнит разные способы финансирования. Остальные поля необязательны.</p>
+      <div className="form-grid">
+        <label className="field">Цель
+          <select required value={need.purpose} onChange={(e) => setNeed({ ...need, purpose: e.target.value })}>
+            <option value="">Выберите цель</option>
+            {fundingPurposes.map((purpose) => <option key={purpose} value={purpose}>{purpose}</option>)}
+          </select>
+        </label>
+        {(['amount', 'preferredTermMonths', 'ownFunds'] as const).map((field) => <label className="field" key={field}>
+          {{ amount: 'Требуемое финансирование, ₽', preferredTermMonths: 'Желаемый срок, месяцев', ownFunds: 'Собственные средства, ₽' }[field]}
+          <BusinessInput type="number" min={field === 'ownFunds' ? 0 : 1}
+            max={field === 'preferredTermMonths' ? 600 : 1e15} step="1" placeholder="Необязательно"
+            value={need[field] ?? ''} onChange={(e) => setNeed({ ...need, [field]: e.target.value === '' ? null : Number(e.target.value) })} />
+        </label>)}
+        <label className="field">Нужна помощь с обеспечением / залогом?
+          <select value={need.needsCollateralSupport === null ? '' : String(need.needsCollateralSupport)}
+            onChange={(e) => setNeed({ ...need, needsCollateralSupport: e.target.value === '' ? null : e.target.value === 'true' })}>
+            <option value="">Пока не знаю</option><option value="true">Да</option><option value="false">Нет</option>
+          </select>
+        </label>
+      </div>
+      <p className="widget-footnote">Требуемая сумма — запрос на внешнее финансирование. Собственные средства указываются отдельно.</p>
+      <ActionButton type="submit" className="primary" disabled={loading}>
+        {loading ? 'Подбираем варианты…' : 'Найти варианты'}
+      </ActionButton>
+      {error && <p className="error" role="alert">{error}</p>}
+      {storageNotice && <p role="status">{storageNotice}</p>}
+    </form>
+    {result && result.fingerprint === fingerprint && <FundingResults result={result.data} onOpen={onOpen} onSave={onSave} saved={saved} />}
+  </section>;
+}

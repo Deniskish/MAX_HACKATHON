@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyProfile } from './domain';
 import { editCompanyProfile, mergeCompanyProfile, requestCompanyData } from './company-data';
-import { DemoCompanyDataProvider } from '../../api-server/company-data/demo-provider';
+import { DemoCompanyDataProvider } from '../../api-server/tests/fixtures/demo-provider';
 import { CompanyDataService } from '../../api-server/company-data/service';
 
 const service = new CompanyDataService(new DemoCompanyDataProvider());

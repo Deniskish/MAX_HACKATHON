@@ -19,7 +19,11 @@ export function editCompanyProfile(previous: Profile, next: Profile): Profile {
 
 export function mergeCompanyProfile(current: Profile, response: CompanyResponse): Profile {
   if (current.inn !== response.company.inn) return current;
-  const next = { ...current, provenance: { ...current.provenance } };
+  const next = { ...current, companyStatus: response.profile.companyStatus, applicantType: response.profile.applicantType, provenance: { ...current.provenance } };
+  for (const field of ['companyStatus', 'applicantType'] as const) {
+    if (response.profile.provenance?.[field]) next.provenance[field] = response.profile.provenance[field];
+    else delete next.provenance[field];
+  }
   for (const field of Object.keys(emptyProfile) as (keyof ProfileValues)[]) {
     if (field === 'goals') continue;
     const origin = response.profile.provenance?.[field];

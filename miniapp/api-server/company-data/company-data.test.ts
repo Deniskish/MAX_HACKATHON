@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { validInn, innEntityType } from './inn';
-import { DemoCompanyDataProvider } from './demo-provider';
+import { DemoCompanyDataProvider } from '../tests/fixtures/demo-provider';
 import { CompanyDataService, ageInMonths, companyDataToProfile } from './service';
 import { companyDataRouter } from './router';
 import { FNSOpenDataProvider, SMERegistryProvider } from './official-providers';
@@ -125,7 +125,7 @@ async function listen(p?: CompanyDataProvider) {
 }
 
 test('GET /api/company/:inn returns 200, 400, 404 and disables caching', async () => {
-  const app = await listen();
+  const app = await listen(provider);
   try {
     for (const inn of ['9900000017', '990000000041']) {
       const response = await fetch(app.url + inn);

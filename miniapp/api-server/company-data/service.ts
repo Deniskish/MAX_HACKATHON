@@ -28,16 +28,19 @@ export function companyDataToProfile({ company, provenance }: CompanyRecord): Pr
     tax: company.taxRegime ?? '',
     isSme: company.isSme === null ? 'unknown' : company.isSme ? 'yes' : 'no',
     provenance: {},
+    companyStatus: company.status ?? null,
+    applicantType: innEntityType(company.inn) === 'ИП' ? 'individual_entrepreneur' : 'legal_entity',
   };
-  const fields: Partial<Record<keyof ProfileValues, CompanyField>> = {
+  const fields: Partial<Record<keyof ProfileValues | 'companyStatus', CompanyField>> = {
     inn: 'inn', name: 'name', companyType: 'companyType', region: 'region',
     okved: 'okvedMain', ageMonths: 'ageMonths', employees: 'employees',
-    revenue: 'revenue', tax: 'taxRegime', isSme: 'isSme',
+    revenue: 'revenue', tax: 'taxRegime', isSme: 'isSme', companyStatus: 'status',
   };
   for (const [target, field] of Object.entries(fields)) {
     if (company[field] !== null && provenance[field])
       profile.provenance![target as keyof ProfileValues] = { ...provenance[field]!, derivedFrom: provenance[field]!.derivedFrom ?? [field] };
   }
+  if (provenance.inn) profile.provenance!.applicantType = { ...provenance.inn, kind: 'derived', derivedFrom: ['inn'] };
   return profile;
 }
 

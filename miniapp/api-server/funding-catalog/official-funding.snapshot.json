@@ -1,0 +1,321 @@
+[
+  {
+    "providerType": "development_institution",
+    "amountMin": 100000000,
+    "amountMax": 1000000000,
+    "rateMin": 3,
+    "rateMax": 5,
+    "termMonthsMin": null,
+    "termMonthsMax": 60,
+    "regions": "all",
+    "purposes": [
+      "покупка оборудования",
+      "запуск производства",
+      "масштабирование"
+    ],
+    "sectors": [
+      "Промышленность"
+    ],
+    "okvedPrefixes": [],
+    "companyTypes": [],
+    "applicantTypes": [
+      "legal_entity"
+    ],
+    "requirements": [],
+    "requiredDocuments": [
+      "Бизнес-план",
+      "Смета проекта",
+      "Финансовая модель"
+    ],
+    "deadline": null,
+    "status": "active",
+    "difficulty": "high",
+    "preparationDays": null,
+    "version": "2026-09-22.1",
+    "manualConditions": [
+      "Промышленная продукция и направление проекта входят в перечни ФРП; основной ОКВЭД сам по себе не подтверждает это",
+      "Проверить обеспечение, финансовые ограничения, права на результаты интеллектуальной деятельности и критерии отбора",
+      "Базовая ставка 5%; 3% при предусмотренной гарантии. Условия дополнительных снижений проверяются отдельно"
+    ],
+    "projectBudgetMin": 125000000,
+    "cofinancingPercent": 20,
+    "id": "frp-development",
+    "title": "ФРП — Проекты развития",
+    "kind": "preferential_loan",
+    "providerName": "Фонд развития промышленности",
+    "description": "Заемное софинансирование промышленного проекта. Доля от 20% может поступать от заявителя, частных инвесторов или банков.",
+    "source": {
+      "name": "Фонд развития промышленности",
+      "url": "https://www.frprf.ru/zaymy/proekty-razvitiya/",
+      "type": "official",
+      "updatedAt": "2026-09-22",
+      "verifiedAt": "2026-09-22"
+    }
+  },
+  {
+    "providerType": "development_institution",
+    "amountMin": 100000000,
+    "amountMax": 1000000000,
+    "rateMin": 3,
+    "rateMax": 5,
+    "termMonthsMin": null,
+    "termMonthsMax": 60,
+    "regions": "all",
+    "purposes": [
+      "покупка оборудования",
+      "запуск производства",
+      "масштабирование"
+    ],
+    "sectors": [
+      "Промышленность"
+    ],
+    "okvedPrefixes": [],
+    "companyTypes": [],
+    "applicantTypes": [
+      "legal_entity"
+    ],
+    "requirements": [],
+    "requiredDocuments": [
+      "Бизнес-план",
+      "Смета проекта",
+      "Финансовая модель"
+    ],
+    "deadline": null,
+    "status": "active",
+    "difficulty": "high",
+    "preparationDays": null,
+    "version": "2026-09-22.1",
+    "manualConditions": [
+      "Комплектующие входят в приложение к ПП РФ №719 либо перечень Межведомственной комиссии; проверить импортозамещающий потенциал",
+      "Проверить обеспечение, финансовые ограничения и требования к регистрации РИД",
+      "Базовая ставка 5%; 3% при предусмотренной гарантии. Дополнительные снижения требуют отдельной проверки"
+    ],
+    "projectBudgetMin": 125000000,
+    "cofinancingPercent": 20,
+    "id": "frp-components",
+    "title": "ФРП — Комплектующие изделия",
+    "kind": "preferential_loan",
+    "providerName": "Фонд развития промышленности",
+    "description": "Финансирование организации или модернизации производства комплектующих. Софинансирование от заявителя, частных инвесторов или банков — не менее 20%.",
+    "source": {
+      "name": "Фонд развития промышленности",
+      "url": "https://frprf.ru/zaymy/komplektuyushchie/",
+      "type": "official",
+      "updatedAt": "2026-09-22",
+      "verifiedAt": "2026-09-22"
+    }
+  },
+  {
+    "providerType": "development_institution",
+    "amountMin": null,
+    "amountMax": 1000000000,
+    "rateMin": null,
+    "rateMax": null,
+    "termMonthsMin": null,
+    "termMonthsMax": 120,
+    "regions": "all",
+    "purposes": [
+      "покупка оборудования",
+      "оборотные средства",
+      "разработка продукта",
+      "найм сотрудников",
+      "экспорт",
+      "аренда / недвижимость",
+      "сельхозтехника",
+      "запуск производства",
+      "масштабирование"
+    ],
+    "sectors": [],
+    "okvedPrefixes": [],
+    "companyTypes": [],
+    "applicantTypes": [
+      "legal_entity",
+      "individual_entrepreneur"
+    ],
+    "requirements": [
+      {
+        "field": "isSme",
+        "operator": "eq",
+        "value": "yes",
+        "required": true,
+        "label": "Заявитель соответствует статусу МСП"
+      }
+    ],
+    "requiredDocuments": [],
+    "deadline": null,
+    "status": "active",
+    "difficulty": "medium",
+    "preparationDays": null,
+    "version": "2026-09-22.1",
+    "manualConditions": [
+      "Банк участвует в механизме и проверяет кредитоспособность, отсутствие просрочки и банкротства",
+      "Проверить исключения для основной деятельности, включая ОКВЭД 47, добычу/реализацию ископаемых и нарушения условий поддержки",
+      "Проверить ограничение по группе компаний с выручкой свыше 2 млрд ₽"
+    ],
+    "projectBudgetMin": null,
+    "cofinancingPercent": null,
+    "id": "msp-umbrella",
+    "title": "Зонтичное поручительство",
+    "kind": "guarantee",
+    "providerName": "Корпорация МСП",
+    "description": "Обеспечение до 50% кредита, в пределах 1 млрд ₽; может использоваться при недостаточном залоговом обеспечении. Обращение через банк-партнер; не самостоятельная выдача денег.",
+    "source": {
+      "name": "Корпорация МСП",
+      "url": "https://www.corpmsp.ru/to-business/obespechenie-kreditov-zaymov/zontichnye-poruchitelstva/",
+      "type": "official",
+      "updatedAt": "2026-09-22",
+      "verifiedAt": "2026-09-22"
+    }
+  },
+  {
+    "providerType": "development_institution",
+    "amountMin": null,
+    "amountMax": 5000000,
+    "rateMin": null,
+    "rateMax": null,
+    "termMonthsMin": null,
+    "termMonthsMax": 12,
+    "regions": "all",
+    "purposes": [
+      "разработка продукта"
+    ],
+    "sectors": [
+      "Технологии"
+    ],
+    "okvedPrefixes": [],
+    "companyTypes": [],
+    "applicantTypes": [
+      "individual",
+      "project",
+      "legal_entity"
+    ],
+    "requirements": [],
+    "requiredDocuments": [],
+    "deadline": null,
+    "status": "closed",
+    "difficulty": "high",
+    "preparationDays": null,
+    "version": "2026-09-22.1",
+    "manualConditions": [
+      "Научно-техническая новизна и коммерческая перспектива проекта",
+      "Для компании — соответствие условиям малого инновационного предприятия; для физлица — условия создания предприятия при победе",
+      "Документы и ограничения конкретной очереди конкурса требуют проверки"
+    ],
+    "projectBudgetMin": null,
+    "cofinancingPercent": null,
+    "id": "fasie-start-1",
+    "title": "ФСИ — Старт-1",
+    "kind": "grant",
+    "providerName": "Фонд содействия инновациям",
+    "description": "Грант на НИОКР. На проверенной странице прием завершен. Новый отбор и его условия необходимо проверить у Фонда.",
+    "source": {
+      "name": "Фонд содействия инновациям",
+      "url": "https://fasie.ru/programs/programma-start/",
+      "type": "official",
+      "updatedAt": "2026-09-22",
+      "verifiedAt": "2026-09-22"
+    }
+  },
+  {
+    "providerType": "development_institution",
+    "amountMin": null,
+    "amountMax": 5000000,
+    "rateMin": null,
+    "rateMax": null,
+    "termMonthsMin": null,
+    "termMonthsMax": null,
+    "regions": [
+      "Республика Татарстан"
+    ],
+    "purposes": [
+      "сельхозтехника",
+      "покупка оборудования",
+      "запуск производства"
+    ],
+    "sectors": [
+      "Сельское хозяйство"
+    ],
+    "okvedPrefixes": [
+      "01"
+    ],
+    "companyTypes": [],
+    "applicantTypes": [
+      "legal_entity",
+      "individual_entrepreneur"
+    ],
+    "requirements": [],
+    "requiredDocuments": [
+      "Бизнес-план"
+    ],
+    "deadline": "2024-08-28",
+    "status": "closed",
+    "difficulty": "high",
+    "preparationDays": null,
+    "version": "2026-09-22.1",
+    "manualConditions": [
+      "Проверить статус начинающего фермера, допустимые расходы, собственное участие и категорию заявителя по документам отбора",
+      "Лимит 5 млн ₽ относится только к КРС; для других направлений — 3 млн ₽"
+    ],
+    "projectBudgetMin": null,
+    "cofinancingPercent": null,
+    "id": "agrostart-tatarstan-2024",
+    "title": "Агростартап — Татарстан, отбор 2024",
+    "kind": "grant",
+    "providerName": "Минсельхозпрод Республики Татарстан",
+    "description": "Архивный отбор для начинающих фермеров. Лимит до 5 млн ₽ для КРС и до 3 млн ₽ для остальных направлений. Условия следующего отбора не подтверждены.",
+    "source": {
+      "name": "Минсельхозпрод Республики Татарстан",
+      "url": "https://agro.tatarstan.ru/index.htm/news/2337342.htm",
+      "type": "official",
+      "updatedAt": "2026-09-22",
+      "verifiedAt": "2026-09-22"
+    }
+  },
+  {
+    "providerType": "development_institution",
+    "amountMin": null,
+    "amountMax": null,
+    "rateMin": null,
+    "rateMax": null,
+    "termMonthsMin": null,
+    "termMonthsMax": null,
+    "regions": "all",
+    "purposes": [
+      "экспорт"
+    ],
+    "sectors": [
+      "Экспорт"
+    ],
+    "okvedPrefixes": [],
+    "companyTypes": [],
+    "applicantTypes": [
+      "legal_entity",
+      "individual_entrepreneur"
+    ],
+    "requirements": [],
+    "requiredDocuments": [],
+    "deadline": null,
+    "status": "unknown",
+    "difficulty": "medium",
+    "preparationDays": null,
+    "version": "2026-09-22.1",
+    "manualConditions": [
+      "Уточнить доступность услуги, стоимость и порядок заказа на платформе Мой экспорт",
+      "Определить товарную категорию и целевой рынок; условия исполнителя проверяются до заказа"
+    ],
+    "projectBudgetMin": null,
+    "cofinancingPercent": null,
+    "id": "rec-market-access",
+    "title": "РЭЦ — Справка по условиям доступа на внешние рынки",
+    "kind": "service",
+    "providerName": "Российский экспортный центр / Мой экспорт",
+    "description": "Аналитическая услуга: барьеры, тарифы и условия доступа продукции на выбранный рынок. Существование и состав услуги подтверждены официальным типовым договором; доступность заказа и стоимость требуют уточнения.",
+    "source": {
+      "name": "Российский экспортный центр / Мой экспорт",
+      "url": "https://myexport.exportcenter.ru/upload/documents/expert-platform/Типовой_договор_Аналитика_Справка_по_условиям_доступа_на_внешние_рынки.pdf",
+      "type": "official",
+      "updatedAt": "2026-09-22",
+      "verifiedAt": "2026-09-22"
+    }
+  }
+]
