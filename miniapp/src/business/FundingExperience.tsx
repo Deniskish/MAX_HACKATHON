@@ -1,5 +1,6 @@
 import React, { useEffect, useState, type FormEvent } from 'react';
 import { ActionButton, BusinessInput } from './MaxControls';
+import { Icon } from './Icon';
 import type { FundingProfile } from '../../api-server/funding-catalog/types';
 import { emptyFundingNeed, fundingPurposes, type FundingMatch, type FundingNeed,
   type FundingResponse } from '../../api-server/funding-catalog/types';
@@ -16,7 +17,7 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved }: { match
       <span className="tag">{o.source.type === 'demo' ? 'Учебные данные' : 'Официальный источник'}</span>
     </div>
     <h3>{o.title}</h3>
-    {onSave && <button className="secondary" aria-pressed={saved} onClick={() => onSave(o.id)}>{saved ? "В сохранённых" : "Сохранить"}</button>}
+    {onSave && <button className={`save-program${saved ? ' is-saved' : ''}`} aria-label={`${saved ? 'Убрать из сохранённых' : 'Сохранить'}: ${o.title}`} aria-pressed={Boolean(saved)} onClick={() => onSave(o.id)}><Icon name="bookmark" size={19} /></button>}
     <p className="muted">{o.providerName}</p>
     <strong>{amountLabel(o)}</strong>
     {rate && <p>{rate}</p>}

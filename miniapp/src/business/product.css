@@ -1,86 +1,83 @@
-:root {
-  --brand: #f36b32; --ai: #7452d6; --text-primary: #202024; --text-secondary: #67676f;
-  --background: #f5f5f7; --surface: #fff; --border: #e5e5e9;
-  --success: #267648; --warning: #98631b; --danger: #bc3540;
-  --radius-sm: 10px; --radius-md: 18px; --radius-lg: 26px;
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px;
-}
-body { background: var(--background); color: var(--text-primary); }
-* { box-sizing: border-box; }
-.app-shell { min-width: 0; }
-.main-wrap, main, .widget, .funding-card, .chat-panel, .application-info { min-width: 0; }
+/* Дополнительные сценарии MAX_HACKATHON в исходной теме vkhackathon-main.
+   Общие цвета, кнопки, карточки и навигация — в plata-layout / max-theme / widgets. */
+.app-shell, .main-wrap, main, .funding-card, .chat-panel, .application-info { min-width: 0; }
 main { max-width: 1500px; margin: auto; }
-.primary { background-color: var(--brand); }
-.widget, .program-card, .profile-panel { border: 1px solid var(--border); border-radius: var(--radius-md); }
-.business-summary { margin-bottom: var(--space-6); }
-.business-summary h1, .agent-welcome h1 { font-size: clamp(24px, 3vw, 38px); line-height: 1.2; margin: 12px 0; }
-.agent-welcome { max-width: 780px; margin: 24px auto; padding: 32px; min-height: 0; }
-.agent-welcome p { font-size: 16px; line-height: 1.7; color: var(--text-secondary); }
-.funding-card { display: flex; flex-direction: column; gap: 8px; overflow-wrap: anywhere; }
-.funding-card p { margin: 0; line-height: 1.6; }
+.business-summary { margin-bottom: 24px; }
+.business-summary h1 { margin: 16px 0 12px; overflow-wrap: anywhere; }
+.agent-welcome { max-width: 780px; margin: 24px auto; padding: 36px; min-height: 0; }
+.agent-welcome h1 { font-size: 36px; line-height: 1.2; margin: 20px 0 16px; }
+.agent-welcome .modal-actions { justify-content: center; }
+.funding-card { position: relative; display: flex; flex-direction: column; gap: 12px; overflow-wrap: anywhere; }
+.funding-card h3 { margin: 0; font-size: 22px; }
+.funding-card p { margin: 0; line-height: 1.65; }
+.funding-card > strong { font-size: 28px; line-height: 1.2; letter-spacing: -1px; }
 .funding-card > .primary { margin-top: auto; }
+.funding-card > a, .official-link { color: #2401fe; font-size: 12px; }
+.funding-card-heading { padding-right: 34px; min-height: 38px; align-items: flex-start; }
+.funding-card > .save-program { position: absolute; top: 22px; right: 20px; }
+.funding-card .funding-status { align-self: flex-start; border-radius: 12px; font-size: 12px; }
+.funding-card > details { padding: 14px; background: #f7f8fb; border-radius: 18px; font-size: 12px; }
+.funding-card summary { font-weight: 650; }
+.funding-card details p { margin-top: 12px; }
 .funding-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
-.funding-results > section { margin-top: 28px; }
+.funding-results > section { margin-top: 24px; }
+.funding-experience > form > .primary { margin-top: 20px; }
+.funding-experience .field .opora-input-body, .project-dialog .field .opora-input-body { background: #f2f4f8; }
 .funding-strategy ol { padding-left: 22px; }
 .funding-strategy .text-button { text-align: left; line-height: 1.6; }
-.detail-facts { display: flex; flex-wrap: wrap; gap: 12px; }
+.detail-facts { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0; }
+.detail-facts strong { font-size: 28px; letter-spacing: -1px; }
 .official-details ul { padding-left: 22px; line-height: 1.7; }
-.official-link { display: inline-block; color: var(--brand); margin: 12px 0; overflow-wrap: anywhere; }
+.official-link { display: inline-block; margin: 12px 0; overflow-wrap: anywhere; }
+.detail-checks > section { padding: 4px 22px 12px; background: #fff; border-radius: 24px; margin: 12px 0; }
 .catalog-state { max-width: 320px; margin: 16px 0; }
 .events-panel { margin-bottom: 24px; }
-.project-overlay { position: fixed; z-index: 110; inset: 0; background: #20202466; display: grid; place-items: center; padding: 16px; overflow-y: auto; }
-.project-dialog { width: min(100%, 760px); max-height: 90dvh; overflow-y: auto; padding: 24px; }
-.bottom-nav { display: none; }
+.events-panel .widget-link-row { text-align: left; line-height: 1.6; }
+.project-overlay { position: fixed; z-index: 110; inset: 0; background: #12141666; backdrop-filter: blur(8px); display: grid; place-items: center; padding: 16px; overflow-y: auto; }
+.project-dialog { width: min(100%, 760px); max-height: 90dvh; overflow-y: auto; padding: 32px; }
 .application-row { flex-wrap: wrap; }
 .messages { overflow-wrap: anywhere; }
 .message-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; white-space: normal; }
-@media (max-width: 767px) {
-  .sidebar { display: none !important; }
-  .app-shell { display: block; }
-  .main-wrap { margin-left: 0 !important; width: 100%; }
-  .topbar { height: 66px; padding: 10px 16px; position: sticky; top: 0; z-index: 20; background: var(--surface); }
-  main { padding: 18px 16px calc(92px + env(safe-area-inset-bottom)) !important; width: 100%; }
-  .breadcrumb { display: none; }
-  .mobile-identity { display: flex; min-width: 0; max-width: calc(100% - 100px); }
-  .mobile-identity b { display: block; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bottom-nav { display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border); }
-  .bottom-nav button { border: 0; background: transparent; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; min-height: 48px; font: inherit; font-size: 12px; }
-  .bottom-nav [aria-current="page"] { color: var(--brand); }
-  .bottom-nav button:last-child[aria-current="page"] { color: var(--ai); }
-  .widget, .profile-panel, .funding-card, .agent-welcome { padding: 18px; }
-  .agent-welcome { margin: 0; text-align: left; }
-  .form-grid, .profile-grid, .program-grid, .catalog, .funding-grid, .profile-wallet-layout { grid-template-columns: minmax(0, 1fr) !important; }
+.chat-program-context > .text-button { min-width: 0; text-align: left; }
+.personal-checklist summary { color: #69707b; }
+.opora-theme .opora-action-content { white-space: normal; text-align: center; }
+
+/* Пароль появляется до монтирования рабочего пространства и его запросов. */
+.access-screen { min-height: 100dvh; max-width: none; padding: 40px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; background: radial-gradient(ellipse at 90% 0, #d5d9e2, transparent 60%), #f7f8fb; }
+.access-brand { display: flex; align-items: center; gap: 10px; font-size: 34px; font-weight: 800; letter-spacing: -2px; }
+.access-card { width: 100%; max-width: 440px; padding: 36px; box-shadow: 0 20px 70px #12141608; }
+.access-card > .color-orb { margin-bottom: 28px; }
+.access-card .eyebrow { font-size: 10px; letter-spacing: 1.2px; }
+.access-card h1 { font-size: 32px; margin: 14px 0; }
+.access-card p { font-size: 14px; }
+.access-card .opora-input-body { background: #f2f4f8; }
+.access-card .opora-action { width: 100%; }
+.access-card .error { color: #ba303f; }
+
+@media (max-width: 600px) {
+  .agent-welcome { margin: 0; padding: 26px 22px; }
+  .agent-welcome h1 { font-size: 30px; letter-spacing: -1.2px; }
+  .agent-welcome .modal-actions { flex-direction: column; align-items: stretch; }
+  .agent-welcome .modal-actions > .opora-action { flex: none; width: 100%; min-width: 0; }
+  .business-summary h1 { font-size: 28px; }
+  .business-summary p { font-size: 12px; }
+  .funding-card h3 { font-size: 20px; }
+  .funding-card p, .funding-experience > form > p { font-size: 12px; }
+  .funding-card .widget-footnote { font-size: 10px; }
+  .funding-grid { grid-template-columns: minmax(0, 1fr); }
+  .funding-experience > form > .primary { width: 100%; }
+  .funding-experience h2 { font-size: 24px; }
   .catalog-toolbar { flex-wrap: wrap; gap: 12px; }
   .search-box { width: 100%; }
-  .filter-chips { flex-wrap: wrap; margin: 0; padding: 0 0 6px; }
-  dialog { width: calc(100% - 16px); max-width: calc(100% - 16px); max-height: 92dvh; padding: 0; }
-  .modal { padding: 24px 18px; }
-  .modal-actions { flex-wrap: wrap; gap: 10px; }
-  .modal-actions > * { flex: 1 1 160px; }
   .detail-facts { flex-direction: column; }
-  .chat-panel { min-height: 55dvh; padding: 12px; }
+  .official-details { font-size: 12px; }
   .suggestions { flex-wrap: wrap; }
   .suggestions button { white-space: normal; text-align: left; }
-  .toast { bottom: 90px; max-width: calc(100% - 24px); }
-  .project-dialog { padding: 20px; }
-  footer { margin-top: 24px; }
-}
-/* Override the legacy MAX theme with the shared Opora tokens. */
-.opora-theme.opora-theme {
-  --background-accent-themed: var(--brand); --text-themed: var(--brand); --icon-themed: var(--brand); --stroke-themed: var(--brand);
-  --text-primary: #202024; --text-secondary: #67676f;
-  background: var(--background); color: var(--text-primary);
-}
-.opora-theme .opora-action.primary, .opora-theme .opora-action.primary:hover { background: var(--brand); color: white; }
-.opora-theme .chat-input .opora-action.primary { background: var(--ai); }
-.opora-theme .opora-action.text-button { color: var(--brand); }
-.opora-theme .opora-action { font-size: 14px; line-height: 1.5; }
-.opora-theme .opora-action-content { white-space: normal; text-align: center; }
-.chat-program-context > .text-button { min-width: 0; text-align: left; color: var(--ai); }
-.personal-checklist summary { color: var(--text-secondary); }
-@media (max-width: 767px) {
-  .agent-welcome .modal-actions { display: flex; flex-direction: column; align-items: stretch; }
-  .agent-welcome .modal-actions > .opora-action { flex: none; width: 100%; min-width: 0; }
-  .opora-theme .modal-actions .opora-action.primary { width: auto; }
-  .opora-theme .agent-welcome .modal-actions .opora-action.primary { width: 100%; }
+  .project-overlay { padding: 0; }
+  .project-dialog { max-height: 100dvh; min-height: 100dvh; border-radius: 0; padding: max(28px, env(safe-area-inset-top)) 20px calc(30px + env(safe-area-inset-bottom)); background: #f7f8fb; }
+  .project-dialog h2 { font-size: 28px; }
+  .project-dialog .field .opora-input-body { background: #fff; }
+  .access-screen { padding: max(28px, env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom)); gap: 28px; }
+  .access-card { padding: 28px 22px; }
+  .access-card h1 { font-size: 30px; }
 }
