@@ -1,26 +1,47 @@
 import { useState, type FormEvent } from 'react';
-import BusinessApp from './business/BusinessApp';
 import { ActionButton, BusinessInput } from './business/MaxControls';
 import { BrandWordmark } from './business/AppChrome';
+
+type Workspace = typeof import('./business/BusinessApp')['default'];
+let workspaceRequest: Promise<Workspace> | undefined;
+function loadWorkspace() {
+  return workspaceRequest ??= import('./business/BusinessApp')
+    .then((module) => module.default)
+    .catch((error: unknown) => { workspaceRequest = undefined; throw error; });
+}
 
 // Демонстрационный экран доступа, не серверная авторизация API.
 // Доступ хранится только в памяти: при новом открытии нужен пароль.
 export default function App() {
-  const [unlocked, setUnlocked] = useState(false);
+  const [WorkspaceApp, setWorkspaceApp] = useState<Workspace | null>(null);
+  const [opening, setOpening] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  function unlock(event: FormEvent<HTMLFormElement>) {
+  async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (opening) return;
     if (password !== '20042004') {
       setError('Неверный пароль. Попробуйте ещё раз.');
       return;
     }
-    setPassword('');
-    setUnlocked(true);
+    setOpening(true);
+    setLoadFailed(false);
+    setError('');
+    try {
+      const component = await loadWorkspace();
+      setPassword('');
+      setWorkspaceApp(() => component);
+    } catch {
+      setLoadFailed(true);
+      setError('Не удалось загрузить приложение. Проверьте интернет и обновите страницу.');
+    } finally {
+      setOpening(false);
+    }
   }
 
-  if (unlocked) return <BusinessApp />;
+  if (WorkspaceApp) return <WorkspaceApp />;
 
   return (
     <main className="access-screen">
@@ -40,13 +61,19 @@ export default function App() {
               placeholder="Введите пароль"
               required
               value={password}
+              onFocus={() => { void loadWorkspace().catch(() => {}); }}
               aria-invalid={Boolean(error)}
               aria-describedby={error ? 'access-error' : undefined}
               onChange={(event) => { setPassword(event.target.value); setError(''); }}
             />
           </label>
           {error && <p className="error" id="access-error" role="alert">{error}</p>}
-          <ActionButton className="primary" type="submit">Войти</ActionButton>
+          <ActionButton className="primary" type="submit" disabled={opening} aria-busy={opening}>
+            {opening ? 'Открываем…' : 'Войти'}
+          </ActionButton>
+          {loadFailed && <ActionButton className="secondary" onClick={() => window.location.reload()}>
+            Обновить страницу
+          </ActionButton>}
         </form>
       </section>
     </main>

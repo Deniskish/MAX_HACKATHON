@@ -39,7 +39,15 @@ jobs:
             npm ci --prefix miniapp/api-server
             npm ci --prefix chatbot
 
-            pm2 restart opora-frontend
+            npm run test:production --prefix miniapp
+            # Keep old hashed chunks available for already opened app sessions.
+            npm run build --prefix miniapp -- --emptyOutDir false
+
+            # Replace the old Vite command, not just restart its saved PM2 config.
+            if pm2 describe opora-frontend >/dev/null 2>&1; then
+              pm2 delete opora-frontend
+            fi
+            pm2 start ecosystem.config.cjs --only opora-frontend
             pm2 restart opora-api
             if pm2 describe opora-bot >/dev/null 2>&1; then
               pm2 restart opora-bot
@@ -48,6 +56,7 @@ jobs:
 
             for i in {1..15}; do
               if curl -fsS http://localhost:3000/ >/dev/null && curl -fsS http://localhost:3000/api/health && curl -fsS http://localhost:3002/api/health; then
+                npm run check:production --prefix miniapp
                 node miniapp/api-server/company-data/smoke-check.cjs
                 node miniapp/api-server/ai/smoke-check.cjs
                 exit 0
