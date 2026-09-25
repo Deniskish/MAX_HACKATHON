@@ -51,15 +51,24 @@ export const answerFunction = {
     followups: { type: 'array', items: { type: 'string' } }, draft: { type: 'string' },
     findings: { type: 'array', items: { type: 'object', properties: { title: { type: 'string' }, detail: { type: 'string' },
       severity: { type: 'string', enum: ['check', 'warning'] }, evidenceId: { type: 'string' }, quote: { type: 'string' } }, required: ['title', 'detail', 'severity'] } },
-    personalization: { type: 'object', description: 'Обязательно для task=workspace. Адаптация всех разделов по анализу бизнеса.', properties: {
-      summary: { type: 'string' },
-      sections: { type: 'object', properties: Object.fromEntries(workspacePages.map((page) => [page, { type: 'object', properties: {
-        title: { type: 'string' }, text: { type: 'string' }, action: { type: 'string', enum: [...workspaceActions] },
-      }, required: ['title', 'text', 'action'] }])), required: [...workspacePages] },
-      priorities: { type: 'array', items: { type: 'object', properties: { programId: { type: 'string' }, reason: { type: 'string' } }, required: ['programId', 'reason'] } },
-    }, required: ['summary', 'sections', 'priorities'] },
   }, required: ['answer', 'evidenceIds', 'followups', 'findings'] },
 };
+export const workspaceFunction = {
+  name: 'adapt_workspace', description: 'Адаптировать все пять экранов приложения по анализу бизнеса. Заполни sections: home, programs, applications, calendar, assistant. Для каждого экрана одна запись. Не меняй профиль и расчёты.',
+  parameters: { type: 'object', properties: {
+    summary: { type: 'string', description: 'Вывод о бизнесе и его ближайших задачах, до 700 символов.' },
+    evidenceIds: { type: 'array', items: { type: 'string' } },
+    sections: { type: 'array', items: { type: 'object', properties: {
+      page: { type: 'string', enum: [...workspacePages] }, title: { type: 'string', description: 'До 50 символов.' },
+      text: { type: 'string', description: 'Конкретный вывод для этого экрана, до 240 символов.' }, action: { type: 'string', enum: [...workspaceActions] },
+    }, required: ['page', 'title', 'text', 'action'] } },
+    priorities: { type: 'array', items: { type: 'object', properties: { programId: { type: 'string' }, reason: { type: 'string' } }, required: ['programId', 'reason'] } },
+  }, required: ['summary', 'evidenceIds', 'sections', 'priorities'] },
+};
+function failureCode(error: unknown) {
+  const code = error instanceof PrivacyError ? error.code : '';
+  return /^(PROVIDER_HTTP_\d{3}|PROVIDER_RATE_LIMITED|PROVIDER_UNAVAILABLE|TRUNCATED_RESPONSE|INVALID_RESPONSE|NO_FUNCTION_CALL|GIGACHAT_AUTH_FAILED)$/.test(code) ? code : 'PROVIDER_UNAVAILABLE';
+}
 function catalogEvidence(): AIEvidence[] {
   return officialFundingCatalog.map((o) => ({ id: `program:${o.id}`, title: o.title, opportunityId: o.id,
     url: o.source.url!, checkedAt: o.source.verifiedAt,
@@ -85,13 +94,13 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
   const { request, redact } = prepareAIContext(input);
   signal.throwIfAborted();
   const originalNeed = request.context.need ?? { ...emptyFundingNeed }, originalProfile = request.context.profile ?? {};
-  let plan: Record<string, any> = {}, calls = 0, tokens = 0, unavailable = !model;
+  let plan: Record<string, any> = {}, calls = 0, tokens = 0, unavailable = !model, providerFailure: string | undefined;
   if (model) {
     try {
       const result = await model('plan', { request, purposes: fundingPurposes,
         catalog: officialFundingCatalog.map((o) => ({ id: o.id, title: o.title, description: o.description, purposes: o.purposes })) }, signal);
       calls++; tokens += result.tokens ?? 0; plan = object(result.value);
-    } catch (error) { if (signal.aborted) throw error; unavailable = true; }
+    } catch (error) { if (signal.aborted) throw error; unavailable = true; providerFailure = failureCode(error); }
   }
   let proposedNeed: FundingNeed | undefined, proposedProfile: FundingProfile | undefined;
   // Предложения проходят те же валидаторы, что и ручная форма. Не применяем их автоматически.
@@ -187,7 +196,7 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
         if (source && !base.citations.some((e) => e.id === source.id)) base.citations.push({ ...source, text: source.text.slice(0, 1400) });
       }
       if (request.task === 'draft' && concise(answer.draft, 18000)) base.draft = redact(concise(answer.draft, 18000));
-    } catch (error) { if (signal.aborted) throw error; unavailable = true; }
+    } catch (error) { if (signal.aborted) throw error; unavailable = true; providerFailure = failureCode(error); }
   }
   if (unavailable) {
     base.notice = 'LLM временно недоступна. Показан результат проверки по правилам; повторите AI-запрос позже.';
@@ -195,5 +204,6 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
     if (request.task === 'draft') base.answer = 'AI-черновик сейчас недоступен. Можно создать локальный шаблон.';
   }
   base.usage = { calls, tokens, durationMs: Date.now() - started };
+  if (providerFailure) base.providerFailure = providerFailure;
   return base;
 }

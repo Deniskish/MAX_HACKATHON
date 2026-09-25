@@ -124,6 +124,16 @@ test('forced GigaChat functions are bounded, use abort signals and reject wrong/
   const model = createAIModel('https://api.giga.chat/v1/chat/completions', 'GigaChat-2-Pro', async () => 'test', transport);
   assert.equal((await model('plan', {}, AbortSignal.timeout(1000))).tokens, 32);
   assert.deepEqual(body.function_call, { name: 'plan_support' }); assert.equal(body.functions.length, 1);
+  const workspaceTransport = (async (_url: unknown, init: any) => {
+    const wire = JSON.parse(String(init.body)); assert.equal(wire.function_call.name, 'adapt_workspace');
+    assert.equal(wire.functions[0].parameters.properties.sections.type, 'array');
+    return new Response(JSON.stringify({ choices: [{ message: { function_call: { name: 'adapt_workspace', arguments: {
+      summary: 'План бизнеса', evidenceIds: [], priorities: [], sections: workspacePages.map((page) => ({ page, title: page, text: 'Уточните цель', action: 'funding' })),
+    } } } }] }));
+  }) as typeof fetch;
+  const workspaceModel = createAIModel('https://api.giga.chat/v1/chat/completions', 'GigaChat-2-Pro', async () => 'test', workspaceTransport);
+  const adapted = await workspaceModel('answer', { request: { task: 'workspace' } }, AbortSignal.timeout(1000));
+  assert.equal((adapted.value as any).personalization.sections.home.title, 'home');
   const malformed = createAIModel('https://api.giga.chat/v1/chat/completions', 'GigaChat-2-Pro', async () => 'test', (async () => new Response(JSON.stringify({ choices: [{ finish_reason: 'length', message: { content: 'unfinished' } }] }))) as typeof fetch);
   await assert.rejects(() => malformed('answer', {}, AbortSignal.timeout(1000)));
 });

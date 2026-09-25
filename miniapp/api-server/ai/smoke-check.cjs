@@ -8,7 +8,7 @@
   if (!response.ok) throw new Error('AI_ENDPOINT_FAILED');
   const result = await response.json();
   if (!['llm', 'local'].includes(result.mode) || typeof result.answer !== 'string' || !Array.isArray(result.actions)) throw new Error('AI_CONTRACT_FAILED');
-  console.log('AI smoke:', JSON.stringify({ mode: result.mode, tools: result.tools, usage: result.usage }));
+  console.log('AI smoke:', JSON.stringify({ mode: result.mode, tools: result.tools, usage: result.usage, providerFailure: result.providerFailure }));
   console.log('AI adaptation:', JSON.stringify({ sections: Object.keys(result.personalization?.sections || {}), priorities: result.personalization?.priorities?.length ?? 0 }));
   if (result.mode === 'llm' && !['home', 'programs', 'applications', 'calendar', 'assistant'].every((page) => result.personalization?.sections?.[page])) throw new Error('AI_ADAPTATION_FAILED');
   if (status.configured && result.mode !== 'llm') console.warn('AI_PROVIDER_NOT_READY: endpoint works, live provider requires attention.');

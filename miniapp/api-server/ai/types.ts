@@ -31,4 +31,5 @@ export type AIResult = {
   scenarios: { label: string; need: FundingNeed; matches: { id: string; title: string; status: string; score: number }[] }[];
   tools: string[]; notice?: string; usage?: { calls: number; tokens: number; durationMs: number };
   personalization?: AIPersonalization;
+  providerFailure?: string;
 };

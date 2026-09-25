@@ -681,6 +681,9 @@ components:
       properties:
         personalization:
           $ref: '#/components/schemas/AIPersonalization'
+        providerFailure:
+          type: string
+          description: Обезличенный код сбоя провайдера, без содержимого запроса или ответа.
         mode:
           type: string
           enum:
