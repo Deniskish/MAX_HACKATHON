@@ -47,6 +47,10 @@ export async function requestCompanyData(
   if (!response.ok) {
     if (response.status === 400) throw new Error('Проверьте ИНН и его контрольную сумму.');
     if (response.status === 404) throw new Error('Компания не найдена в подключённом источнике. Заполните сведения вручную.');
+    const error = await response.json().catch(() => null) as { code?: string } | null;
+    if (error?.code === 'FNS_NOT_CONFIGURED')
+      throw new Error('Автозаполнение пока не подключено. Вы можете заполнить профиль вручную.');
+    if (response.status === 429) throw new Error('Слишком много запросов. Попробуйте через минуту.');
     throw new Error('Источник данных недоступен. Можно заполнить сведения вручную.');
   }
   const data = await response.json() as CompanyResponse;

@@ -66,6 +66,10 @@ test('company lookup calls only company API and propagates cancellation and erro
   for (const [status, message] of [[400, /Проверьте ИНН/], [404, /не найдена/], [503, /недоступен/]] as const)
     await assert.rejects(requestCompanyData(data.company.inn, controller.signal,
       (async () => new Response('{}', { status })) as typeof fetch), message);
+  await assert.rejects(requestCompanyData(data.company.inn, controller.signal,
+    (async () => new Response(JSON.stringify({ code: 'FNS_NOT_CONFIGURED' }), { status: 503 })) as typeof fetch), /Автозаполнение пока не подключено/);
+  await assert.rejects(requestCompanyData(data.company.inn, controller.signal,
+    (async () => new Response('Too many requests', { status: 429 })) as typeof fetch), /Попробуйте через минуту/);
   for (const body of [{}, { ...data, mode: 'pretend' }, { ...data, company: { inn: 'other' } }])
     await assert.rejects(requestCompanyData(data.company.inn, controller.signal,
       (async () => new Response(JSON.stringify(body))) as typeof fetch), /некорректный/);

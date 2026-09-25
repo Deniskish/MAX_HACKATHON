@@ -756,7 +756,7 @@ export default function BusinessApp() {
             <form onSubmit={saveProfile}>
               <span className="eyebrow">ПРОФИЛЬ БИЗНЕСА · ШАГ {step + 1} ИЗ 2</span>
               <h2>{step === 0 ? 'ИНН вашего бизнеса' : 'Данные для подбора'}</h2>
-              <p className="muted">Источник: ФНС России. Поиск выполняется в официальном локальном индексе. Если данных нет, дополните профиль вручную.</p>
+              <p className="muted">{step === 0 ? 'Укажите ИНН для поиска сведений о компании. Также можно заполнить профиль вручную.' : 'Проверьте сведения и дополните то, чего не хватает для подбора поддержки.'}</p>
               <CompanySources profile={form} />
               <fieldset className="company-form-fields" disabled={companyLoading}>
                 {step === 0 ? (
@@ -936,7 +936,7 @@ export default function BusinessApp() {
                     </ActionButton>
                   )}
                   <ActionButton className="primary" type="submit">
-                    {step === 0 ? 'Продолжить' : 'Сохранить бизнес'}
+                    {step === 0 ? 'Заполнить вручную' : 'Сохранить бизнес'}
                     <Icon name="arrow" size={17} />
                   </ActionButton>
                 </div>
