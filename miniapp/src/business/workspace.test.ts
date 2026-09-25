@@ -2,13 +2,33 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { loadWorkspace, saveWorkspace, applicationStatus, filterFunding, calendarICS, fundingEvents, projectAsProfile } from './workspace';
+import { loadWorkspace, saveWorkspace, applicationStatus, filterFunding, calendarICS, fundingEvents, projectAsProfile, personalFunding, trackedFunding } from './workspace';
 import { officialFundingCatalog } from '../../api-server/funding-catalog/official-catalog';
 import { matchFundingOpportunity } from '../../api-server/funding-catalog/matching';
 import { emptyFundingNeed } from '../../api-server/funding-catalog/types';
 import { OfficialDetails, ProjectOnboarding } from './OfficialExperience';
 import { inspectDocumentText, type Application } from './domain';
 const ids = officialFundingCatalog.map((o) => o.id);
+test('personal selection hides ineligible and closed measures and never counts unknown conditions as confirmed', () => {
+  const base = matchFundingOpportunity({}, emptyFundingNeed, officialFundingCatalog[0]);
+  const matches = (['eligible', 'almost_eligible', 'need_more_data', 'not_eligible', 'expired', 'upcoming'] as const).map((status) => ({ ...base, status }));
+  assert.equal(personalFunding(matches, false).candidates.length, 0);
+  const selection = personalFunding(matches, true);
+  assert.deepEqual(selection.candidates.map((m) => m.status), ['eligible', 'almost_eligible', 'need_more_data']);
+  assert.equal(selection.confirmed.length, 1); assert.equal(selection.pending.length, 2);
+  const projectMatches = officialFundingCatalog.map((o) => matchFundingOpportunity({ applicantType: 'project' }, emptyFundingNeed, o));
+  assert.ok(personalFunding(projectMatches, true).candidates.every((m) => m.status !== 'not_eligible'));
+});
+test('personal calendar is the union of bookmarks and applications, without other catalogue deadlines', () => {
+  const app = { programId: ids[1] } as Application;
+  assert.deepEqual(trackedFunding(officialFundingCatalog, [ids[0], ids[0], 'unknown'], [app]).map((o) => o.id), ids.slice(0, 2));
+  assert.deepEqual(trackedFunding(officialFundingCatalog, [], []), []);
+});
+test('guest programme details show public terms without pretending to assess a missing profile', () => {
+  const match = matchFundingOpportunity({}, emptyFundingNeed, officialFundingCatalog[0]);
+  const html = renderToStaticMarkup(React.createElement(OfficialDetails, { match, personalized: false, onAsk: () => {} }));
+  assert.match(html, /общие условия/); assert.doesNotMatch(html, /Почему подходит|Что не соответствует|Объяснить с помощью AI/);
+});
 const memory = () => { const map = new Map<string, string>(); return { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => { map.set(k, v); } }; };
 test('versioned workspace migrates bookmarks and drops synthetic profiles/unknown program drafts', () => {
   const storage = memory(); storage.setItem('opora.saved.v1', JSON.stringify([ids[0], ids[0], 'removed-program']));

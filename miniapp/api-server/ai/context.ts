@@ -58,11 +58,28 @@ export function prepareAIContext(input: unknown) {
     }) };
   });
   if (ctx.budget != null && (typeof ctx.budget !== 'number' || !Number.isSafeInteger(ctx.budget) || ctx.budget < 0 || ctx.budget > 1e15)) throw new PrivacyError('INVALID_INPUT');
+  let workspace: AIRequest['context']['workspace'];
+  if (ctx.workspace !== undefined) {
+    const value = object(ctx.workspace);
+    if (!Array.isArray(value.savedIds) || value.savedIds.length > 50 || !Array.isArray(value.applications) || value.applications.length > 30) throw new PrivacyError('INVALID_INPUT');
+    const program = (id: unknown) => {
+      const entry = officialFundingCatalog.find((o) => o.id === id);
+      if (!entry) throw new PrivacyError('INVALID_PROGRAM');
+      return entry;
+    };
+    workspace = { savedIds: [...new Set<string>(value.savedIds.map((id: unknown) => program(id).id))], applications: value.applications.map((a: unknown) => {
+      const item = object(a), entry = program(item.programId);
+      if (item.budget != null && (typeof item.budget !== 'number' || !Number.isSafeInteger(item.budget) || item.budget < 0 || item.budget > 1e15)) throw new PrivacyError('INVALID_INPUT');
+      return { programId: entry.id, project: redact(text(item.project, 2000)), budget: item.budget ?? null,
+        preparedDocuments: Array.isArray(item.preparedDocuments) ? entry.requiredDocuments.filter((d) => item.preparedDocuments.includes(d)) : [],
+        hasDraft: item.hasDraft === true, reviewConfirmed: item.reviewConfirmed === true };
+    }) };
+  }
   const request: AIRequest = {
     task: raw.task as AITask, question: redact(text(raw.question, 2000, true)), history,
     context: { profile, need, programId, page: text(ctx.page, 40), project: redact(text(ctx.project, 10000)),
       budget: ctx.budget ?? null, draft: redact(text(ctx.draft, 18000)), draftKind: text(ctx.draftKind, 100),
-      preparedDocuments: Array.isArray(ctx.preparedDocuments) ? ctx.preparedDocuments.slice(0, 30).map((v: unknown) => redact(text(v, 160))) : [], documents },
+      preparedDocuments: Array.isArray(ctx.preparedDocuments) ? ctx.preparedDocuments.slice(0, 30).map((v: unknown) => redact(text(v, 160))) : [], documents, workspace },
   };
   return { request, redact };
 }

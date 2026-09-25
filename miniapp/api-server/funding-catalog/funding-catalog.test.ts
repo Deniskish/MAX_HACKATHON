@@ -230,6 +230,8 @@ test('strategy has no invented financing when all opportunities are blocked or e
 });
 test('HTTP catalog and matching work without external providers; invalid input returns 400', async () => {
   const app = express(); app.use(express.json()); app.use('/api/funding', fundingCatalogRouter(service));
+  const calendarFixtures = service.getCatalog().map((o, index) => ({ ...o, deadline: index < 2 ? '2030-12-31' : null }));
+  app.use('/calendar-test', fundingCatalogRouter(new FundingCatalogService(() => new Date(), { getCatalog: () => calendarFixtures })));
   const server = app.listen(0, '127.0.0.1');
   await new Promise<void>((resolve) => server.once('listening', resolve));
   const address = server.address(); assert.ok(address && typeof address === 'object');
@@ -239,6 +241,16 @@ test('HTTP catalog and matching work without external providers; invalid input r
     assert.equal(catalog.headers.get('cache-control'), 'no-store');
     const body = await catalog.json() as { opportunities: FundingOpportunity[] };
     assert.equal(body.opportunities.length, 14);
+    const calendarUrl = `http://127.0.0.1:${address.port}/calendar-test`;
+    const dated = calendarFixtures.filter((o) => o.deadline);
+    assert.ok(dated.length >= 2);
+    const personalCalendar = await fetch(calendarUrl + '/calendar.ics?ids=' + encodeURIComponent(dated[0].id));
+    assert.equal(personalCalendar.status, 200);
+    const calendarText = await personalCalendar.text();
+    assert.ok(calendarText.includes(`UID:${dated[0].id}@opora`));
+    assert.ok(!calendarText.includes(`UID:${dated[1].id}@opora`));
+    assert.equal((await fetch(url + '/calendar.ics?ids=missing-id')).status, 400);
+    assert.equal((await fetch(url + '/calendar.ics?ids=a&ids=b')).status, 400);
     for (const [data, status] of [[{ profile: await techProfile(), need: techNeed }, 200],
       [{ profile: {}, need: { purpose: 'масштабирование' } }, 200],
       [{ profile: {}, need: { purpose: '' } }, 400], [{ profile: [], need: techNeed }, 400]] as const) {

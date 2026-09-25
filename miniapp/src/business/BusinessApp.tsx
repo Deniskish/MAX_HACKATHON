@@ -8,12 +8,16 @@ import { matchFundingOpportunity, rankFundingMatches } from '../../api-server/fu
 import { toFundingProfile } from '../../api-server/funding-catalog/input';
 import { fundingKindLabels } from '../../api-server/funding-catalog/presentation';
 import type { FundingProfile, ProjectProfile } from '../../api-server/funding-catalog/types';
-import { loadWorkspace, saveWorkspace, projectAsProfile, applicationStatus, applicationLabels, calendarICS, fundingEvents } from './workspace';
+import { loadWorkspace, saveWorkspace, projectAsProfile, applicationStatus, applicationLabels, calendarICS, fundingEvents, personalFunding, trackedFunding } from './workspace';
 import {
   DocumentChecklist,
   DraftComposer,
 } from './AgentExperience';
-import { BusinessCard, DetailSteps } from './VisualWidgets';
+import { DetailSteps } from './VisualWidgets';
+import { BusinessHub } from './BusinessHub';
+import { useBusinessAnalysis } from './useBusinessAnalysis';
+import { AdaptiveInsight } from './AdaptiveInsight';
+import type { WorkspaceInsight } from '../../api-server/ai/types';
 import { Icon } from './Icon';
 import { ModalSheet } from './ModalSheet';
 import { HomePage } from './HomePage';
@@ -65,7 +69,9 @@ export default function BusinessApp() {
     if (window.WebApp?.initData) {
       if (type.startsWith('text/calendar') && window.WebApp.downloadFile && location.protocol === 'https:') {
         try {
-          Promise.resolve(window.WebApp.downloadFile(new URL('/api/funding/calendar.ics', location.origin).href, name))
+          const calendarUrl = new URL('/api/funding/calendar.ics', location.origin);
+          if (!allCalendar) calendarUrl.searchParams.set('ids', calendarCatalog.map((o) => o.id).join(','));
+          Promise.resolve(window.WebApp.downloadFile(calendarUrl.href, name))
             .catch(() => setToast('MAX не смог скачать календарь. Повторите попытку или откройте приложение в браузере.'));
         } catch { setToast('MAX не смог скачать календарь. Откройте приложение в браузере.'); }
       } else { setSelected(null); setExportText(text); }
@@ -86,13 +92,39 @@ export default function BusinessApp() {
   const [deleteDraftId, setDeleteDraftId] = useState<string | null>(null);
   const [saved, setSaved] = useState<string[]>(initial.saved);
   const [availability, setAvailability] = useState('');
-  const [homePanel, setHomePanel] = useState<'business' | 'funding' | 'events' | 'more' | null>(null);
+  const [homePanel, setHomePanel] = useState<'business' | 'funding' | 'events' | null>(null);
+  const [catalogScope, setCatalogScope] = useState<'personal' | 'all' | 'saved'>('personal');
   const [previousSnapshot] = useState<Record<string, string>>(() => readSaved('opora.snapshot.v2', {}));
   const matches = rankFundingMatches(officialFundingCatalog.map((o) => matchFundingOpportunity(fundingProfile, need, o, {
     preparedDocuments: Object.keys(apps.find((a) => a.programId === o.id)?.documents ?? {}).filter((d) => apps.find((a) => a.programId === o.id)?.documents[d]),
   })));
   const events = fundingEvents(officialFundingCatalog, saved, previousSnapshot, matches);
+  const personal = personalFunding(matches, !!profile);
+  const tracked = trackedFunding(officialFundingCatalog, saved, apps);
+  const [allCalendar, setAllCalendar] = useState(false);
+  const calendarCatalog = allCalendar ? officialFundingCatalog : tracked;
+  const calendarPrograms = programs.filter((p) => p.deadline && calendarCatalog.some((o) => o.id === p.id));
+  function navigate(next: Page) {
+    setHomePanel(null);
+    if (['assistant', 'calendar'].includes(next) && !profile) { setPage('profile'); return; }
+    if (next === 'programs') { setCatalogScope(profile ? 'personal' : 'all'); setOnlySaved(false); setFilter('Все меры'); setQuery(''); setAvailability(''); }
+    if (next === 'calendar') setAllCalendar(false);
+    setPage(next);
+  }
   const [sourceUpdates, setSourceUpdates] = useState<{ id: string; url: string; title: string; detectedAt: string; opportunityId?: string; kind: string }[]>([]);
+  const analysisContext = profile ? { profile: fundingProfile, need: need.purpose ? need : undefined,
+    identifiers: { name: profile.name, inn: profile.inn }, page: 'workspace',
+    workspace: { savedIds: saved, applications: apps.map((a) => ({ programId: a.programId, project: a.project.slice(0, 2000),
+      budget: a.budget.trim() && Number.isSafeInteger(Number(a.budget)) && Number(a.budget) >= 0 && Number(a.budget) <= 1e15 ? Number(a.budget) : null,
+      preparedDocuments: Object.keys(a.documents).filter((d) => a.documents[d]), hasDraft: !!a.generatedDraft?.trim(), reviewConfirmed: !!a.reviewConfirmed })) } } : null;
+  const businessAnalysis = useBusinessAnalysis(analysisContext, officialFundingCatalog.map((o) => `${o.id}:${o.version}`).join('|') + sourceUpdates.map((u) => u.id).join('|'));
+  const aiPriorities = businessAnalysis.data?.personalization?.priorities ?? [];
+  const priorityRank = (id: string) => { const index = aiPriorities.findIndex((p) => p.programId === id); return index < 0 ? 100 : index; };
+  function followInsight(action: WorkspaceInsight['action']) {
+    if (action === 'funding') setHomePanel(profile ? 'funding' : 'business');
+    else if (action === 'profile') openProfile();
+    else navigate(action);
+  }
   const [sourcesCheckedAt, setSourcesCheckedAt] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -237,12 +269,15 @@ export default function BusinessApp() {
     setQuery('');
     setOnlySaved(false);
     setAvailability('');
+    setCatalogScope('all');
     setPage('programs');
   };
-  const visiblePrograms = ranked.filter(
+  const visiblePrograms = (profile ? matches.map((m) => ranked.find(({ p }) => p.id === m.opportunity.id)!) : ranked)
+    .sort((a, b) => profile && catalogScope === 'personal' ? priorityRank(a.p.id) - priorityRank(b.p.id) : 0).filter(
     ({ p }) =>
       (filter === 'Все меры' || p.type === filter) &&
       (!onlySaved || saved.includes(p.id)) &&
+      (!profile || catalogScope !== 'personal' || personal.candidates.some((m) => m.opportunity.id === p.id)) &&
       (!availability || officialFundingCatalog.find((o) => o.id === p.id)?.status === availability) &&
       `${p.title} ${p.description} ${p.type}`.toLowerCase().includes(query.toLowerCase()),
   );
@@ -268,7 +303,7 @@ export default function BusinessApp() {
   function startApplication(p: Program) {
     if (!profile) {
       setSelected(null);
-      openProfile();
+      setHomePanel('business');
       return;
     }
     if (['expired', 'upcoming', 'not_eligible'].includes(matches.find((m) => m.opportunity.id === p.id)!.status)) { setToast('Приём закрыт. Сохраните программу и проверяйте новые отборы.'); return; }
@@ -318,9 +353,9 @@ export default function BusinessApp() {
     });
     close();
     setPage('overview');
-    setHomePanel('funding');
+    setCatalogScope('personal');
   }
-  const aiContext = { profile: fundingProfile, need: need.purpose ? need : undefined, page,
+  const aiContext = { profile: fundingProfile, need: need.purpose ? need : undefined, page, workspace: analysisContext?.workspace,
     identifiers: profile ? { name: profile.name, inn: profile.inn } : undefined };
   function applyAIProfile(patch: FundingProfile) {
     setHomePanel(null); setSelected(null);
@@ -342,6 +377,7 @@ export default function BusinessApp() {
     program: Program | null = chatProgram,
     task?: 'strategy' | 'documents',
   ) {
+    if (!profile) { navigate('profile'); return; }
     if (!text.trim() || sending) return;
     setPage('assistant');
     setChatProgram(program);
@@ -371,32 +407,37 @@ export default function BusinessApp() {
     }
   }
   // Экспортируем только опубликованные в каталоге сроки, в том числе архивные.
-  function exportCalendar() { download(calendarICS(officialFundingCatalog), 'opora-calendar.ics', 'text/calendar;charset=utf-8'); }
+  function exportCalendar() { download(calendarICS(calendarCatalog), 'opora-calendar.ics', 'text/calendar;charset=utf-8'); }
   function programCard(p: Program) {
     const match = matches.find((m) => m.opportunity.id === p.id)!;
-    return <FundingOpportunityCard key={p.id} match={match} onOpen={openFunding} onSave={toggleSaved} saved={saved.includes(p.id)} />;
+    return <FundingOpportunityCard key={p.id} match={match} onOpen={openFunding} onSave={toggleSaved} saved={saved.includes(p.id)} personalized={!!profile}
+      aiReason={profile ? aiPriorities.find((item) => item.programId === p.id)?.reason : undefined} />;
   }
 
   return (
     <div className={`app-shell page-${page}`}>
       {page !== 'overview' && <AppHeader
         title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', assistant: 'AI-помощник' }[page]}
-        onBack={() => setPage('overview')} onNotifications={() => setHomePanel('events')} hasNotifications={events.length > 0 || sourceUpdates.some((u) => u.opportunityId && saved.includes(u.opportunityId))}
+        backLabel={['assistant', 'calendar'].includes(page) ? 'В мой бизнес' : 'На главную'} onBack={() => navigate(['assistant', 'calendar'].includes(page) ? 'profile' : 'overview')} onNotifications={() => setHomePanel('events')} hasNotifications={events.length > 0 || sourceUpdates.some((u) => u.opportunityId && saved.includes(u.opportunityId))}
       />}
       <main ref={mainRef} className="app-content">
           {page === 'overview' && <HomePage
-            onFindSupport={() => setHomePanel(profile ? 'funding' : 'business')}
-            onAddBusiness={() => setHomePanel('business')}
-            onOpportunities={() => browse()}
+            onFindSupport={() => navigate('programs')}
+            onAddBusiness={() => profile ? navigate('profile') : setHomePanel('business')}
+            onOpportunities={() => profile ? setHomePanel('funding') : browse()}
             onNotifications={() => setHomePanel('events')}
             onApplications={() => setPage('applications')}
-            onMore={() => setHomePanel('more')}
+            onBusiness={() => navigate('profile')} personalized={!!profile}
+            analysis={businessAnalysis} onAIAction={followInsight}
             hasNotifications={events.length > 0 || sourceUpdates.some((u) => u.opportunityId && saved.includes(u.opportunityId))}
           />}
           {page === 'programs' && (
             <>
+              {profile ? <><AdaptiveInsight analysis={businessAnalysis} section="programs" onAction={followInsight} /><details className="catalog-personal-context"><summary>{profile.name}</summary><p>{profile.region} · {need.purpose || 'Укажите цель для более точного подбора'}</p><button onClick={() => setHomePanel('funding')}>Изменить цель и параметры подбора <Icon name="arrow" size={14} /></button></details></>
+                : <section className="catalog-guest-context"><p>Вы смотрите общий каталог. Добавьте бизнес, чтобы проверить, какие программы подходят именно вам.</p><button onClick={() => navigate('profile')}>Настроить поддержку для себя <Icon name="arrow" size={14} /></button></section>}
+              {profile && <div className="catalog-scopes" aria-label="Область подбора">{([['personal', 'Для вас'], ['all', 'Все меры'], ['saved', `Сохранённые · ${saved.length}`]] as const).map(([scope, title]) => <button key={scope} aria-pressed={catalogScope === scope} onClick={() => { setCatalogScope(scope); setOnlySaved(scope === 'saved'); }}>{title}</button>)}</div>}
               <div className="catalog-toolbar">
-                <div className="segmented-control" aria-label="Показать программы">
+                {!profile && <div className="segmented-control" aria-label="Показать программы">
                   <button
                     aria-pressed={!onlySaved}
                     className={!onlySaved ? 'selected' : ''}
@@ -411,7 +452,7 @@ export default function BusinessApp() {
                   >
                     Сохранённые <span>{saved.length}</span>
                   </button>
-                </div>
+                </div>}
                 <label className="search-box">
                   <Icon name="search" />
                   <BusinessInput
@@ -423,10 +464,10 @@ export default function BusinessApp() {
                 </label>
               </div>
               <label className="field catalog-state">Статус<select value={availability} onChange={(e) => setAvailability(e.target.value)}><option value="">Все статусы</option><option value="active">Приём открыт</option><option value="closed">Приём завершён</option><option value="upcoming">Ожидается открытие</option><option value="unknown">Требует проверки</option></select></label>
-              <details className="ai-entry"><summary>Найти поддержку по описанию задачи</summary><AIPanel title="Умный поиск" task="search" context={aiContext} initialQuestion={query} {...aiHandlers} /></details>
+              {profile && <details className="ai-entry"><summary>Найти поддержку по описанию задачи</summary><AIPanel title="Умный поиск" task="search" context={aiContext} initialQuestion={query} {...aiHandlers} /></details>}
               <div className="catalog-results-header">
-                <h2>{filter === 'Все меры' ? 'Все возможности' : filter}</h2>
-                <span>{visiblePrograms.length} в официальном каталоге</span>
+                <h2>{filter === 'Все меры' ? profile && catalogScope === 'personal' ? 'Для вашего бизнеса' : 'Все возможности' : filter}</h2>
+                <span>{visiblePrograms.length} программ</span>
                 {filter !== 'Все меры' && (
                   <button onClick={() => setFilter('Все меры')}>
                     Сбросить <Icon name="close" size={13} />
@@ -441,10 +482,11 @@ export default function BusinessApp() {
                     className={filter === type ? 'selected' : ''}
                     onClick={() => setFilter(type)}
                   >
-                    {type}
+                    {type === 'Все меры' ? 'Все виды' : type}
                   </button>
                 ))}
               </div>
+              {profile && catalogScope === 'personal' && <p className="widget-footnote">Подбор учитывает заполненные сведения. Варианты со статусом «Нужно уточнить» требуют дополнительных данных; закрытые и не соответствующие программы доступны во вкладке «Все меры».</p>}
               <div className="program-grid catalog">
                 {visiblePrograms.map(({ p }) => programCard(p))}
               </div>
@@ -468,7 +510,7 @@ export default function BusinessApp() {
                     onClick={() => {
                       setFilter('Все меры');
                       setQuery('');
-                      setOnlySaved(false);
+                      setOnlySaved(false); setCatalogScope('all');
                       setAvailability('');
                     }}
                   >
@@ -481,10 +523,13 @@ export default function BusinessApp() {
               </p>
             </>
           )}
-          {page === 'applications' &&
+          {page === 'applications' && !profile && <section className="empty-state guest-applications"><Icon name="file" size={38} /><h2>Заявки вашего бизнеса</h2><p>Добавьте компанию или проект — появятся персональные условия, подготовка документов и черновики заявок.</p><ActionButton className="primary" onClick={() => setHomePanel('business')}>Добавить бизнес</ActionButton><ActionButton className="secondary" onClick={() => browse()}>Посмотреть программы</ActionButton></section>}
+          {page === 'applications' && profile &&
+            <AdaptiveInsight analysis={businessAnalysis} section="applications" onAction={followInsight} />}
+          {page === 'applications' && profile &&
             (apps.length ? (
               <div className="application-list">
-                {apps.map((a) => {
+                {[...apps].sort((a, b) => priorityRank(a.programId) - priorityRank(b.programId)).map((a) => {
                   const p = programs.find((p) => p.id === a.programId)!;
                   const count = p.documents.filter((d) => a.documents[d]).length;
                   return (
@@ -515,17 +560,21 @@ export default function BusinessApp() {
               <div className="empty-state">
                 <Icon name="file" size={42} />
                 <h2>Пока нет заявок</h2>
-                <ActionButton className="primary" onClick={() => setPage('programs')}>
+                <ActionButton className="primary" onClick={() => navigate('programs')}>
                   Выбрать программу <Icon name="arrow" size={17} />
                 </ActionButton>
               </div>
             ))}
-          {page === 'calendar' && (
+          {page === 'calendar' && profile && (
             <>
+              <AdaptiveInsight analysis={businessAnalysis} section="calendar" onAction={followInsight} />
+              <p className="calendar-context">Сроки для {profile.name}. Здесь — сохранённые программы и программы, по которым вы готовите заявки.</p>
+              <div className="catalog-scopes"><button aria-pressed={!allCalendar} onClick={() => setAllCalendar(false)}>Мои сроки</button><button aria-pressed={allCalendar} onClick={() => setAllCalendar(true)}>Весь каталог</button></div>
+              {!calendarPrograms.length && <section className="empty-state"><Icon name="calendar" size={32} /><h2>Опубликованных сроков нет</h2><p>{tracked.length ? 'У выбранных программ нет точных дат в каталоге. Сверяйте сроки на сайте оператора.' : 'Сохраните программу или начните подготовку заявки — её опубликованный срок появится здесь.'}</p><ActionButton className="secondary" onClick={() => navigate('programs')}>Найти поддержку</ActionButton></section>}
               <div className="section-title">
                 <ActionButton
                   className="secondary"
-                  disabled={!officialFundingCatalog.some((o) => o.deadline)}
+                  disabled={!calendarPrograms.length}
                   onClick={exportCalendar}
                 >
                   <Icon name="download" size={17} />
@@ -533,7 +582,7 @@ export default function BusinessApp() {
                 </ActionButton>
               </div>
               <div className="timeline">
-                {programs.filter((p) => p.deadline)
+                {calendarPrograms
                   .sort((a, b) => a.deadline.localeCompare(b.deadline))
                   .map((p) => (
                     <button className="timeline-row" key={p.id} onClick={() => setSelected(p)}>
@@ -569,35 +618,16 @@ export default function BusinessApp() {
               </div>
             </>
           )}
-          {page === 'profile' && (
-            <div className="profile-wallet-layout">
-              <BusinessCard profile={profile} onEdit={profile ? openProfile : () => setHomePanel('business')} />
-              <section className="widget profile-shortcuts">
-                <button className="widget-link-row" onClick={() => browse()}>
-                  <span className="soft-round">
-                    <Icon name="compass" />
-                  </span>
-                  <span>
-                    <b>Поддержка бизнеса</b>
-                  </span>
-                  <Icon name="chevron" size={16} />
-                </button>
-                <button className="widget-link-row" onClick={() => setPage('calendar')}>
-                  <span className="soft-round">
-                    <Icon name="calendar" />
-                  </span>
-                  <span>
-                    <b>Важные сроки</b>
-                  </span>
-                  <Icon name="chevron" size={16} />
-                </button>
-              </section>
-            </div>
-          )}
+          {page === 'profile' && <BusinessHub profile={profile} project={!!projectProfile && !companyProfile}
+            insight={businessAnalysis.data?.personalization?.sections.home} onInsight={followInsight}
+            confirmed={personal.confirmed.length} pending={personal.pending.length} applications={apps.length} saved={saved.length} purpose={need.purpose}
+            onAdd={() => setHomePanel('business')} onEdit={openProfile} onSupport={() => navigate('programs')}
+            onNeed={() => setHomePanel('funding')} onAssistant={() => navigate('assistant')} onCalendar={() => navigate('calendar')}
+            onApplications={() => navigate('applications')} onSaved={() => { navigate('programs'); setCatalogScope('saved'); setOnlySaved(true); }} />}
           {page === 'profile' && profile && <details className="ai-entry"><summary>Проанализировать бизнес и следующий шаг</summary><AIPanel title="План развития" task="analysis" context={aiContext} initialQuestion="Проанализируй мой бизнес: какие возможности рассмотреть, чего не хватает и какой следующий шаг?" {...aiHandlers} /></details>}
           {page === 'profile' &&
             (profile ? (
-              <section className="profile-panel">
+              <details className="profile-panel"><summary>Сведения о бизнесе</summary>
                 <div className="section-title">
                   <div>
                     <span className="tag">{companyProfile ? 'Профиль бизнеса' : 'Проект без компании'}</span>
@@ -670,10 +700,11 @@ export default function BusinessApp() {
                 <div className="data-note">
                   Профиль и черновики сохранены на этом устройстве. На другом устройстве их потребуется заполнить заново.
                 </div>
-              </section>
+              </details>
             ) : null)}
-          {page === 'assistant' && (
+          {page === 'assistant' && profile && (
             <section className="chat-panel">
+              <AdaptiveInsight analysis={businessAnalysis} section="assistant" onAction={followInsight} compact />
               <div className="chat-header">
                 <img className="assistant-orb" src="/assets/orb.png" width={48} height={48} alt="" />
                 <div>
@@ -683,6 +714,7 @@ export default function BusinessApp() {
               </div>
               <details className="context-info">
                 <summary>Как обрабатываются данные</summary>
+                <p><b>{profile.name}</b> · {profile.region}<br />Цель: {need.purpose || 'пока не указана'}. Ответы учитывают этот профиль.</p>
                 <p>
                   GigaChat получает вопрос, последние сообщения, параметры бизнеса и выбранной заявки.
                   Известные реквизиты скрываются. Не добавляйте лишние персональные данные.
@@ -754,7 +786,7 @@ export default function BusinessApp() {
             </section>
           )}
       </main>
-      {page !== 'overview' && <AppNavigation active={page} onNavigate={setPage} onMore={() => setHomePanel('more')} />}
+      {page !== 'overview' && <AppNavigation active={page} onNavigate={navigate} />}
       <dialog
         aria-label={onboard ? 'Профиль бизнеса' : selected?.title || 'Программа'}
         ref={dialogRef}
@@ -960,10 +992,11 @@ export default function BusinessApp() {
                     </ActionButton>
                   )}
                   <ActionButton className="primary" type="submit">
-                    {step === 0 ? 'Продолжить' : 'Перейти к потребности'}
+                    {step === 0 ? 'Продолжить' : 'Сохранить бизнес'}
                     <Icon name="arrow" size={17} />
                   </ActionButton>
                 </div>
+                {step === 1 && <p className="widget-footnote">После сохранения GigaChat анализирует параметры бизнеса и подстраивает все разделы. Известные реквизиты скрываются; исходные файлы автоматически не отправляются.</p>}
               </fieldset>
             </form>
           )}
@@ -975,8 +1008,8 @@ export default function BusinessApp() {
               <span className="tag">{selected.type} · официальный источник</span>
               <h2>{selected.title}</h2>
               <p className="muted">{selected.description}</p>
-              <OfficialDetails match={matches.find((m) => m.opportunity.id === selected.id)!} onAsk={() => { const program = selected; close(); void ask('Объясни следующий шаг', program, 'strategy'); }} />
-              {activeApp ? (
+              <OfficialDetails personalized={!!profile} match={matches.find((m) => m.opportunity.id === selected.id)!} onAsk={() => { const program = selected; close(); void ask('Объясни следующий шаг', program, 'strategy'); }} />
+              {activeApp && profile ? (
                 <>
                   <DetailSteps
                     prepared={selected.documents.filter((d) => activeApp.documents[d]).length}
@@ -1059,15 +1092,15 @@ export default function BusinessApp() {
                       className="secondary"
                       onClick={() => {
                         setSelected(null);
-                        openProfile();
+                        profile ? openProfile() : setHomePanel('business');
                       }}
                     >
-                      Уточнить профиль
+                      {profile ? 'Уточнить профиль' : 'Проверить для моего бизнеса'}
                     </ActionButton>
                     <ActionButton
                       className="primary"
                       disabled={
-                        ['expired', 'upcoming', 'not_eligible'].includes(matches.find((m) => m.opportunity.id === selected.id)!.status)
+                        !!profile && ['expired', 'upcoming', 'not_eligible'].includes(matches.find((m) => m.opportunity.id === selected.id)!.status)
                       }
                       onClick={() => startApplication(selected)}
                     >
@@ -1082,7 +1115,7 @@ export default function BusinessApp() {
         </div>
       </dialog>
       {exportText && <ModalSheet title="Экспорт текста" onClose={() => setExportText('')}><h2>Текст черновика</h2><p>Скопируйте текст в редактор и сохраните как TXT. Документ остаётся на вашем устройстве.</p><BusinessTextarea aria-label="Текст для экспорта" readOnly rows={12} value={exportText} /><div className="modal-actions"><ActionButton className="primary" onClick={() => navigator.clipboard.writeText(exportText).then(() => setToast('Текст скопирован')).catch(() => setToast('Выделите и скопируйте текст вручную.'))}>Копировать текст</ActionButton><ActionButton className="secondary" onClick={() => setExportText('')}>Закрыть</ActionButton></div></ModalSheet>}
-      {homePanel && <ModalSheet title={{ business: 'Ваш бизнес', funding: 'Подбор поддержки', events: 'Уведомления', more: 'Ещё' }[homePanel]} onClose={() => setHomePanel(null)}>
+      {homePanel && <ModalSheet title={{ business: 'Ваш бизнес', funding: 'Подбор поддержки', events: 'Уведомления' }[homePanel]} onClose={() => setHomePanel(null)}>
         {homePanel === 'business' && <div className="home-panel-actions">
           <h2>Расскажите о бизнесе</h2>
           <details className="ai-entry"><summary>Заполнить с помощью AI</summary><AIPanel title="Расскажите своими словами" task="intake" context={aiContext} {...aiHandlers} /></details>
@@ -1093,17 +1126,12 @@ export default function BusinessApp() {
           <section className="widget business-summary"><span className="tag">{companyProfile ? 'Ваш бизнес' : 'Проект без юридического лица'}</span><h1>{profile.name}</h1><p>{profile.region} · {companyProfile ? `ОКВЭД ${profile.okved || 'не указан'} · МСП: ${profile.isSme === 'yes' ? 'да' : profile.isSme === 'no' ? 'нет' : 'неизвестно'}` : projectProfile?.industry}</p><ActionButton className="secondary" onClick={openProfile}>Редактировать профиль</ActionButton></section>
           <FundingExperience key={companyProfile?.inn ?? 'project'} profile={fundingProfile} initialNeed={need} onNeed={setNeed} onOpen={openFunding} onSave={toggleSaved} saved={saved} />
         </>}
-        {homePanel === 'events' && <div className="home-panel-actions"><h2>События</h2>{events.length ? events.map((event) => <button className="widget-link-row" key={event.id} onClick={() => openFunding(event.opportunityId)}>{event.text}</button>) : <p>Новых событий нет. Сохраните интересующие программы.</p>}<ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('calendar'); }}>Открыть календарь</ActionButton></div>}
+        {homePanel === 'events' && <div className="home-panel-actions"><h2>События</h2>{events.length ? events.map((event) => <button className="widget-link-row" key={event.id} onClick={() => openFunding(event.opportunityId)}>{event.text}</button>) : <p>Новых событий нет. Сохраните интересующие программы.</p>}<ActionButton className="secondary" onClick={() => { navigate('calendar'); }}>Открыть календарь</ActionButton></div>}
         {homePanel === 'events' && <section className="source-updates"><h3>Обновления официальных источников</h3>
           <p className="widget-footnote">{sourcesCheckedAt ? `Последняя проверка: ${new Date(sourcesCheckedAt).toLocaleString('ru-RU')}.` : 'Первая проверка источников ещё не завершена.'} Изменение страницы требует сверки условий программы.</p>
           {sourceUpdates.map((u) => <article className="ai-proposal" key={u.id}><span className="tag">{u.kind === 'discovered' ? 'Найден новый материал' : saved.includes(u.opportunityId ?? '') ? 'По сохранённой программе' : 'Изменилась страница'}</span><p><a href={u.url} target="_blank" rel="noreferrer">{u.title} ↗</a></p>
-            <ActionButton className="secondary" onClick={() => { setHomePanel(null); void ask(`Оцени, как актуальные материалы по теме «${u.title}» влияют на мой бизнес. Укажи, что подтверждено и что требует проверки.`, programs.find((p) => p.id === u.opportunityId) ?? null, 'strategy'); }}>Объяснить влияние с AI</ActionButton></article>)}
+            <ActionButton className="secondary" onClick={() => { setHomePanel(null); if (!profile) { navigate('profile'); return; } void ask(`Оцени, как актуальные материалы по теме «${u.title}» влияют на мой бизнес. Укажи, что подтверждено и что требует проверки.`, programs.find((p) => p.id === u.opportunityId) ?? null, 'strategy'); }}>Объяснить влияние с AI</ActionButton></article>)}
         </section>}
-        {homePanel === 'more' && <div className="home-panel-actions">
-          <ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('assistant'); }}>AI-помощник</ActionButton>
-          <ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('profile'); }}>Мой бизнес</ActionButton>
-          <ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('calendar'); }}>Календарь</ActionButton>
-        </div>}
       </ModalSheet>}
       {deleteDraftId && <ModalSheet title="Удалить черновик?" onClose={() => setDeleteDraftId(null)}>
         <h2>Удалить черновик?</h2>
@@ -1116,7 +1144,7 @@ export default function BusinessApp() {
           }}>Удалить</ActionButton>
         </div>
       </ModalSheet>}
-      {projectOnboard && <ProjectOnboarding initial={aiProjectSeed ?? projectProfile} onCancel={() => { setProjectOnboard(false); setAIProjectSeed(null); }} onSave={(project) => { setProjectProfile(project); setProfile(null); setNeed({ ...need, purpose: project.fundingPurpose, amount: project.fundingNeed }); setProjectOnboard(false); setAIProjectSeed(null); setPage('overview'); setHomePanel('funding'); }} />}
+      {projectOnboard && <ProjectOnboarding initial={aiProjectSeed ?? projectProfile} onCancel={() => { setProjectOnboard(false); setAIProjectSeed(null); }} onSave={(project) => { setProjectProfile(project); setProfile(null); setNeed({ ...need, purpose: project.fundingPurpose, amount: project.fundingNeed }); setProjectOnboard(false); setAIProjectSeed(null); setPage('overview'); setCatalogScope('personal'); }} />}
       {toast && (
         <div className="toast" role="status">
           <Icon name="check" size={18} />

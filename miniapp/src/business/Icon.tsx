@@ -2,6 +2,7 @@
 import React, { type ReactNode } from 'react';
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, ReactNode> = {
+    edit: <><path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15Z" /></>,
     home: (
       <React.Fragment>
         <path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9" />

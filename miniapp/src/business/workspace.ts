@@ -54,6 +54,16 @@ export function applicationStatus(app: Application, opportunity: FundingOpportun
   return app.project.trim() || Object.values(app.documents).some(Boolean) ? 'collecting_documents' : 'draft';
 }
 export const applicationLabels = { draft: 'Черновик', collecting_documents: 'Сбор документов', ready_for_review: 'Комплект готов к проверке перед подачей' };
+// Не смешиваем подтверждённое соответствие с вариантами, для которых не хватает данных.
+export function personalFunding(matches: FundingMatch[], hasProfile: boolean) {
+  if (!hasProfile) return { candidates: [], confirmed: [], pending: [] };
+  const candidates = matches.filter((m) => ['eligible', 'almost_eligible', 'need_more_data'].includes(m.status));
+  return { candidates, confirmed: candidates.filter((m) => m.status === 'eligible'), pending: candidates.filter((m) => m.status !== 'eligible') };
+}
+export function trackedFunding(catalog: FundingOpportunity[], saved: string[], apps: Application[]) {
+  const ids = new Set([...saved, ...apps.map((a) => a.programId)]);
+  return catalog.filter((o) => ids.has(o.id));
+}
 export function filterFunding(catalog: FundingOpportunity[], query: string, kind: string, status: string, saved?: string[]) {
   return catalog.filter((o) => (!kind || o.kind === kind) && (!status || o.status === status) && (!saved || saved.includes(o.id))
     && `${o.title} ${o.description} ${o.providerName} ${o.purposes.join(' ')}`.toLocaleLowerCase('ru-RU').includes(query.trim().toLocaleLowerCase('ru-RU')));

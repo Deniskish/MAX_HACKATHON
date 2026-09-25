@@ -9,7 +9,7 @@ import { amountLabel, fundingKindLabels, fundingSourceLabel, fundingStatusLabels
 import { fundingFingerprint, requestFunding, restoreFundingNeed } from './funding';
 import { AIPanel } from './AIExperience';
 
-export function FundingOpportunityCard({ match, onOpen, onSave, saved }: { match: FundingMatch; onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: boolean }) {
+export function FundingOpportunityCard({ match, onOpen, onSave, saved, personalized = true, aiReason }: { match: FundingMatch; onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: boolean; personalized?: boolean; aiReason?: string }) {
   const o = match.opportunity;
   const rate = rateLabel(o), term = termLabel(o);
   return <article className="widget funding-card">
@@ -22,20 +22,21 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved }: { match
     </div>
     <h3>{o.title}</h3>
     <p className="muted">{o.providerName}</p>
+    {aiReason && <p className="ai-program-reason"><b>Почему AI рекомендует рассмотреть</b><br />{aiReason}</p>}
     <strong>{amountLabel(o)}</strong>
     <div className="funding-key-facts">{rate && <span>{rate}</span>}{term && <span>Срок: {term}</span>}</div>
-    <span className={`funding-status funding-status-${match.status}`}>{fundingStatusLabels[match.status]}</span>
+    <span className={`funding-status funding-status-${personalized ? match.status : o.status}`}>{personalized ? fundingStatusLabels[match.status] : { active: 'Приём открыт', closed: 'Приём завершён', upcoming: 'Ожидается открытие', unknown: 'Статус уточняется' }[o.status ?? 'unknown']}</span>
 
     <details>
-      <summary>Условия и соответствие</summary>
+      <summary>{personalized ? 'Условия и соответствие' : 'Условия программы'}</summary>
       <p>{o.description}</p>
       <p>Регион: {o.regions === "all" ? "Вся Россия" : o.regions.join(", ")}</p>
-      <p>Соответствие: {match.score}% · {scoreNotice}</p>
+      {personalized && <><p>Соответствие: {match.score}% · {scoreNotice}</p>
       <p>{match.explanation}</p>
       {match.missingRequirements.length > 0 && <p>Не выполнено: {match.missingRequirements.map((r) => r.label).join('; ')}.</p>}
       {match.unknownRequirements.length > 0 && <p>Нужно уточнить: {match.unknownRequirements.map((r) => r.label).join('; ')}.</p>}
       {match.missingDocuments.length > 0 && <p>Документы: {match.missingDocuments.join('; ')}.</p>}
-      <ul>{match.nextActions.map((action) => <li key={action}>{action}</li>)}</ul>
+      <ul>{match.nextActions.map((action) => <li key={action}>{action}</li>)}</ul></>}
       <p>Подготовка: {o.preparationDays === null ? 'не указана' : `${o.preparationDays} дн.`}.
         {' '}Сложность: {{ low: 'низкая', medium: 'средняя', high: 'высокая' }[o.difficulty]}.</p>
       <p className="widget-footnote">{fundingSourceLabel(o)} · версия {o.version} · {o.source.verifiedAt ?? o.source.updatedAt}.</p>

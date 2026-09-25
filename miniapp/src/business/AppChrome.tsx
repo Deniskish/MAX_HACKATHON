@@ -8,8 +8,8 @@ export function BrandWordmark({ className = '' }: { className?: string }) {
   </span>;
 }
 
-export function AppNavigation({ active, onNavigate, onMore }: {
-  active: AppPage; onNavigate: (page: AppPage) => void; onMore: () => void;
+export function AppNavigation({ active, onNavigate }: {
+  active: AppPage; onNavigate: (page: AppPage) => void;
 }) {
   return <div className="home-nav-wrap">
     <nav className="home-nav" aria-label="Основная навигация">
@@ -19,18 +19,18 @@ export function AppNavigation({ active, onNavigate, onMore }: {
         aria-current={active === page ? 'page' : undefined} onClick={() => onNavigate(page)}>
         <Icon name={icon} /><span>{label}</span>
       </button>)}
-      <button type="button" aria-current={['calendar', 'profile', 'assistant'].includes(active) ? 'page' : undefined} onClick={onMore}>
-        <Icon name="chat" /><span>Ещё</span>
+      <button type="button" aria-current={['calendar', 'profile', 'assistant'].includes(active) ? 'page' : undefined} onClick={() => onNavigate('profile')}>
+        <Icon name="building" /><span>Мой бизнес</span>
       </button>
     </nav>
   </div>;
 }
 
-export function AppHeader({ title, onBack, onNotifications, hasNotifications }: {
-  title: string; onBack: () => void; onNotifications: () => void; hasNotifications: boolean;
+export function AppHeader({ title, onBack, onNotifications, hasNotifications, backLabel = 'На главную' }: {
+  title: string; onBack: () => void; onNotifications: () => void; hasNotifications: boolean; backLabel?: string;
 }) {
   return <header className="app-topbar">
-    <button type="button" className="app-back icon-button" aria-label="На главную" onClick={onBack}><Icon name="chevron" /></button>
+    <button type="button" className="app-back icon-button" aria-label={backLabel} onClick={onBack}><Icon name="chevron" /></button>
     <h1>{title}</h1>
     <button type="button" className="home-notifications" aria-label="Уведомления" onClick={onNotifications}>
       <Icon name="bell" size={22} />{hasNotifications && <span className="home-notification-dot" aria-hidden="true" />}

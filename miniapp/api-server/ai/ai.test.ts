@@ -10,11 +10,38 @@ import { createSemanticSearch, cosine } from './embeddings';
 import { SourceStore, trustedSource, extractSource } from './sources';
 import { officialFundingCatalog } from '../funding-catalog/official-catalog';
 import { createApp } from '../app';
+import { workspacePages } from './types';
 
 const id = officialFundingCatalog[0].id;
 const input = { task: 'chat', question: 'Хочу купить оборудование за 200 млн рублей, залога нет. А если уменьшить сумму?',
   history: [{ role: 'user', text: 'Срок три года' }], context: { profile: { region: 'Самарская область', applicantType: 'legal_entity' }, project: 'Производство приборов', identifiers: { name: 'ООО Секрет', inn: '7707083893' } } };
 const answer = { answer: 'Уточните условия обеспечения.', evidenceIds: [`program:${id}`], followups: ['Сколько собственных средств?'], findings: [] };
+test('workspace analysis adapts every page, retains actual business facts and drops invented or unavailable programme priorities', async () => {
+  const model: AIModel = async (stage, payload: any) => {
+    if (stage === 'plan') return { value: { query: 'производство', opportunityIds: [id], profile: { region: 'Выдуманный регион' }, need: { purpose: 'экспорт' } } };
+    assert.equal(payload.request.context.profile.region, input.context.profile.region);
+    assert.equal(payload.proposedProfile, undefined); assert.equal(payload.proposedNeed, undefined);
+    return { value: { ...answer, personalization: { summary: 'Производству нужно уточнить обеспечение.',
+      sections: Object.fromEntries(workspacePages.map((p) => [p, { title: `План ${p}`, text: 'Уточните задачу производства.', action: 'funding' }])),
+      priorities: [{ programId: id, reason: 'Рассмотреть после уточнения параметров.' }, { programId: 'invented', reason: 'Ошибка' },
+        { programId: 'fasie-start-1', reason: 'Приём закрыт' }, { programId: id, reason: 'Дубликат' }] } } };
+  };
+  const result = await runAssistant({ ...input, task: 'workspace' }, model);
+  assert.equal(result.mode, 'llm'); assert.deepEqual(Object.keys(result.personalization!.sections), [...workspacePages]);
+  assert.deepEqual(result.personalization!.priorities.map((p) => p.programId), [id]);
+  const broken: AIModel = async (stage) => ({ value: stage === 'plan' ? { query: '', opportunityIds: [] } : { ...answer, personalization: { sections: { home: { title: 'Ошибка', text: 'Текст', action: 'send_money' } } } } });
+  const fallback = await runAssistant({ ...input, task: 'workspace' }, broken);
+  assert.equal(fallback.mode, 'local'); assert.equal(fallback.personalization, undefined);
+});
+test('automatic workspace context only carries allowed application facts, with private text minimized', () => {
+  const prepared = prepareAIContext({ ...input, task: 'workspace', context: { ...input.context,
+    workspace: { savedIds: [id, id], applications: [{ programId: id, project: 'ООО Секрет покупает станки', budget: 100,
+      preparedDocuments: ['fake-document'], hasDraft: 'true', reviewConfirmed: true, secret: 'never-forward' }] } } });
+  assert.deepEqual(prepared.request.context.workspace?.savedIds, [id]);
+  assert.equal(prepared.request.context.workspace?.applications[0].hasDraft, false);
+  assert.doesNotMatch(JSON.stringify(prepared.request), /ООО Секрет|never-forward|fake-document/);
+  assert.throws(() => prepareAIContext({ ...input, context: { workspace: { savedIds: ['invented'], applications: [] } } }));
+});
 test('meaningful question, regional profile, project and history reach v2; known identifiers are removed', () => {
   const prepared = prepareAIContext({ ...input, question: `${input.question} ООО Секрет 7707083893 user@example.com`, context: { ...input.context, documents: [{ id: 'doc1', name: 'private-name.txt', pages: [{ page: 2, text: 'ООО Секрет производит приборы.' }] }] } });
   const payload = JSON.stringify(prepared.request);

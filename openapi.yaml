@@ -367,7 +367,19 @@ paths:
   /api/funding/calendar.ics:
     get:
       summary: Календарь опубликованных сроков для скачивания и MAX Bridge
+      parameters:
+        - in: query
+          name: ids
+          description: ID программ через запятую (до 50). Если не указан, возвращается весь каталог.
+          schema:
+            type: string
       responses:
+        '400':
+          description: Неизвестные ID программ или неверный формат
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '200':
           description: iCalendar RFC 5545
           content:
@@ -438,6 +450,86 @@ paths:
         "429": *a1
 components:
   schemas:
+    AIWorkspaceInput:
+      type: object
+      required: [savedIds, applications]
+      properties:
+        savedIds:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+        applications:
+          type: array
+          maxItems: 30
+          items:
+            type: object
+            required: [programId]
+            properties:
+              programId:
+                type: string
+              project:
+                type: string
+                maxLength: 2000
+              budget:
+                type: integer
+                nullable: true
+                minimum: 0
+                maximum: 1000000000000000
+              preparedDocuments:
+                type: array
+                items:
+                  type: string
+              hasDraft:
+                type: boolean
+              reviewConfirmed:
+                type: boolean
+    AIWorkspaceInsight:
+      type: object
+      required: [title, text, action]
+      properties:
+        title:
+          type: string
+          maxLength: 60
+        text:
+          type: string
+          maxLength: 300
+        action:
+          type: string
+          enum: [programs, funding, applications, profile, assistant, calendar]
+    AIPersonalization:
+      type: object
+      required: [summary, sections, priorities]
+      properties:
+        summary:
+          type: string
+          maxLength: 700
+        sections:
+          type: object
+          required: [home, programs, applications, calendar, assistant]
+          properties:
+            home:
+              $ref: '#/components/schemas/AIWorkspaceInsight'
+            programs:
+              $ref: '#/components/schemas/AIWorkspaceInsight'
+            applications:
+              $ref: '#/components/schemas/AIWorkspaceInsight'
+            calendar:
+              $ref: '#/components/schemas/AIWorkspaceInsight'
+            assistant:
+              $ref: '#/components/schemas/AIWorkspaceInsight'
+        priorities:
+          type: array
+          maxItems: 6
+          items:
+            type: object
+            required: [programId, reason]
+            properties:
+              programId:
+                type: string
+              reason:
+                type: string
+                maxLength: 300
     AIContextRequest:
       type: object
       properties:
@@ -452,6 +544,7 @@ components:
             - review
             - draft
             - changes
+            - workspace
         question:
           type: string
           maxLength: 2000
@@ -518,6 +611,8 @@ components:
               additionalProperties:
                 type: string
                 maxLength: 500
+            workspace:
+              $ref: '#/components/schemas/AIWorkspaceInput'
       required:
         - task
         - question
@@ -584,6 +679,8 @@ components:
     AIContextResult:
       type: object
       properties:
+        personalization:
+          $ref: '#/components/schemas/AIPersonalization'
         mode:
           type: string
           enum:
