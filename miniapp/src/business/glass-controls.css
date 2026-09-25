@@ -1,0 +1,221 @@
+/* Shared optical materials. Keep geometry in the component styles. */
+.opora-theme, .app-shell {
+  --glass-surface: radial-gradient(ellipse at 100% 0%, #b7a0ff0d, transparent 65%),
+    linear-gradient(145deg, #ffffff0e, #ffffff02 48%, #b29eff07), #22222b9e;
+  --glass-control: linear-gradient(155deg, #ffffff1c, #ffffff05 48%, #a99ae40c), #29293380;
+  --glass-inset: linear-gradient(145deg, #13141c70, #ffffff04), #29283278;
+  --glass-selected: radial-gradient(ellipse at 50% 0%, #d2c3ff24, transparent 78%),
+    linear-gradient(145deg, #ffffff20, #ffffff06), #71638928;
+  --glass-edge: #d7d0ee29;
+  --glass-shadow: inset 0 1px 0 #ffffff1c, inset 1px 0 0 #ffffff06,
+    inset 0 -1px 0 #b6a4ff10, 0 10px 28px #00000020;
+  --glass-control-shadow: inset 0 1px 0 #ffffff2e, inset 0 -1px 0 #ffffff08,
+    0 4px 12px #0000001f;
+}
+
+/* Surfaces stay translucent; only isolated chrome uses a live blur on mobile. */
+.opora-theme :is(.widget, .profile-panel, .application-row, .timeline-row,
+  .empty-state, .hub-services, .hub-benefits, .hub-stats button, .funding-card,
+  .hub-identity, .catalog-guest-context, .catalog-glass-context, .funding-result-intro,
+  .access-card, .ai-entry, .adaptive-insight, .priority-card, .company-summary,
+  .notification-preview, .checklist-item, .detail-checks > section, .home-opportunities) {
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+}
+.opora-theme :is(.hub-next, .black-business-card) {
+  background: radial-gradient(ellipse at 0% 0%, #8064ff24, transparent 75%), var(--glass-surface);
+  border-color: #b39aee38;
+  box-shadow: var(--glass-shadow);
+}
+.opora-theme .home-action-business {
+  background: var(--glass-surface);
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+}
+.opora-theme .home-action-support {
+  background: radial-gradient(ellipse at 0% 100%, #ff946d24, transparent 62%),
+    linear-gradient(145deg, #a388ff26, #ffffff00 48%), linear-gradient(135deg, #604dcae0, #4f439ab8);
+  border-color: #c4b1ff52;
+  box-shadow: inset 0 1px 0 #ffffff36, inset 0 -1px 0 #ebbdff1a, 0 10px 26px #24124424;
+}
+
+/* The dock and its selected item have separate edges and optical depth. */
+.app-shell .home-nav-wrap {
+  background: radial-gradient(ellipse at 12% 100%, #ff7a3d0c, transparent 65%),
+    radial-gradient(ellipse at 90% 100%, #8064ff14, transparent 65%);
+}
+.app-shell .home-nav {
+  background: radial-gradient(ellipse at 12% 0%, #ffffff14, transparent 52%),
+    linear-gradient(115deg, #33333e82, #24232da8 50%, #39313e7a);
+  border: 1px solid #e4daf03d;
+  box-shadow: inset 0 1px 0 #ffffff30, inset 0 -1px 0 #bca4f21f,
+    inset 1px 0 0 #ffffff0a, 0 10px 30px #00000040;
+  -webkit-backdrop-filter: blur(24px) saturate(130%);
+  backdrop-filter: blur(24px) saturate(130%);
+}
+.app-shell .home-nav > button {
+  color: #aaa8b7;
+  transition: background-color .18s ease, box-shadow .18s ease, color .18s ease;
+}
+.app-shell .home-nav > button[aria-current="page"] {
+  background: var(--glass-selected);
+  box-shadow: inset 0 1px 0 #ffffff40, inset 0 0 0 1px #e4d6ff18,
+    inset 0 -1px 0 #ffffff0b, 0 3px 10px #00000026;
+  color: #ff5a1f;
+}
+
+/* Tactile circular and secondary controls, with no extra overlay on hit targets. */
+.opora-theme :is(.app-back, .home-notifications, .assistant-icon-button,
+  .home-arrow, .modal-toolbar .icon-button, .save-program, .hub-identity-title button,
+  .widget-chevron, .soft-round, .hub-service-icon, .service-icon, .assistant-clear,
+  .assistant-latest, .goal-chip, .filter-chips > button, .preparation-options > button,
+  .assistant-prompts button, .ai-followups button),
+.opora-theme .opora-action:is(.secondary, .dark-action, .goal-chip) {
+  background: var(--glass-control);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-control-shadow);
+}
+.opora-theme .home-notifications::before { display: none; }
+.opora-theme .opora-action.goal-chip.chosen,
+.opora-theme :is(.filter-chips > button.selected,
+  .preparation-options > button.current, .save-program.is-saved) {
+  background: var(--glass-selected);
+  border-color: #bba5ff66;
+  color: #e2d8ff;
+  box-shadow: var(--glass-control-shadow);
+}
+.opora-theme .save-program.is-saved svg { fill: #bba5ff24; }
+.opora-theme .opora-action.primary,
+.opora-theme .assistant-send {
+  background: linear-gradient(170deg, #ffffff1f, #ffffff00 55%),
+    linear-gradient(120deg, #6954d2ed, #4f439ad9);
+  border: 1px solid #cbbaff4a;
+  box-shadow: inset 0 1px 0 #ffffff38, inset 0 -1px 0 #ffffff0c, 0 6px 20px #23184433;
+  color: #f4f0ff;
+}
+.opora-theme .opora-action.danger-button {
+  background: linear-gradient(145deg, #ffffff0f, transparent), #743638b3;
+  border-color: #efa3aa40;
+  box-shadow: var(--glass-control-shadow);
+}
+
+/* Inset fields contrast with raised buttons, including native select arrows. */
+.opora-theme :is(.opora-input-body, .opora-native-textarea, .search-box,
+  .assistant-input-wrap, .segmented-control, .catalog-scopes),
+.opora-theme :is(.field, .access-card, .chat-input) .opora-input-body {
+  background: var(--glass-inset);
+  border: 1px solid #d7d0ee24;
+  box-shadow: inset 0 2px 5px #0000001f, 0 1px 0 #ffffff0d;
+}
+.opora-theme .field select {
+  background-color: #292832a6;
+  border: 1px solid #d7d0ee2e;
+  box-shadow: inset 0 2px 5px #0000001f, 0 1px 0 #ffffff0d;
+}
+.opora-theme .field select option { background: #242229; color: #ebebf3; }
+.opora-theme .search-box .opora-input-body { background: transparent; border: 0; box-shadow: none; }
+.opora-theme .opora-native-input:focus { outline: none; }
+.opora-theme .field input:invalid:not(:placeholder-shown) { box-shadow: none; }
+.opora-theme .field .opora-input-body:has(input:user-invalid) {
+  border-color: #d597a6;
+}
+.opora-theme :is(.opora-input-body, .search-box, .assistant-input-wrap):focus-within,
+.opora-theme :is(.opora-native-textarea, .field select):focus-visible {
+  border-color: #b8a2ff99;
+  box-shadow: 0 0 0 3px #8064ff1f, inset 0 1px 0 #ffffff12;
+}
+.opora-theme :is(.segmented-control > button.selected, .catalog-scopes button[aria-pressed="true"]) {
+  background: var(--glass-selected);
+  color: #ebebf3;
+  box-shadow: var(--glass-control-shadow), inset 0 0 0 1px #ffffff14;
+}
+.opora-theme :is(.ai-proposal, .ai-finding, .data-note, .context-info,
+  .company-sources, .document-review, .detail-facts, .funding-card details,
+  .requirements, .plain-list, .document-list, .assistant-program) {
+  background: linear-gradient(145deg, #ffffff06, #a894e706), #1b1c2452;
+  border-color: #d7d0ee1c;
+  box-shadow: inset 0 1px 0 #ffffff08;
+}
+.opora-theme .tag:not(.funding-status) {
+  background: #c8b9e50b;
+  border-color: #d7d0ee1c;
+  box-shadow: inset 0 1px 0 #ffffff08;
+}
+.opora-theme .checklist-item .attach {
+  background: #a08bdd0a;
+  border-color: #bda9ec4d;
+}
+.opora-theme .document-row input[type='checkbox'] {
+  background: var(--glass-inset);
+  border-color: #d2c3ee66;
+}
+.opora-theme .document-row input[type='checkbox']:checked {
+  background: #604dca;
+  border-color: #b8a2ff;
+  box-shadow: inset 0 1px 0 #ffffff38;
+}
+
+/* Full-screen sheets retain a quiet, legible base below their glass toolbar. */
+.opora-theme dialog[open] {
+  background: radial-gradient(ellipse at 100% 0%, #8064ff12, transparent 55%), #191a1ff7;
+  border-color: #d7d0ee24;
+}
+.opora-theme dialog::backdrop { background: #090a10b8; }
+.opora-theme dialog :is(.modal, .project-dialog) { background: transparent; }
+.opora-theme :is(.modal-toolbar, .assistant-header, .assistant-composer) {
+  background: linear-gradient(125deg, #ffffff08, #b5a0ff05), #1c1d23c9;
+  border-color: #d7d0ee20;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+.opora-theme .assistant-page .message.assistant {
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+}
+.opora-theme .assistant-page .message.user {
+  background: linear-gradient(140deg, #bca5ff1f, transparent), #604dca40;
+  border: 1px solid #bba5ff38;
+  box-shadow: inset 0 1px 0 #ffffff14;
+}
+.opora-theme .toast {
+  background: linear-gradient(145deg, #ffffff0e, transparent), #26232bed;
+  border-color: #d7c6ff44;
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+.opora-theme :is(button, a, summary):focus-visible {
+  outline: 2px solid #beaaff;
+  outline-offset: 3px;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .opora-theme :is(.home-nav, .modal-toolbar, .assistant-header, .assistant-composer, .toast) {
+    background-color: #24242c;
+  }
+}
+@media (hover: hover) {
+  .opora-theme .opora-action:is(.primary, .secondary, .dark-action):hover:not(:disabled),
+  .opora-theme :is(.home-nav > button, .filter-chips > button, .assistant-prompts button,
+    .home-action, .home-opportunities, .hub-next):hover:not(:disabled) {
+    box-shadow: inset 0 1px 0 #ffffff4d, inset 0 0 0 1px #dfceff20, 0 6px 18px #00000026;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .opora-theme, .app-shell {
+    --glass-surface: #24242c;
+    --glass-control: #303039;
+    --glass-inset: #22222a;
+    --glass-selected: #3b354b;
+  }
+  .opora-theme :is(.home-nav, .modal-toolbar, .assistant-header, .assistant-composer, .toast) {
+    background: #24242c;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .opora-theme dialog[open] { background: #191a1f; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .home-nav > button { transition: none; }
+}
