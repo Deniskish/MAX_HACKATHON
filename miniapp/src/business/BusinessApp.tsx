@@ -16,6 +16,7 @@ import {
 import { BusinessCard, DetailSteps, Orb } from './VisualWidgets';
 import { Icon } from './Icon';
 import { ModalSheet } from './ModalSheet';
+import { HomePage } from './HomePage';
 import { Spinner } from '@maxhub/max-ui';
 import { ActionButton, BusinessInput, BusinessTextarea } from './MaxControls';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -88,13 +89,14 @@ export default function BusinessApp() {
   const [saved, setSaved] = useState<string[]>(initial.saved);
   const [availability, setAvailability] = useState('');
   const [showEvents, setShowEvents] = useState(false);
+  const [homePanel, setHomePanel] = useState<'business' | 'funding' | 'events' | 'more' | null>(null);
   const [previousSnapshot] = useState<Record<string, string>>(() => readSaved('opora.snapshot.v2', {}));
   const matches = rankFundingMatches(officialFundingCatalog.map((o) => matchFundingOpportunity(fundingProfile, need, o, {
     preparedDocuments: Object.keys(apps.find((a) => a.programId === o.id)?.documents ?? {}).filter((d) => apps.find((a) => a.programId === o.id)?.documents[d]),
   })));
   const events = fundingEvents(officialFundingCatalog, saved, previousSnapshot, matches);
   useEffect(() => { try { localStorage.setItem('opora.snapshot.v2', JSON.stringify(Object.fromEntries(officialFundingCatalog.map((o) => [o.id, o.version])))); } catch { /* Workspace storage warning handles unavailable storage. */ } }, []);
-  const openFunding = (id: string) => { const p = programs.find((p) => p.id === id); if (p) setSelected(p); };
+  const openFunding = (id: string) => { const p = programs.find((p) => p.id === id); if (p) { setHomePanel(null); setSelected(p); } };
   const [onlySaved, setOnlySaved] = useState(false);
   const [selected, setSelected] = useState<Program | null>(
     () =>
@@ -226,6 +228,7 @@ export default function BusinessApp() {
   );
   const activeApp = selected ? apps.find((a) => a.programId === selected.id) : undefined;
   const openProfile = () => {
+    setHomePanel(null);
     if (projectProfile && !companyProfile) { setProjectOnboard(true); return; }
     cancelCompanyRequest();
     setForm(profile || emptyProfile);
@@ -295,6 +298,7 @@ export default function BusinessApp() {
     });
     close();
     setPage('overview');
+    setHomePanel('funding');
   }
   // Контекст выбранной программы сохраняется при переходе в чат.
   async function ask(
@@ -454,7 +458,7 @@ export default function BusinessApp() {
           </div>
         </header>
         <main ref={mainRef}>
-          {showEvents && <section className="widget events-panel"><h2>События</h2><p className="muted">Вычислены при открытии приложения. Фонового мониторинга нет.</p>{events.length ? events.map((event) => <button className="widget-link-row" key={event.id} onClick={() => { openFunding(event.opportunityId); setShowEvents(false); }}>{event.text}</button>) : <p>Новых событий нет. Сохраните интересующие программы.</p>}<ActionButton className="secondary" onClick={() => { setPage('calendar'); setShowEvents(false); }}>Открыть календарь</ActionButton></section>}
+          {page !== 'overview' && showEvents && <section className="widget events-panel"><h2>События</h2><p className="muted">Вычислены при открытии приложения. Фонового мониторинга нет.</p>{events.length ? events.map((event) => <button className="widget-link-row" key={event.id} onClick={() => { openFunding(event.opportunityId); setShowEvents(false); }}>{event.text}</button>) : <p>Новых событий нет. Сохраните интересующие программы.</p>}<ActionButton className="secondary" onClick={() => { setPage('calendar'); setShowEvents(false); }}>Открыть календарь</ActionButton></section>}
           {page !== 'overview' && (
             <div className="page-heading">
               <h1>
@@ -470,10 +474,15 @@ export default function BusinessApp() {
               </h1>
             </div>
           )}
-          {page === 'overview' && (profile ? <>
-            <section className="widget business-summary"><span className="tag">{companyProfile ? 'Ваш бизнес' : 'Проект без юридического лица'}</span><h1>{profile.name}</h1><p>{profile.region} · {companyProfile ? `ОКВЭД ${profile.okved || 'не указан'} · МСП: ${profile.isSme === 'yes' ? 'да' : profile.isSme === 'no' ? 'нет' : 'неизвестно'}` : projectProfile?.industry}</p><ActionButton className="secondary" onClick={openProfile}>Редактировать профиль</ActionButton></section>
-            <FundingExperience key={companyProfile?.inn ?? 'project'} profile={fundingProfile} initialNeed={need} onNeed={setNeed} onOpen={openFunding} onSave={toggleSaved} saved={saved} />
-          </> : <section className="widget agent-welcome"><Orb /><h1>Найдём поддержку и финансирование для вашего бизнеса</h1><p>Расскажите о бизнесе и его потребности. Условия берём из официальных источников, соответствие рассчитываем по правилам.</p><div className="modal-actions"><ActionButton className="primary" onClick={openProfile}>Добавить бизнес</ActionButton><ActionButton className="secondary" onClick={() => setProjectOnboard(true)}>У меня пока нет компании</ActionButton></div></section>)}
+          {page === 'overview' && <HomePage
+            onFindSupport={() => setHomePanel(profile ? 'funding' : 'business')}
+            onAddBusiness={() => setHomePanel('business')}
+            onOpportunities={() => browse()}
+            onNotifications={() => setHomePanel('events')}
+            onApplications={() => setPage('applications')}
+            onMore={() => setHomePanel('more')}
+            hasNotifications={events.length > 0}
+          />}
           {page === 'programs' && (
             <>
               <div className="catalog-toolbar">
@@ -824,11 +833,6 @@ export default function BusinessApp() {
               </form>
             </section>
           )}
-          {page === 'overview' && <footer>
-            <span className="footer-logo">
-              <img className="footer-logo-image" src="/brand/logo1.png" width={1254} height={1254} alt="опора." />
-            </span>
-          </footer>}
         </main>
       </div>
       <dialog
@@ -1154,7 +1158,24 @@ export default function BusinessApp() {
         </div>
       </dialog>
       {exportText && <ModalSheet title="Экспорт текста" onClose={() => setExportText('')}><h2>Текст черновика</h2><p>Скопируйте текст в редактор и сохраните как TXT. Документ остаётся на вашем устройстве.</p><BusinessTextarea aria-label="Текст для экспорта" readOnly rows={12} value={exportText} /><div className="modal-actions"><ActionButton className="primary" onClick={() => navigator.clipboard.writeText(exportText).then(() => setToast('Текст скопирован')).catch(() => setToast('Выделите и скопируйте текст вручную.'))}>Копировать текст</ActionButton><ActionButton className="secondary" onClick={() => setExportText('')}>Закрыть</ActionButton></div></ModalSheet>}
-      {projectOnboard && <ProjectOnboarding initial={projectProfile} onCancel={() => setProjectOnboard(false)} onSave={(project) => { setProjectProfile(project); setProfile(null); setNeed({ ...need, purpose: project.fundingPurpose, amount: project.fundingNeed }); setProjectOnboard(false); setPage('overview'); }} />}
+      {homePanel && <ModalSheet title={{ business: 'Ваш бизнес', funding: 'Подбор поддержки', events: 'Уведомления', more: 'Ещё' }[homePanel]} onClose={() => setHomePanel(null)}>
+        {homePanel === 'business' && <div className="home-panel-actions">
+          <h2>Расскажите о бизнесе</h2>
+          <ActionButton className="primary" onClick={openProfile}>{profile ? 'Редактировать профиль' : 'Добавить компанию по ИНН'}</ActionButton>
+          <ActionButton className="secondary" onClick={() => { setHomePanel(null); setProjectOnboard(true); }}>У меня пока нет компании</ActionButton>
+        </div>}
+        {homePanel === 'funding' && profile && <>
+          <section className="widget business-summary"><span className="tag">{companyProfile ? 'Ваш бизнес' : 'Проект без юридического лица'}</span><h1>{profile.name}</h1><p>{profile.region} · {companyProfile ? `ОКВЭД ${profile.okved || 'не указан'} · МСП: ${profile.isSme === 'yes' ? 'да' : profile.isSme === 'no' ? 'нет' : 'неизвестно'}` : projectProfile?.industry}</p><ActionButton className="secondary" onClick={openProfile}>Редактировать профиль</ActionButton></section>
+          <FundingExperience key={companyProfile?.inn ?? 'project'} profile={fundingProfile} initialNeed={need} onNeed={setNeed} onOpen={openFunding} onSave={toggleSaved} saved={saved} />
+        </>}
+        {homePanel === 'events' && <div className="home-panel-actions"><h2>События</h2>{events.length ? events.map((event) => <button className="widget-link-row" key={event.id} onClick={() => openFunding(event.opportunityId)}>{event.text}</button>) : <p>Новых событий нет. Сохраните интересующие программы.</p>}<ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('calendar'); }}>Открыть календарь</ActionButton></div>}
+        {homePanel === 'more' && <div className="home-panel-actions">
+          <ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('assistant'); }}>AI-помощник</ActionButton>
+          <ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('profile'); }}>Мой бизнес</ActionButton>
+          <ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('calendar'); }}>Календарь</ActionButton>
+        </div>}
+      </ModalSheet>}
+      {projectOnboard && <ProjectOnboarding initial={projectProfile} onCancel={() => setProjectOnboard(false)} onSave={(project) => { setProjectProfile(project); setProfile(null); setNeed({ ...need, purpose: project.fundingPurpose, amount: project.fundingNeed }); setProjectOnboard(false); setPage('overview'); setHomePanel('funding'); }} />}
       {toast && (
         <div className="toast" role="status">
           <Icon name="check" size={18} />
