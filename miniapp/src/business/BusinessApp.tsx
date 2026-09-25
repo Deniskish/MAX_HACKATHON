@@ -110,7 +110,8 @@ export default function BusinessApp() {
   const calendarPrograms = programs.filter((p) => p.deadline && calendarCatalog.some((o) => o.id === p.id));
   function navigate(next: Page) {
     setHomePanel(null);
-    if (['assistant', 'calendar'].includes(next) && !profile) { setPage('profile'); return; }
+    if (next === 'calendar' && !profile) { setPage('profile'); return; }
+    if (next === 'assistant') setAssistantBack(page === 'overview' ? 'overview' : 'profile');
     if (next === 'programs') { setCatalogScope(profile ? 'personal' : 'all'); setOnlySaved(false); setFilter('Все меры'); setQuery(''); setAvailability(''); }
     if (next === 'calendar') setAllCalendar(false);
     setPage(next);
@@ -219,6 +220,7 @@ export default function BusinessApp() {
   const [question, setQuestion] = useState('');
   const [sending, setSending] = useState(false);
   const [assistantMode, setAssistantMode] = useState('Проверяем доступность GigaChat');
+  const [assistantBack, setAssistantBack] = useState<'overview' | 'profile'>('overview');
   useEffect(() => { const controller = new AbortController(); fetch('/api/ai/status', { signal: controller.signal }).then((r) => r.json()).then((data) => setAssistantMode(data.status === 'ready' ? 'GigaChat подключён' : data.configured ? 'GigaChat настроен · соединение ещё не подтверждено' : 'GigaChat не настроен')).catch(() => { if (!controller.signal.aborted) setAssistantMode('Статус AI недоступен'); }); return () => controller.abort(); }, []);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const mainRef = useRef<HTMLElement>(null);
@@ -356,7 +358,7 @@ export default function BusinessApp() {
     setPage('overview');
     setCatalogScope('personal');
   }
-  const aiContext = { profile: fundingProfile, need: need.purpose ? need : undefined, page, workspace: analysisContext?.workspace,
+  const aiContext = { profile: profile ? fundingProfile : undefined, need: need.purpose ? need : undefined, page, workspace: analysisContext?.workspace,
     identifiers: profile ? { name: profile.name, inn: profile.inn } : undefined };
   function applyAIProfile(patch: FundingProfile) {
     setHomePanel(null); setSelected(null);
@@ -378,7 +380,6 @@ export default function BusinessApp() {
     program: Program | null = chatProgram,
     task?: 'strategy' | 'documents',
   ) {
-    if (!profile) { navigate('profile'); return; }
     if (!text.trim() || sending) return;
     setPage('assistant');
     setChatProgram(program);
@@ -386,7 +387,7 @@ export default function BusinessApp() {
     setMessages((m) => [...m, { role: 'user', text }]);
     setSending(true);
     const controller = new AbortController(); chatRequest.current = controller;
-    const application = apps.find((a) => a.programId === program?.id);
+    const application = profile ? apps.find((a) => a.programId === program?.id) : undefined;
     try {
       const data = await requestAI({ task: task === 'strategy' ? 'strategy' : 'chat', question: text,
         history: messages.slice(-8).map(({ role, text }) => ({ role, text })),
@@ -395,7 +396,7 @@ export default function BusinessApp() {
           budget: application?.budget.trim() ? Number(application.budget) : null } },
         AbortSignal.any([controller.signal, AbortSignal.timeout(70000)]));
       if (controller.signal.aborted || chatRequest.current !== controller) return;
-      setMessages((m) => [...m.slice(-29), { role: 'assistant', text: data.answer, result: data }]);
+      setMessages((m) => [...m.slice(-29), { role: 'assistant', text: data.answer, result: !profile && data.mode === 'local' ? undefined : data }]);
       setAssistantMode(data.mode === 'llm' ? 'GigaChat · контекстный помощник' : 'Ответ по правилам');
     } catch (error) {
       if (controller.signal.aborted || chatRequest.current !== controller) return;
@@ -433,11 +434,10 @@ export default function BusinessApp() {
           {page === 'overview' && <HomePage
             onFindSupport={() => navigate('programs')}
             onAddBusiness={() => profile ? navigate('profile') : setHomePanel('business')}
-            onOpportunities={() => profile ? setHomePanel('funding') : browse()}
+            onAssistant={() => navigate('assistant')}
             onNotifications={() => setHomePanel('events')}
             onApplications={() => setPage('applications')}
             onBusiness={() => navigate('profile')} personalized={!!profile}
-            analysis={businessAnalysis} onAIAction={followInsight}
             hasNotifications={hasNotifications}
           />}
           {page === 'programs' && (
@@ -720,14 +720,15 @@ export default function BusinessApp() {
                 </div>
               </details>
             ) : null)}
-          {page === 'assistant' && profile && <AssistantPage
-            businessName={profile.name} status={assistantMode} messages={messages} question={question} onQuestion={setQuestion}
-            sending={sending} onSend={(text) => { void ask(text); }} onBack={() => navigate('profile')}
+          {page === 'assistant' && <AssistantPage
+            businessName={profile?.name ?? 'Вопросы о бизнесе'} guest={!profile} backLabel={assistantBack === 'overview' ? 'На главную' : 'В мой бизнес'} status={assistantMode} messages={messages} question={question} onQuestion={setQuestion}
+            sending={sending} onSend={(text) => { void ask(text); }} onBack={() => navigate(assistantBack)}
             onStop={() => { chatRequest.current?.abort(); chatRequest.current = null; setSending(false); }}
             onClear={() => { chatRequest.current?.abort(); chatRequest.current = null; setSending(false); setMessages([]); setChatProgram(null); setQuestion(''); }}
             program={chatProgram ? { title: chatProgram.title, onOpen: () => setSelected(chatProgram), onRemove: () => setChatProgram(null) } : undefined}
             context={(closeInfo) => <>
-              <p><b>{profile.name}</b> · {profile.region}<br />Цель: {need.purpose || 'пока не указана'}. Ответы учитывают этот профиль.</p>
+              {profile ? <p><b>{profile.name}</b> · {profile.region}<br />Цель: {need.purpose || 'пока не указана'}. Ответы учитывают этот профиль.</p>
+                : <><p>Задавайте общие вопросы без профиля. Для персонального подбора можно добавить бизнес.</p><ActionButton className="secondary" onClick={() => { closeInfo(); setHomePanel('business'); }}>Добавить бизнес</ActionButton></>}
               <AdaptiveInsight analysis={businessAnalysis} section="assistant" onAction={(action) => { closeInfo(); followInsight(action); }} compact />
               <p>GigaChat получает вопрос, последние сообщения, параметры бизнеса и выбранной заявки. Известные реквизиты скрываются. Не добавляйте лишние персональные данные. История сохраняется на этом устройстве.</p>
             </>}

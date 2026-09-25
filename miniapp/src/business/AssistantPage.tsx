@@ -5,7 +5,8 @@ import { GlassArt } from './GlassArt';
 
 type ChatMessage = { role: 'user' | 'assistant'; text: string };
 
-export function AssistantPage({ businessName, status, messages, renderMessage, question, onQuestion, sending, onSend, onStop, onBack, onClear, context, program }: {
+export function AssistantPage({ businessName, guest = false, backLabel = 'В мой бизнес', status, messages, renderMessage, question, onQuestion, sending, onSend, onStop, onBack, onClear, context, program }: {
+  guest?: boolean; backLabel?: string;
   businessName: string; status: string; messages: ChatMessage[]; renderMessage: (index: number) => ReactNode;
   question: string; onQuestion: (text: string) => void; sending: boolean; onSend: (text: string) => void;
   onStop: () => void; onBack: () => void; onClear: () => void; context: (close: () => void) => ReactNode;
@@ -49,7 +50,7 @@ export function AssistantPage({ businessName, status, messages, renderMessage, q
   }
   return <section className="assistant-page" aria-label="Чат с AI-помощником">
     <header className="assistant-header">
-      <button className="assistant-icon-button assistant-back" aria-label="В мой бизнес" onClick={onBack}><Icon name="chevron" /></button>
+      <button className="assistant-icon-button assistant-back" aria-label={backLabel} onClick={onBack}><Icon name="chevron" /></button>
       <div className="assistant-heading"><h1>Опора AI</h1><span title={businessName}>{businessName}</span></div>
       <button className="assistant-icon-button" aria-label="О чате и контексте бизнеса" onClick={() => setInfoOpen(true)}><Icon name="spark" /></button>
     </header>
@@ -66,8 +67,8 @@ export function AssistantPage({ businessName, status, messages, renderMessage, q
       }}>
         {!messages.some((message) => message.role === 'user') && <div className="assistant-welcome">
           <GlassArt shape="loop" size={112} className="assistant-welcome-art" />
-          <h2>С чего начнём?</h2><p>Помогу найти поддержку и разобраться с документами для вашего бизнеса.</p>
-          <div className="assistant-prompts">{['Что мне подходит?', 'Какой следующий шаг?', 'Какие документы нужны?'].map((text) => <button key={text} disabled={sending} onClick={() => send(text)}>{text}<Icon name="arrow" size={16} /></button>)}</div>
+          <h2>С чего начнём?</h2><p>{guest ? 'Отвечу на вопросы о бизнесе и поддержке.' : 'Помогу найти поддержку и разобраться с документами для вашего бизнеса.'}</p>
+          <div className="assistant-prompts">{(guest ? ['Какая поддержка бывает?', 'С чего начать свой бизнес?', 'Чем грант отличается от кредита?'] : ['Что мне подходит?', 'Какой следующий шаг?', 'Какие документы нужны?']).map((text) => <button key={text} disabled={sending} onClick={() => send(text)}>{text}<Icon name="arrow" size={16} /></button>)}</div>
         </div>}
         {messages.map((message, index) => <article key={index} className={`message ${message.role}`} aria-label={message.role === 'user' ? 'Вы' : 'Опора AI'}>{renderMessage(index)}</article>)}
         {sending && <div className="assistant-typing" role="status"><span />Готовлю ответ…</div>}

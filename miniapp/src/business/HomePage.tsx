@@ -1,19 +1,15 @@
 import { ThemedImage } from './ThemedImage';
 import { Icon } from './Icon';
 import { AppNavigation, BrandWordmark } from './AppChrome';
-import type { BusinessAnalysis } from './useBusinessAnalysis';
-import type { WorkspaceInsight } from '../../api-server/ai/types';
 
 type HomePageProps = {
   onFindSupport: () => void;
   onAddBusiness: () => void;
-  onOpportunities: () => void;
+  onAssistant: () => void;
   onNotifications: () => void;
   onApplications: () => void;
   onBusiness: () => void;
   personalized: boolean;
-  analysis: BusinessAnalysis;
-  onAIAction: (action: WorkspaceInsight['action']) => void;
   hasNotifications: boolean;
 };
 
@@ -21,8 +17,7 @@ function Arrow() {
   return <span className="home-arrow" aria-hidden="true"><Icon name="arrow" size={20} /></span>;
 }
 
-export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNotifications, onApplications, onBusiness, personalized, hasNotifications, analysis, onAIAction }: HomePageProps) {
-  const insight = analysis.data?.personalization?.sections.home;
+export function HomePage({ onFindSupport, onAddBusiness, onAssistant, onNotifications, onApplications, onBusiness, personalized, hasNotifications }: HomePageProps) {
   return <div className={`home-dashboard${personalized ? ' home-personalized' : ''}`}>
     <header className="home-topbar">
       <BrandWordmark className="home-wordmark-small" />
@@ -52,10 +47,10 @@ export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNoti
             <ThemedImage className="home-briefcase" src="/assets/briefcase.png" width={1254} height={1254} alt="" draggable={false} />
           </button>
         </div>
-        <button type="button" className={`home-opportunities${personalized ? ' home-adaptive' : ''}`} onClick={() => insight ? onAIAction(insight.action) : onOpportunities()}>
+        <button type="button" className="home-opportunities home-adaptive" onClick={onAssistant}>
           <ThemedImage className="home-orb" src="/assets/orb.png" width={1254} height={1254} alt="" draggable={false} />
           <span className="home-opportunities-copy">
-            <span className="home-action-title">{insight ? insight.title : personalized ? analysis.status === 'loading' ? 'Анализируем ваш бизнес…' : 'Уточните вашу задачу' : <>Возможности<br />рядом</>}</span>
+            <span className="home-action-title">AI-помощник</span>
           </span>
           <Arrow />
         </button>

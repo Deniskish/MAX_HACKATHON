@@ -18,6 +18,27 @@ const id = officialFundingCatalog[0].id;
 const input = { task: 'chat', question: 'Хочу купить оборудование за 200 млн рублей, залога нет. А если уменьшить сумму?',
   history: [{ role: 'user', text: 'Срок три года' }], context: { profile: { region: 'Самарская область', applicantType: 'legal_entity' }, project: 'Производство приборов', identifiers: { name: 'ООО Секрет', inn: '7707083893' } } };
 const answer = { answer: 'Уточните условия обеспечения.', evidenceIds: [`program:${id}`], followups: ['Сколько собственных средств?'], findings: [] };
+
+test('guest chat accepts questions and history without inventing a company or unrelated programme actions', async () => {
+  const stages: string[] = [];
+  const result = await runAssistant({ task: 'chat', question: 'Чем грант отличается от кредита?',
+    history: [{ role: 'user', text: 'Только изучаю поддержку' }], context: { page: 'assistant' } }, async (stage, payload: any) => {
+      stages.push(stage);
+      assert.deepEqual(payload.request.context.profile, {});
+      assert.equal(payload.request.history[0].text, 'Только изучаю поддержку');
+      return { value: stage === 'plan' ? { query: 'грант кредит', opportunityIds: [] }
+        : { answer: 'Кредит возвращают с процентами; грант расходуют на цели программы с отчётностью.', evidenceIds: [], followups: [], findings: [] } };
+    });
+  assert.deepEqual(stages, ['plan', 'answer']);
+  assert.equal(result.mode, 'llm'); assert.match(result.answer, /Кредит/);
+  assert.deepEqual(result.actions, []); assert.equal(result.proposedProfile, undefined);
+});
+
+test('guest chat provider failure does not masquerade as a personal selection', async () => {
+  const result = await runAssistant({ task: 'chat', question: 'Что такое грант?', context: {} });
+  assert.equal(result.mode, 'local'); assert.match(result.answer, /не смог ответить/);
+  assert.deepEqual(result.actions, []); assert.deepEqual(result.matches, []); assert.equal(result.notice, undefined);
+});
 test('workspace analysis adapts every page, retains actual business facts and drops invented or unavailable programme priorities', async () => {
   const model: AIModel = async (stage, payload: any) => {
     if (stage === 'plan') return { value: { query: 'производство', opportunityIds: [id], profile: { region: 'Выдуманный регион' }, need: { purpose: 'экспорт' } } };
