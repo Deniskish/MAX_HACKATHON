@@ -1,6 +1,7 @@
 // Run from api-server. Only response structure is logged, never content or credentials.
 import { config } from 'dotenv';
 import { createGigaChatClient, GIGACHAT_CHAT_URL } from '../gigachat';
+import { SourceStore } from './sources';
 config({ path: '../../.env', quiet: true });
 config({ quiet: true });
 const known = new Set(['summary', 'answer', 'personalization', 'evidenceIds', 'sections', 'priorities', 'page', 'title', 'text', 'action', 'programId', 'reason', 'home', 'programs', 'applications', 'calendar', 'assistant']);
@@ -25,7 +26,9 @@ async function main() {
     return response;
   };
   const client = createGigaChatClient({ authKey: process.env.GIGACHAT_AUTH_KEY, scope: process.env.GIGACHAT_SCOPE || 'GIGACHAT_API_PERS', model: process.env.GIGACHAT_MODEL || 'GigaChat-2-Pro' }, transport);
-  const result = await client.assist({ task: 'workspace', question: 'Проанализируй имеющиеся сведения и адаптируй все пять разделов. Не придумывай параметры бизнеса: если данных мало, предложи уточнения.', context: { profile: {}, workspace: { savedIds: [], applications: [] } } });
+  const evidence = await new SourceStore().evidence();
+  console.log('AI source context:', JSON.stringify({ items: evidence.length, characters: evidence.reduce((n, item) => n + item.text.length, 0) }));
+  const result = await client.assist({ task: 'workspace', question: 'Проанализируй имеющиеся сведения и адаптируй все пять разделов. Не придумывай параметры бизнеса: если данных мало, предложи уточнения.', context: { profile: {}, workspace: { savedIds: [], applications: [] } } }, evidence);
   console.log('AI diagnostic:', JSON.stringify({ mode: result.mode, failure: result.providerFailure }));
 }
 main().catch(() => { console.error('AI_DIAGNOSTIC_FAILED'); process.exitCode = 1; });

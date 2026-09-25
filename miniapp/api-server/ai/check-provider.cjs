@@ -7,7 +7,7 @@ if (!api) throw new Error('API_PROCESS_NOT_FOUND');
 const command = [api.pm_exec_path, ...[api.args ?? []].flat()].join(' ');
 console.log('AI runtime:', JSON.stringify({ script: api.pm_exec_path, cwd: api.pm_cwd, interpreter: api.exec_interpreter, compiledApi: /dist\/server|start:prod/.test(command), extraCA: Boolean(api.NODE_EXTRA_CA_CERTS), nodeOptions: Boolean(api.NODE_OPTIONS) }));
 const env = { ...process.env };
-for (const name of ['GIGACHAT_AUTH_KEY', 'GIGACHAT_SCOPE', 'GIGACHAT_MODEL', 'NODE_EXTRA_CA_CERTS', 'NODE_OPTIONS']) {
+for (const name of ['GIGACHAT_AUTH_KEY', 'GIGACHAT_SCOPE', 'GIGACHAT_MODEL', 'NODE_EXTRA_CA_CERTS', 'NODE_OPTIONS', 'OPORA_SOURCE_DIR']) {
   if (typeof api[name] === 'string') env[name] = api[name];
 }
 const result = spawnSync(process.execPath, ['--import', 'tsx', path.join(__dirname, 'check-provider.ts')], { cwd: path.resolve(__dirname, '..'), env, stdio: 'inherit' });
