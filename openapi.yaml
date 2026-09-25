@@ -1324,6 +1324,7 @@ components:
           type: string
           enum:
           - official
+          - aggregator
           - manual
         kind:
           type: string
@@ -1457,6 +1458,7 @@ components:
           type: string
           enum:
           - official
+          - aggregator
       required:
       - id
       - name
@@ -1470,6 +1472,7 @@ components:
           type: string
           enum:
           - official
+          - aggregator
         entityType:
           type: string
           enum:

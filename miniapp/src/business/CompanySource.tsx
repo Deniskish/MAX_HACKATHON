@@ -18,7 +18,7 @@ export function CompanySources({ profile }: { profile: Profile }) {
   if (!unique.length) return null;
   return <div className="company-sources" role="status">
     {unique.map((source) => <p key={source.sourceId}>
-      <strong>{source.mode === 'demo' ? 'ДЕМО · не данные ФНС. ' : 'Официальный источник. '}</strong>
+      <strong>{source.mode === 'demo' ? 'ДЕМО · не данные ФНС. ' : source.mode === 'aggregator' ? 'Сервис данных. ' : 'Официальный источник. '}</strong>
       {source.source}
       {source.sourceUrl && /^https:\/\//.test(source.sourceUrl) && <>
         {' '}<a href={source.sourceUrl} target="_blank" rel="noreferrer">Источник</a>

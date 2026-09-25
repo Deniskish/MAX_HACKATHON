@@ -23,7 +23,7 @@ export function loadWorkspace(storage: Pick<Storage, 'getItem'>, ids: string[]):
     try {
       const provenance = record(p.provenance) ? Object.fromEntries(Object.entries(p.provenance).filter(([, v]) => record(v)
         && ['sourceId', 'source', 'updatedAt'].every((key) => typeof v[key] === 'string')
-        && (v.sourceUrl === null || typeof v.sourceUrl === 'string') && ['official', 'manual'].includes(String(v.mode))
+        && (v.sourceUrl === null || typeof v.sourceUrl === 'string') && ['official', 'aggregator', 'manual'].includes(String(v.mode))
         && ['source', 'derived', 'manual'].includes(String(v.kind)))) : undefined;
       result.profile = { ...emptyProfile, ...parseFundingProfile(p), inn: p.inn, name: p.name, provenance: provenance as Profile['provenance'] };
     } catch { /* Malformed stored values must not crash React or become matching facts. */ }

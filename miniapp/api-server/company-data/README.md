@@ -1,6 +1,6 @@
 # Официальные данные компании
 
-`CompanyDataProvider` и `CompanyDataService` сохранены. Runtime использует `FNSRegistrySnapshotProvider`; отсутствие индекса — 503, отсутствие записи — 404. Synthetic `DemoCompanyDataProvider` перенесён в `../tests/fixtures` и не импортируется production-кодом.
+`CompanyDataProvider` и `CompanyDataService` сохранены. При `DADATA_API_KEY` runtime использует `DaDataCompanyProvider` с режимом `aggregator`, иначе `FNSRegistrySnapshotProvider` с режимом `official`. Ключ только на сервере. Источник и период сохраняются для каждого поля. Отсутствие локального индекса без DaData — 503, отсутствие записи — 404. Synthetic `DemoCompanyDataProvider` находится в `../tests/fixtures` и не импортируется production-кодом.
 
 `fns-parser.ts` выборочно разбирает официальные XML ЕГРЮЛ/ЕГРИП, МСП, численности, доходов/расходов. `sync.ts` потоково читает XML/ZIP, проверяет официальные HTTPS download/redirect, запрещает DTD, обновляет SQLite в транзакции. `fns-index.ts` хранит записи и метаданные. Поля из разных источников имеют отдельный provenance. Неизвестные поля не дополняются догадками, доход не превращается в выручку, период не выводится из даты публикации.
 

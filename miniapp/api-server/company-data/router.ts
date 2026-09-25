@@ -3,6 +3,7 @@ import { FNSRegistrySnapshotProvider } from './official-providers';
 import { InvalidInnError } from './inn';
 import { CompanyDataService } from './service';
 import { ProviderNotConfiguredError } from './types';
+import { CompanyProviderError } from './dadata';
 
 // Единственная точка выбора provider; подключение официального адаптера не меняет маршруты.
 export function companyDataRouter(service = new CompanyDataService(new FNSRegistrySnapshotProvider())) {
@@ -19,6 +20,8 @@ export function companyDataRouter(service = new CompanyDataService(new FNSRegist
     } catch (error) {
       if (error instanceof InvalidInnError)
         res.status(400).json({ code: 'INVALID_INN', error: 'Проверьте ИНН: нужны 10 или 12 цифр с верной контрольной суммой.' });
+      else if (error instanceof CompanyProviderError)
+        res.status(error.code === 'COMPANY_RATE_LIMITED' ? 429 : 503).json({ code: error.code, error: 'Сервис автозаполнения недоступен' });
       else if (error instanceof ProviderNotConfiguredError)
         res.status(503).json({ code: 'FNS_NOT_CONFIGURED', error: 'Официальный источник данных ещё не подключён' });
       else

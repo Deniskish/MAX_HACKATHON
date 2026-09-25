@@ -50,11 +50,13 @@ export async function requestCompanyData(
     const error = await response.json().catch(() => null) as { code?: string } | null;
     if (error?.code === 'FNS_NOT_CONFIGURED')
       throw new Error('Автозаполнение пока не подключено. Вы можете заполнить профиль вручную.');
+    if (error?.code === 'COMPANY_ACCESS_DENIED') throw new Error('Сервис автозаполнения не разрешил доступ. Можно заполнить профиль вручную.');
+    if (error?.code === 'COMPANY_QUOTA_EXCEEDED') throw new Error('Лимит автозаполнения исчерпан. Можно заполнить профиль вручную.');
     if (response.status === 429) throw new Error('Слишком много запросов. Попробуйте через минуту.');
     throw new Error('Источник данных недоступен. Можно заполнить сведения вручную.');
   }
   const data = await response.json() as CompanyResponse;
-  if (!['demo', 'official'].includes(data.mode) || data.company?.inn !== inn ||
+  if (!['demo', 'official', 'aggregator'].includes(data.mode) || data.company?.inn !== inn ||
       data.profile?.inn !== inn || !data.profile.provenance || !Array.isArray(data.sources))
     throw new Error('Источник вернул некорректный ответ. Заполните сведения вручную.');
   return data;

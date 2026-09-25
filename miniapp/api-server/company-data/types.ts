@@ -1,6 +1,6 @@
 import type { Profile } from '../support-model';
 
-export type CompanyDataMode = 'demo' | 'official';
+export type CompanyDataMode = 'demo' | 'official' | 'aggregator';
 export type CompanySource = {
   id: string;
   name: string;

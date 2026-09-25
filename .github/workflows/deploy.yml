@@ -15,12 +15,17 @@ jobs:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_SSH_KEY_B64: ${{ secrets.SERVER_SSH_KEY_B64 }}
+          DADATA_API_KEY: ${{ secrets.DADATA_API_KEY }}
         run: |
           mkdir -p ~/.ssh
           printf '%s' "$SERVER_SSH_KEY_B64" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+          if [ -n "$DADATA_API_KEY" ]; then
+            printf 'DADATA_API_KEY=%s\n' "$DADATA_API_KEY" | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$SERVER_USER@$SERVER_HOST" 'umask 077; cat > /opt/app/.env.dadata; chmod 600 /opt/app/.env.dadata'
+          fi
 
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$SERVER_USER@$SERVER_HOST" '
             set -e

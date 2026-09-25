@@ -6,6 +6,8 @@ import { fundingCatalogRouter } from './funding-catalog/router';
 import { fundingCatalogStatus } from './funding-catalog/official-catalog';
 import { companyDataRouter } from './company-data/router';
 import { OfficialCompanyDataService } from './company-data/official-providers';
+import { DaDataCompanyProvider } from './company-data/dadata';
+import { CompanyDataService } from './company-data/service';
 import { providerStatus } from './company-data/fns-index';
 import { runAssistant } from './ai/service';
 import { prepareAIContext } from './ai/context';
@@ -23,6 +25,7 @@ function isCertificateError(error: unknown): boolean {
 }
 export function createApp(options: { giga?: AIClient | null; fnsDir?: string; env?: NodeJS.ProcessEnv; sources?: SourceStore } = {}) {
   const env = options.env ?? process.env;
+  const dadata = env.DADATA_API_KEY?.trim() ? new DaDataCompanyProvider(env.DADATA_API_KEY.trim()) : null;
   const sources = options.sources ?? new SourceStore(env.OPORA_SOURCE_DIR);
   const model = env.GIGACHAT_MODEL || 'GigaChat-2-Pro';
   let giga = options.giga;
@@ -52,9 +55,9 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
   });
   app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'opora', catalog: 'official', privacy: 'context-v2', legacyPrivacy: 'strict-v1' }));
   app.get('/api/ai/status', (_req, res) => res.json(aiStatus()));
-  app.get('/api/providers/status', (_req, res) => res.json({ company: providerStatus(options.fnsDir),
+  app.get('/api/providers/status', (_req, res) => res.json({ company: { ...providerStatus(options.fnsDir), activeProvider: dadata ? 'dadata' : 'fns', dadata: dadata?.status() ?? { configured: false, state: 'not_configured', lastSuccess: null } },
     funding: { officialSnapshot: 'ready', opportunities: fundingCatalogStatus().total, verifiedAt: fundingCatalogStatus().verifiedAt }, ai: { gigachat: aiStatus().status } }));
-  app.use('/api/company', companyDataRouter(new OfficialCompanyDataService(options.fnsDir)));
+  app.use('/api/company', companyDataRouter(dadata ? new CompanyDataService(dadata) : new OfficialCompanyDataService(options.fnsDir)));
   app.use('/api/funding', fundingCatalogRouter());
   app.get('/api/funding/updates', async (_req, res, next) => { try { res.json(await sources.status()); } catch (e) { next(e); } });
   let activeAI = 0;

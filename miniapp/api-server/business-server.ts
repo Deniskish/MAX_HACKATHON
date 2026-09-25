@@ -5,6 +5,7 @@ import { createApp } from './app';
 import { SourceStore, startSourceMonitor } from './ai/sources';
 config({ path: path.resolve(process.cwd(), '../../.env'), quiet: true });
 config({ quiet: true });
+config({ path: path.resolve(__dirname, __dirname.endsWith('dist') ? '../../../.env.dadata' : '../../.env.dadata'), quiet: true });
 const port = Number(process.env.PORT || 3002);
 const sources = new SourceStore();
 createApp({ sources }).listen(port, '0.0.0.0', () => {

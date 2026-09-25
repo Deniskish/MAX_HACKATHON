@@ -887,7 +887,7 @@ export default function BusinessApp() {
                           value={form.tax}
                           onChange={(e) => editForm({ ...form, tax: e.target.value })}
                         >
-                          {['', 'УСН', 'ОСНО', 'ПСН', 'ЕСХН', 'АУСН'].map((t) => (
+                          {['', 'УСН', 'ОСНО', 'ПСН', 'ЕСХН', 'АУСН', 'СРП'].map((t) => (
                             <option key={t} value={t}>
                               {t || 'Не указан'}
                             </option>
