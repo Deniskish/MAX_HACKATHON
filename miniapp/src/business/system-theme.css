@@ -63,7 +63,7 @@
     .preparation-options > button, .assistant-heading h1) { color: var(--ink); }
   .opora-theme .opora-action:is(.secondary, .dark-action, .goal-chip) { color: var(--ink); }
   .opora-theme :is(.muted, .field small, .widget-footnote, .source-note,
-    .home-opportunities-description, .home-hero-caption, .hub-eyebrow,
+    .home-opportunities-description, .hub-eyebrow,
     .hub-identity p, .hub-stats span, .hub-services small, .hub-hint, .hub-welcome p,
     .hub-benefits small, .hub-next > span:last-of-type, .calendar-context,
     .catalog-personal-context p, .catalog-guest-context p, .guest-applications p,
@@ -97,7 +97,6 @@
     .hub-identity, .hub-services, .hub-benefits, .profile-panel, .funding-card,
     .catalog-guest-context, .catalog-glass-context, .application-row) { border-radius: 22px; }
   .opora-theme :is(.hub-next, .black-business-card) { background: var(--glass-surface); border-color: var(--line); }
-  .opora-theme .home-hero-caption::before { background: #59477433; }
   .opora-theme .home-dashboard .home-action-support {
     color: #fff;
     background: linear-gradient(135deg, #51438c, #423772);

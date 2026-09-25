@@ -38,7 +38,6 @@ export function HomePage({ onFindSupport, onAddBusiness, onAssistant, onNotifica
         <div className="home-hero-artwork">
           <ThemedImage className="home-hero-shapes" src="/assets/hero-shapes.png" width={1254} height={1254} alt="" draggable={false} />
           <BrandWordmark className="home-wordmark-hero" />
-          <p className="home-hero-caption" aria-hidden="true">БИЗНЕС<br />РАЗВИВАЕТСЯ<br />С ПОДДЕРЖКОЙ</p>
         </div>
       </section>
       <section className="home-actions" aria-label="Возможности для бизнеса">
