@@ -1,6 +1,9 @@
 import { ThemedImage } from './ThemedImage';
 import { Icon } from './Icon';
 import { AppNavigation, BrandWordmark } from './AppChrome';
+import { ContextHelp } from './ContextHelp';
+import type { BusinessAnalysis } from './useBusinessAnalysis';
+import type { WorkspaceInsight } from '../../api-server/ai/types';
 
 type HomePageProps = {
   onFindSupport: () => void;
@@ -10,6 +13,8 @@ type HomePageProps = {
   onApplications: () => void;
   onBusiness: () => void;
   personalized: boolean;
+  analysis: BusinessAnalysis;
+  onAIAction: (action: WorkspaceInsight['action']) => void;
   hasNotifications: boolean;
 };
 
@@ -17,7 +22,9 @@ function Arrow() {
   return <span className="home-arrow" aria-hidden="true"><Icon name="arrow" size={20} /></span>;
 }
 
-export function HomePage({ onFindSupport, onAddBusiness, onAssistant, onNotifications, onApplications, onBusiness, personalized, hasNotifications }: HomePageProps) {
+export function HomePage({ onFindSupport, onAddBusiness, onAssistant, onNotifications, onApplications, onBusiness, personalized, hasNotifications, analysis, onAIAction }: HomePageProps) {
+  const insight = personalized ? analysis.data?.personalization?.sections.home : undefined;
+  const analyzing = personalized && analysis.status === 'loading';
   return <div className={`home-dashboard${personalized ? ' home-personalized' : ''}`}>
     <header className="home-topbar">
       <BrandWordmark className="home-wordmark-small" />
@@ -47,13 +54,19 @@ export function HomePage({ onFindSupport, onAddBusiness, onAssistant, onNotifica
             <ThemedImage className="home-briefcase" src="/assets/briefcase.png" width={1254} height={1254} alt="" draggable={false} />
           </button>
         </div>
-        <button type="button" className="home-opportunities home-adaptive" onClick={onAssistant}>
+        <button type="button" className="home-opportunities home-adaptive" disabled={analyzing} aria-busy={analyzing}
+          onClick={() => !personalized ? onAssistant() : insight ? onAIAction(insight.action) : analysis.refresh()}>
           <ThemedImage className="home-orb" src="/assets/orb.png" width={1254} height={1254} alt="" draggable={false} />
           <span className="home-opportunities-copy">
-            <span className="home-action-title">AI-помощник</span>
+            {personalized && <span className="home-ai-label">{insight ? 'AI · следующий шаг' : 'AI · анализ бизнеса'}</span>}
+            <span className="home-action-title">{!personalized ? 'AI-помощник' : insight?.title ?? (analyzing ? 'Определяем следующий шаг…' : 'Повторить анализ')}</span>
           </span>
-          <Arrow />
+          {!analyzing && <Arrow />}
         </button>
+        {personalized && <ContextHelp title="Как выбран следующий шаг">
+          <p>{insight ? 'Рекомендация AI на основе профиля бизнеса, вашей цели и текущих заявок.' : analyzing ? 'AI анализирует профиль бизнеса, вашу цель и текущие заявки.' : 'Не удалось получить AI-рекомендацию. Повторите анализ или задайте вопрос помощнику в разделе «Мой бизнес».'}</p>
+          {insight && <p>{insight.text}</p>}
+        </ContextHelp>}
       </section>
     </div>
     <AppNavigation active="overview" onNavigate={(page) => {

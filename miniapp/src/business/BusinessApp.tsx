@@ -438,6 +438,7 @@ export default function BusinessApp() {
             onNotifications={() => setHomePanel('events')}
             onApplications={() => setPage('applications')}
             onBusiness={() => navigate('profile')} personalized={!!profile}
+            analysis={businessAnalysis} onAIAction={followInsight}
             hasNotifications={hasNotifications}
           />}
           {page === 'programs' && (
