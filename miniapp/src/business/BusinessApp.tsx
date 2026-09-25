@@ -13,10 +13,11 @@ import {
   DocumentChecklist,
   DraftComposer,
 } from './AgentExperience';
-import { BusinessCard, DetailSteps, Orb } from './VisualWidgets';
+import { BusinessCard, DetailSteps } from './VisualWidgets';
 import { Icon } from './Icon';
 import { ModalSheet } from './ModalSheet';
 import { HomePage } from './HomePage';
+import { AppHeader, AppNavigation, type AppPage as Page } from './AppChrome';
 import { Spinner } from '@maxhub/max-ui';
 import { ActionButton, BusinessInput, BusinessTextarea } from './MaxControls';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -33,15 +34,8 @@ import {
   draftText,
 } from './domain';
 
-type Page = 'overview' | 'programs' | 'applications' | 'calendar' | 'profile' | 'assistant';
 type Message = { role: 'user' | 'assistant'; text: string; opportunityIds?: string[] };
-const nav: { id: Page; label: string; icon: string }[] = [
-  { id: 'overview', label: 'Главная', icon: 'home' },
-  { id: 'programs', label: 'Меры поддержки', icon: 'compass' },
-  { id: 'applications', label: 'Мои заявки', icon: 'file' },
-  { id: 'calendar', label: 'Календарь', icon: 'calendar' },
-  { id: 'profile', label: 'Профиль бизнеса', icon: 'building' },
-];
+
 
 const date = (s: string) =>
   !s ? 'не опубликован' : new Date(s + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
@@ -86,9 +80,9 @@ export default function BusinessApp() {
     ? { region: projectProfile.region, applicantType: 'project', stage: projectProfile.stage, industry: projectProfile.industry }
     : toFundingProfile(profile ?? emptyProfile);
   const [apps, setApps] = useState<Application[]>(initial.applications);
+  const [deleteDraftId, setDeleteDraftId] = useState<string | null>(null);
   const [saved, setSaved] = useState<string[]>(initial.saved);
   const [availability, setAvailability] = useState('');
-  const [showEvents, setShowEvents] = useState(false);
   const [homePanel, setHomePanel] = useState<'business' | 'funding' | 'events' | 'more' | null>(null);
   const [previousSnapshot] = useState<Record<string, string>>(() => readSaved('opora.snapshot.v2', {}));
   const matches = rankFundingMatches(officialFundingCatalog.map((o) => matchFundingOpportunity(fundingProfile, need, o, {
@@ -217,6 +211,7 @@ export default function BusinessApp() {
     setFilter(type);
     setQuery('');
     setOnlySaved(false);
+    setAvailability('');
     setPage('programs');
   };
   const visiblePrograms = ranked.filter(
@@ -364,116 +359,11 @@ export default function BusinessApp() {
 
   return (
     <div className={`app-shell page-${page}`}>
-      <aside className="sidebar">
-        <a
-          className="brand"
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            setPage('overview');
-          }}
-        >
-          <span className="brand-mark">
-            о<span />
-          </span>
-          опора<span className="brand-dot">.</span>
-        </a>
-        <nav aria-label="Основная навигация">
-          {nav.map((n) => (
-            <button
-              key={n.id}
-              aria-current={page === n.id ? 'page' : undefined}
-              className={'nav-item nav-' + n.id + ' ' + (page === n.id ? 'active' : '')}
-              onClick={() => setPage(n.id)}
-            >
-              <Icon name={n.icon} />
-              <span className="desktop-nav-label">{n.label}</span>
-              <span className="mobile-nav-label">{n.id === 'programs' ? 'Поддержка' : n.id === 'applications' ? 'Заявки' : n.label}</span>
-              {n.id === 'applications' && apps.length > 0 && <small>{apps.length}</small>}
-            </button>
-          ))}
-        </nav>
-        <button
-          aria-label="AI-помощник"
-          aria-current={page === 'assistant' ? 'page' : undefined}
-          className={'nav-item assistant-nav ' + (page === 'assistant' ? 'active' : '')}
-          onClick={() => setPage('assistant')}
-        >
-          <Icon name="chat" />
-          <span>AI-помощник</span>
-          <span className="tiny-badge">AI</span>
-        </button>
-        <div className="sidebar-bottom">
-          <div className="max-card">
-            <span className="max-logo">м</span>
-            <div>
-              <b>Рядом, в MAX</b>
-            </div>
-          </div>
-          <button className="business-switch" onClick={openProfile}>
-            <span className="avatar">
-              <Icon name="building" />
-            </span>
-            <span>
-              <b>{profile ? profile.name : 'Ваш бизнес'}</b>
-              <small>{profile ? `ИНН ${profile.inn}` : 'Добавить компанию'}</small>
-            </span>
-            <span>⌄</span>
-          </button>
-        </div>
-      </aside>
-      <div className="main-wrap">
-        <header className="topbar">
-          <button className="mobile-identity" onClick={() => setPage('profile')}>
-            <img className="identity-avatar" src="/brand/opora-logo.svg" width={43} height={43} alt="" aria-hidden="true" />
-            <span>
-              <b>{profile ? profile.name.replace(/ООО|ИП|«|»/g, '').trim() : 'Ваш бизнес'}</b>
-            </span>
-          </button>
-          <span className="breadcrumb">
-            Рабочее пространство <span>/</span>{' '}
-            <b>{nav.find((n) => n.id === page)?.label || 'AI-помощник'}</b>
-          </span>
-          <div className="top-actions">
-            <button
-              className="icon-button"
-              aria-label="События по сохранённым программам"
-              aria-expanded={showEvents}
-              onClick={() => setShowEvents(!showEvents)}
-            >
-              <Icon name="bell" />
-            </button>
-            <button
-              className="user-avatar"
-              aria-label="Профиль бизнеса"
-              onClick={() => setPage('profile')}
-            >
-              {profile
-                ? profile.name
-                    .replace(/ООО|ИП|«|»/g, '')
-                    .trim()
-                    .slice(0, 1)
-                : 'В'}
-            </button>
-          </div>
-        </header>
-        <main ref={mainRef}>
-          {page !== 'overview' && showEvents && <section className="widget events-panel"><h2>События</h2><p className="muted">Вычислены при открытии приложения. Фонового мониторинга нет.</p>{events.length ? events.map((event) => <button className="widget-link-row" key={event.id} onClick={() => { openFunding(event.opportunityId); setShowEvents(false); }}>{event.text}</button>) : <p>Новых событий нет. Сохраните интересующие программы.</p>}<ActionButton className="secondary" onClick={() => { setPage('calendar'); setShowEvents(false); }}>Открыть календарь</ActionButton></section>}
-          {page !== 'overview' && (
-            <div className="page-heading">
-              <h1>
-                {
-                  {
-                    programs: 'Меры поддержки',
-                    applications: 'Мои заявки',
-                    calendar: 'Календарь',
-                    profile: 'Мой бизнес',
-                    assistant: 'AI-агент',
-                  }[page]
-                }
-              </h1>
-            </div>
-          )}
+      {page !== 'overview' && <AppHeader
+        title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', assistant: 'AI-помощник' }[page]}
+        onBack={() => setPage('overview')} onNotifications={() => setHomePanel('events')} hasNotifications={events.length > 0}
+      />}
+      <main ref={mainRef} className="app-content">
           {page === 'overview' && <HomePage
             onFindSupport={() => setHomePanel(profile ? 'funding' : 'business')}
             onAddBusiness={() => setHomePanel('business')}
@@ -558,6 +448,7 @@ export default function BusinessApp() {
                       setFilter('Все меры');
                       setQuery('');
                       setOnlySaved(false);
+                      setAvailability('');
                     }}
                   >
                     Посмотреть все меры
@@ -594,7 +485,7 @@ export default function BusinessApp() {
                       <ActionButton className="secondary" onClick={() => setSelected(p)}>
                         Продолжить <Icon name="arrow" size={17} />
                       </ActionButton>
-                      <ActionButton className="text-button" onClick={() => { if (window.confirm('Удалить локальный черновик и отметки документов?')) setApps((old) => old.filter((item) => item.id !== a.id)); }}>Удалить черновик</ActionButton>
+                      <ActionButton className="text-button" onClick={() => setDeleteDraftId(a.id)}>Удалить черновик</ActionButton>
                     </article>
                   );
                 })}
@@ -659,7 +550,7 @@ export default function BusinessApp() {
           )}
           {page === 'profile' && (
             <div className="profile-wallet-layout">
-              <BusinessCard profile={profile} onEdit={openProfile} />
+              <BusinessCard profile={profile} onEdit={profile ? openProfile : () => setHomePanel('business')} />
               <section className="widget profile-shortcuts">
                 <button className="widget-link-row" onClick={() => browse()}>
                   <span className="soft-round">
@@ -687,15 +578,24 @@ export default function BusinessApp() {
               <section className="profile-panel">
                 <div className="section-title">
                   <div>
-                    <span className="tag">Профиль бизнеса · источники и ручной ввод</span>
+                    <span className="tag">{companyProfile ? 'Профиль бизнеса' : 'Проект без компании'}</span>
                     <h2>{profile.name}</h2>
                   </div>
                   <ActionButton className="secondary" onClick={openProfile}>
                     Редактировать
                   </ActionButton>
                 </div>
-                <CompanySources profile={profile} />
-                <FieldSource profile={profile} field="name" />
+                {companyProfile && <><CompanySources profile={profile} /><FieldSource profile={profile} field="name" /></>}
+                {projectProfile && !companyProfile ? <dl className="profile-grid">
+                  {[
+                    ['Регион', projectProfile.region],
+                    ['Направление', projectProfile.industry],
+                    ['Стадия', { idea: 'Идея', prototype: 'Прототип', mvp: 'MVP', revenue: 'Есть выручка проекта' }[projectProfile.stage]],
+                    ['Команда', projectProfile.teamSize === null ? 'Не указана' : `${projectProfile.teamSize} чел.`],
+                    ['Цель финансирования', need.purpose || 'Не указана'],
+                    ['Требуемая сумма', need.amount === null ? 'Не указана' : `${need.amount.toLocaleString('ru-RU')} ₽`],
+                  ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+                </dl> : <>
                 <dl className="profile-grid">
                   {[
                     ['ИНН', profile.inn, 'inn'],
@@ -742,24 +642,18 @@ export default function BusinessApp() {
                       {g}
                     </span>
                   ))}
+                  {profile.goals.length === 0 && <span className="muted">Добавьте цели в профиле бизнеса.</span>}
                 </div>
+                </>}
                 <div className="data-note">
-                  Профиль и черновики хранятся в этом браузере. Данные ФНС доступны после импорта официальной выгрузки на сервере. Синхронизации с MAX пока нет.
+                  Профиль и черновики сохранены на этом устройстве. На другом устройстве их потребуется заполнить заново.
                 </div>
               </section>
-            ) : (
-              <div className="empty-state">
-                <Icon name="building" size={42} />
-                <h2>Добавьте бизнес</h2>
-                <ActionButton className="primary" onClick={openProfile}>
-                  Добавить бизнес
-                </ActionButton>
-              </div>
-            ))}
+            ) : null)}
           {page === 'assistant' && (
             <section className="chat-panel">
               <div className="chat-header">
-                <Orb small />
+                <img className="assistant-orb" src="/assets/orb.png" width={48} height={48} alt="" />
                 <div>
                   <b>Опора AI</b>
                   <small>{assistantMode} · официальные источники</small>
@@ -833,8 +727,8 @@ export default function BusinessApp() {
               </form>
             </section>
           )}
-        </main>
-      </div>
+      </main>
+      {page !== 'overview' && <AppNavigation active={page} onNavigate={setPage} onMore={() => setHomePanel('more')} />}
       <dialog
         aria-label={onboard ? 'Профиль бизнеса' : selected?.title || 'Программа'}
         ref={dialogRef}
@@ -1174,6 +1068,17 @@ export default function BusinessApp() {
           <ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('profile'); }}>Мой бизнес</ActionButton>
           <ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('calendar'); }}>Календарь</ActionButton>
         </div>}
+      </ModalSheet>}
+      {deleteDraftId && <ModalSheet title="Удалить черновик?" onClose={() => setDeleteDraftId(null)}>
+        <h2>Удалить черновик?</h2>
+        <p>Текст, выбранные файлы и отметки документов будут удалены из этого браузера.</p>
+        <div className="modal-actions">
+          <ActionButton className="secondary" onClick={() => setDeleteDraftId(null)}>Оставить черновик</ActionButton>
+          <ActionButton className="primary danger-button" onClick={() => {
+            setApps((old) => old.filter((item) => item.id !== deleteDraftId));
+            setDeleteDraftId(null); setToast('Черновик удалён');
+          }}>Удалить</ActionButton>
+        </div>
       </ModalSheet>}
       {projectOnboard && <ProjectOnboarding initial={projectProfile} onCancel={() => setProjectOnboard(false)} onSave={(project) => { setProjectProfile(project); setProfile(null); setNeed({ ...need, purpose: project.fundingPurpose, amount: project.fundingNeed }); setProjectOnboard(false); setPage('overview'); setHomePanel('funding'); }} />}
       {toast && (

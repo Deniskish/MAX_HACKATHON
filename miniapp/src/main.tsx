@@ -1,5 +1,5 @@
 // Подключаем тему MAX и запускаем React. Данные запуска нужны только для навигации.
-import { StrictMode, useEffect, useSyncExternalStore } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MaxUI } from '@maxhub/max-ui';
 import '@maxhub/max-ui/dist/styles.css';
@@ -14,15 +14,9 @@ bridgeScript.onload = () => {
   window.dispatchEvent(new Event('opora:max-ready'));
 };
 document.head.appendChild(bridgeScript);
-const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
-const subscribeTheme = (listener: () => void) => {
-  darkMode.addEventListener('change', listener);
-  return () => darkMode.removeEventListener('change', listener);
-};
 function ThemedApp() {
-  const dark = useSyncExternalStore(subscribeTheme, () => darkMode.matches);
   useEffect(installViewportSizing, []);
-  return <MaxUI colorScheme={dark ? 'dark' : 'light'} className="opora-theme"><App /></MaxUI>;
+  return <MaxUI colorScheme="dark" className="opora-theme"><App /></MaxUI>;
 }
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

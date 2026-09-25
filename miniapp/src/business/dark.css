@@ -1,6 +1,4 @@
 /* Explicit palette avoids WebView auto-darkening white cards and form controls. */
-:root { color-scheme: light; }
-@media (prefers-color-scheme: dark) {
   :root { color-scheme: dark; --ink: #f5f6fa; --muted: #b0b6c4; --surface: #1c1e24; --canvas: #202022; --line: #ffffff1c; --accent: #b39bff; }
   body { background: var(--canvas); }
   .opora-theme.opora-theme { color-scheme: dark; color: var(--ink); background: var(--canvas); --background-surface-primary: #1c1e24; --background-surface-secondary: #292c35; --background-surface-ground: #111318; --background-surface-card: #1c1e24; --background-button-secondary: #292c35; --text-primary: #f5f6fa; --text-secondary: #b0b6c4; --text-tertiary: #a6adbd; --text-themed: #b39bff; --icon-themed: #b39bff; --stroke-themed: #b39bff; }
@@ -49,4 +47,3 @@
   .error, .access-card .error { background: #45262a; color: #ffc3c8; }
   .company-sources { background: #292c35; color: var(--muted); }
   .business-switch, .max-card { background: #292c35; color: var(--ink); }
-}

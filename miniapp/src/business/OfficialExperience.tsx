@@ -24,7 +24,15 @@ export function OfficialDetails({ match, onAsk }: { match: FundingMatch; onAsk: 
 }
 export function ProjectOnboarding({ initial, onSave, onCancel }: { initial: ProjectProfile | null; onSave: (project: ProjectProfile) => void; onCancel: () => void }) {
   const [form, setForm] = React.useState<ProjectProfile>(initial ?? { name: '', region: '', industry: '', stage: 'idea', teamSize: null, fundingNeed: null, fundingPurpose: '', hasLegalEntity: false });
-  function submit(e: FormEvent) { e.preventDefault(); onSave({ ...form, name: form.name.trim(), region: form.region.trim(), industry: form.industry.trim() }); }
+  const [error, setError] = React.useState('');
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim() || !form.region.trim() || !form.industry.trim()) {
+      setError('Укажите название проекта, регион и направление. Поля не могут состоять из пробелов.');
+      return;
+    }
+    onSave({ ...form, name: form.name.trim(), region: form.region.trim(), industry: form.industry.trim() });
+  }
   return <ModalSheet title="Проект без компании" onClose={onCancel}>
     <h2>У меня пока нет компании</h2><p>Рассмотрим только программы, допускающие проект или физическое лицо. Соответствие остальным условиям проверяется отдельно.</p>
     <form onSubmit={submit}><div className="form-grid">
@@ -33,6 +41,6 @@ export function ProjectOnboarding({ initial, onSave, onCancel }: { initial: Proj
       <label className="field">Команда, человек<BusinessInput type="number" min="1" max="10000" step="1" value={form.teamSize ?? ''} onChange={(e) => setForm({ ...form, teamSize: e.target.value ? Number(e.target.value) : null })} /></label>
       <label className="field">Цель<select value={form.fundingPurpose} onChange={(e) => setForm({ ...form, fundingPurpose: e.target.value })}><option value="">Укажу позже</option>{fundingPurposes.map((p) => <option key={p}>{p}</option>)}</select></label>
       <label className="field">Сумма финансирования, ₽<BusinessInput type="number" min="1" step="1" value={form.fundingNeed ?? ''} onChange={(e) => setForm({ ...form, fundingNeed: e.target.value ? Number(e.target.value) : null })} /></label>
-    </div><div className="modal-actions"><ActionButton type="button" className="secondary" onClick={onCancel}>Отмена</ActionButton><ActionButton className="primary" type="submit">Сохранить проект</ActionButton></div></form>
+    </div>{error && <p className="error" role="alert">{error}</p>}<div className="modal-actions"><ActionButton type="button" className="secondary" onClick={onCancel}>Отмена</ActionButton><ActionButton className="primary" type="submit">Сохранить проект</ActionButton></div></form>
   </ModalSheet>;
 }

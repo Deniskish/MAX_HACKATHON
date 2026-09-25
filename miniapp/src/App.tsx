@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import BusinessApp from './business/BusinessApp';
 import { ActionButton, BusinessInput } from './business/MaxControls';
-import { Orb } from './business/VisualWidgets';
+import { BrandWordmark } from './business/AppChrome';
 
 // Демонстрационный экран доступа, не серверная авторизация API.
 // Доступ хранится только в памяти: при новом открытии нужен пароль.
@@ -24,12 +24,9 @@ export default function App() {
 
   return (
     <main className="access-screen">
-      <div className="access-brand" aria-label="Опора">
-        <span className="brand-mark" aria-hidden="true">о<span /></span>
-        опора<span className="brand-dot">.</span>
-      </div>
+      <BrandWordmark className="access-wordmark" />
       <section className="widget access-card" aria-labelledby="access-title">
-        <Orb />
+        <img className="access-symbol" src="/assets/orb.png" width={80} height={80} alt="" draggable={false} />
         <span className="eyebrow">ПОДДЕРЖКА ВАШЕГО БИЗНЕСА</span>
         <h1 id="access-title">Добро пожаловать<br />в Опору</h1>
         <p>Введите пароль, чтобы войти в рабочее пространство.</p>

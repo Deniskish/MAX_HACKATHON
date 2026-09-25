@@ -22,15 +22,14 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved }: { match
     <h3>{o.title}</h3>
     <p className="muted">{o.providerName}</p>
     <strong>{amountLabel(o)}</strong>
-    {rate && <p>{rate}</p>}
-    {term && <p>Срок: {term}</p>}
-    <p>{o.description}</p>
-    <p className="widget-footnote">Регион: {o.regions === "all" ? "Вся Россия" : o.regions.join(", ")}</p>
+    <div className="funding-key-facts">{rate && <span>{rate}</span>}{term && <span>Срок: {term}</span>}</div>
     <span className={`funding-status funding-status-${match.status}`}>{fundingStatusLabels[match.status]}</span>
-    <p>Соответствие: {match.score}% · {scoreNotice}</p>
 
     <details>
-      <summary>Почему такой результат:</summary>
+      <summary>Условия и соответствие</summary>
+      <p>{o.description}</p>
+      <p>Регион: {o.regions === "all" ? "Вся Россия" : o.regions.join(", ")}</p>
+      <p>Соответствие: {match.score}% · {scoreNotice}</p>
       <p>{match.explanation}</p>
       {match.missingRequirements.length > 0 && <p>Не выполнено: {match.missingRequirements.map((r) => r.label).join('; ')}.</p>}
       {match.unknownRequirements.length > 0 && <p>Нужно уточнить: {match.unknownRequirements.map((r) => r.label).join('; ')}.</p>}
@@ -38,9 +37,9 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved }: { match
       <ul>{match.nextActions.map((action) => <li key={action}>{action}</li>)}</ul>
       <p>Подготовка: {o.preparationDays === null ? 'не указана' : `${o.preparationDays} дн.`}.
         {' '}Сложность: {{ low: 'низкая', medium: 'средняя', high: 'высокая' }[o.difficulty]}.</p>
+      <p className="widget-footnote">{fundingSourceLabel(o)} · версия {o.version} · {o.source.verifiedAt ?? o.source.updatedAt}.</p>
     </details>
-    <p className="widget-footnote">{fundingSourceLabel(o)} · версия {o.version} · {o.source.verifiedAt ?? o.source.updatedAt}.
-      {' '}Срок приёма: {o.deadline ?? 'не указан'}.</p>
+    <p className="widget-footnote">Срок приёма: {o.deadline ?? 'не указан'}.</p>
     {o.source.url && /^https:\/\//.test(o.source.url) &&
       <a href={o.source.url} target="_blank" rel="noreferrer">Источник условий</a>}
     {onOpen && <ActionButton className="primary" onClick={() => onOpen(o.id)}>Подробнее</ActionButton>}

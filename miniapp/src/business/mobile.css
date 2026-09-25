@@ -22,7 +22,7 @@ dialog .modal, .modal-sheet .project-dialog { overflow: auto; overscroll-behavio
 dialog .modal { padding-top: 24px; }
 .modal-sheet .project-dialog { padding: 24px; }
 
-@media (max-width: 767px) {
+/* Shared mobile layout, also used in the centered desktop frame. */
   :root { --mobile-gutter: 16px; }
   .app-shell { height: var(--app-height, 100dvh); min-height: 0; width: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; background: radial-gradient(ellipse 100% 400px at 90% 0, #d5d9e2 0, transparent 90%), #f7f8fb; }
   .main-wrap { display: contents; }
@@ -185,7 +185,6 @@ dialog .modal { padding-top: 24px; }
   .access-screen { min-height: 100dvh; padding: 24px 16px; }
   .access-card { padding: 24px 20px; }
   .access-card h1 { font-size: 28px; }
-}
 
 @media (max-width: 359px) {
   :root { --mobile-gutter: 12px; }

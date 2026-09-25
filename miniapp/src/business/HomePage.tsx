@@ -1,4 +1,5 @@
 import { Icon } from './Icon';
+import { AppNavigation, BrandWordmark } from './AppChrome';
 
 type HomePageProps = {
   onFindSupport: () => void;
@@ -10,13 +11,6 @@ type HomePageProps = {
   hasNotifications: boolean;
 };
 
-// The PNG is preserved verbatim; only its transparent canvas is cropped by CSS.
-function Wordmark({ className = '' }: { className?: string }) {
-  return <span className={`home-wordmark ${className}`}>
-    <img src="/assets/opora-logo.png" width={1254} height={1254} alt="опора." draggable={false} />
-  </span>;
-}
-
 function Arrow() {
   return <span className="home-arrow" aria-hidden="true"><Icon name="arrow" size={20} /></span>;
 }
@@ -24,7 +18,7 @@ function Arrow() {
 export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNotifications, onApplications, onMore, hasNotifications }: HomePageProps) {
   return <div className="home-dashboard">
     <header className="home-topbar">
-      <Wordmark className="home-wordmark-small" />
+      <BrandWordmark className="home-wordmark-small" />
       <button type="button" className="home-notifications" aria-label={hasNotifications ? 'Уведомления — есть новые события' : 'Уведомления'} onClick={onNotifications}>
         <Icon name="bell" size={22} />
         <span className="home-notification-dot" aria-hidden="true" />
@@ -33,7 +27,7 @@ export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNoti
     <div className="home-scroll">
       <section className="home-hero" aria-label="Опора — поддержка бизнеса">
         <img className="home-hero-shapes" src="/assets/hero-shapes.png" width={1254} height={1254} alt="" draggable={false} />
-        <Wordmark className="home-wordmark-hero" />
+        <BrandWordmark className="home-wordmark-hero" />
         <div className="home-hero-index" aria-hidden="true"><span>01 <i /></span><span>02</span><span>03</span></div>
         <p className="home-hero-caption" aria-hidden="true">БИЗНЕС<br />РАЗВИВАЕТСЯ<br />С ПОДДЕРЖКОЙ</p>
       </section>
@@ -60,13 +54,10 @@ export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNoti
         </button>
       </section>
     </div>
-    <div className="home-nav-wrap">
-      <nav className="home-nav" aria-label="Основная навигация">
-        <button type="button" aria-current="page" onClick={() => document.querySelector('.home-scroll')?.scrollTo({ top: 0, behavior: 'smooth' })}><Icon name="home" /><span>Главная</span></button>
-        <button type="button" onClick={onOpportunities}><Icon name="compass" /><span>Поддержка</span></button>
-        <button type="button" onClick={onApplications}><Icon name="file" /><span>Заявки</span></button>
-        <button type="button" onClick={onMore}><Icon name="chat" /><span>Ещё</span></button>
-      </nav>
-    </div>
+    <AppNavigation active="overview" onMore={onMore} onNavigate={(page) => {
+      if (page === 'programs') onOpportunities();
+      else if (page === 'applications') onApplications();
+      else document.querySelector('.home-scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
+    }} />
   </div>;
 }

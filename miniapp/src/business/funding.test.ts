@@ -62,7 +62,7 @@ test('rendered cards show demo source, catalog facts, explanation, missing docum
   const match = result.matches.find((m) => m.opportunity.id === 'demo-sme-loan')!;
   const html = renderToStaticMarkup(createElement(FundingOpportunityCard, { match }));
   for (const text of ['Учебные данные', match.opportunity.title, match.opportunity.providerName,
-    'Ставка:', 'Срок:', 'Почему такой результат:', 'Документы:', 'Подготовить:', match.opportunity.source.name]) assert.ok(html.includes(text), text);
+    'Ставка:', 'Срок:', 'Условия и соответствие', 'Документы:', 'Подготовить:', match.opportunity.source.name]) assert.ok(html.includes(text), text);
   assert.match(html, /Окончательное решение принимает кредитор/);
   assert.doesNotMatch(html, /кредит одобрен|банк точно выдаст|вы получите кредит/i);
   assert.match(html, /не вероятность одобрения/);

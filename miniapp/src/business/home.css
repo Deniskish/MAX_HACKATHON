@@ -8,9 +8,7 @@ body:has(.home-dashboard), .opora-theme:has(.home-dashboard) { background: #191a
     radial-gradient(circle at 5% 100%, #ff5b1f1a, transparent 18%),
     radial-gradient(ellipse at 65% 32%, #604dca09, transparent 32%), #191a1f;
 }
-.page-overview > .sidebar, .page-overview > .main-wrap > .topbar { display: none; }
-.page-overview > .main-wrap { display: contents; }
-.app-shell.page-overview .main-wrap > main { display: block; height: 100%; width: 100%; max-width: none; margin: 0; padding: 0; overflow: hidden; }
+.app-shell.page-overview > .app-content { display: block; height: 100%; width: 100%; max-width: none; margin: 0; padding: 0; overflow: hidden; }
 .home-dashboard { height: 100%; display: grid; grid-template-rows: calc(76px + var(--app-safe-top)) minmax(0, 1fr) calc(90px + var(--app-safe-bottom)); }
 .home-dashboard img { object-fit: contain; pointer-events: none; user-select: none; }
 .home-dashboard button { font-family: 'Manrope Variable', Manrope, Arial, sans-serif; color: #ebebf3; -webkit-tap-highlight-color: transparent; }

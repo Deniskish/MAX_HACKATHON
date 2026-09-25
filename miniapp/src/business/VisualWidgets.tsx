@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
 import { ActionButton } from './MaxControls';
+import { BrandWordmark } from './AppChrome';
 import { type Profile } from './domain';
 
 export const supportCategories = [
@@ -75,28 +76,26 @@ export function BusinessCard({ profile, onEdit }: { profile: Profile | null; onE
   return (
     <section className="business-card-widget">
       <div className="black-business-card">
-        <span className="card-wordmark" aria-hidden="true">
-          ОПОРА
-        </span>
+        <BrandWordmark className="profile-wordmark" />
+        <img className="profile-briefcase" src="/assets/briefcase.png" width={100} height={100} alt="" />
         <div className="black-card-meta">
           <span>{profile?.companyType || 'ВАШ БИЗНЕС'}</span>
-          <span>Профиль компании</span>
+          <span>{profile && !profile.inn ? 'Профиль проекта' : 'Профиль компании'}</span>
         </div>
         <strong>{profile?.name || 'Здесь начинается рост'}</strong>
         <div className="black-card-bottom">
           <span>
-            {profile
+            {profile?.inn
               ? visible
                 ? profile.inn
                 : `•••• •••• ${profile.inn.slice(-4)}`
-              : 'Добавьте свою компанию'}
+              : profile ? 'Проект без компании' : 'Добавьте компанию или проект'}
           </span>
-          <Orb small />
         </div>
       </div>
       <button
         className="card-reveal"
-        disabled={!profile}
+        disabled={!profile?.inn}
         onClick={() => setVisible((v) => !v)}
         aria-pressed={visible}
       >
