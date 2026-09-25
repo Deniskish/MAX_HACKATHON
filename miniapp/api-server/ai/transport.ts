@@ -13,10 +13,24 @@ function validateShape(value: any, schema: any): any {
   } else if (typeof value !== schema.type || schema.enum && !schema.enum.includes(value)) throw new PrivacyError('INVALID_RESPONSE');
   return value;
 }
-function parseStructured(value: unknown, schema: unknown) {
+function parseStructured(value: unknown, schema: unknown, workspace = false) {
   if (typeof value === 'string') {
     try { value = JSON.parse(value.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')); }
     catch { throw new PrivacyError('INVALID_RESPONSE'); }
+  }
+  // Older prompts asked for the application envelope instead of function arguments.
+  // Accept that equivalent representation, then validate every required field.
+  if (workspace && value && typeof value === 'object' && !Array.isArray(value)) {
+    let data = value as any;
+    if (!('summary' in data) && data.personalization && typeof data.personalization === 'object') {
+      data = { ...data.personalization, evidenceIds: data.personalization.evidenceIds ?? data.evidenceIds };
+    }
+    if (Array.isArray(data.sections)) {
+      const pages = data.sections.map((s: any) => s?.page);
+      if (new Set(pages).size !== pages.length) throw new PrivacyError('INVALID_RESPONSE');
+      data = { ...data, sections: Object.fromEntries(data.sections.map((s: any) => [s?.page, s])) };
+    }
+    value = data;
   }
   return validateShape(value, schema);
 }
@@ -53,17 +67,17 @@ export function createAIModel(endpoint: string, model: string, token: () => Prom
       return { value: { answer: message.content.trim(), evidenceIds: [], followups: [], findings: [] }, tokens, calls };
     }
     let value;
-    try { value = parseStructured(message?.function_call?.name === fn.name ? message.function_call.arguments : message?.content, fn.parameters); }
+    try { value = parseStructured(message?.function_call?.name === fn.name ? message.function_call.arguments : message?.content, fn.parameters, workspace); }
     catch {
       // One bounded retry for the required JSON shape; never label unstructured prose as a review or draft.
       signal.throwIfAborted();
       const retried = await request(true), next = retried.choices?.[0];
       calls++; tokens += typeof retried.usage?.total_tokens === 'number' ? retried.usage.total_tokens : 0;
       if (next?.finish_reason === 'length') throw new PrivacyError('TRUNCATED_RESPONSE');
-      value = parseStructured(next?.message?.content, fn.parameters);
+      value = parseStructured(next?.message?.content, fn.parameters, workspace);
     }
     if (workspace) {
-      const sections = Object.fromEntries(value.sections.map((s: any) => [s.page, { title: s.title, text: s.text, action: s.action }]));
+      const sections = value.sections;
       value = { answer: value.summary, evidenceIds: value.evidenceIds, followups: [], findings: [], personalization: { summary: value.summary, sections, priorities: value.priorities } };
     }
     if (draft) value = { ...value, findings: [], followups: [] };

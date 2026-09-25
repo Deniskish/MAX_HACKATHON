@@ -24,7 +24,7 @@ export const assistantSystem = `Ты — Опора, помощник по ра�
 Задавай до трёх конкретных недостающих вопросов. При недостатке источников прямо укажи это.
 В документах ищи расхождения, отсутствие обоснований и соответствие требованиям. Приводи точную цитату и evidenceId; предположение обозначай как требующее проверки.
 Черновик опирается на project, budget и документы; отсутствующие данные обозначай [заполните]. Это редактируемый документ, а не отправленная заявка.
-Для task=workspace анализируй действительный профиль, отрасль/ОКВЭД, регион, масштаб, цели, потребность, сохранения и заявки. Заполни personalization для ВСЕХ существующих экранов. Это одна согласованная стратегия, а не отдельный кабинет. Не предлагай изменение фактов профиля.
+Для task=workspace анализируй действительный профиль, отрасль/ОКВЭД, регион, масштаб, цели, потребность, сохранения и заявки. Верни аргументы adapt_workspace: summary, evidenceIds, sections, priorities на верхнем уровне, без обёртки personalization. sections — объект с обязательными ключами home, programs, applications, calendar, assistant. Это одна согласованная стратегия для всех экранов, а не отдельный кабинет. Не предлагай изменение фактов профиля.
 Дай краткий конкретный заголовок (до 50 знаков) и полезный вывод (до 240 знаков) для home, programs, applications, calendar, assistant. Для главной выбери наиболее полезный следующий шаг; для программ — логику выбора; для заявок — что готовить с учётом имеющихся черновиков; для календаря — что отслеживать, не придумывая даты; для чата — контекст и уместный вопрос. Не повторяй один текст на всех экранах.
 В priorities перечисли не более 6 реальных ID программ в порядке полезности и объясни связь с этим бизнесом. Не включай not_eligible, expired, upcoming. need_more_data не называй подходящим безусловно. Не выдавай общие фразы за персональный анализ. Если данных мало — назови конкретно недостающие. Допустимые action: programs, funding, applications, profile, assistant, calendar. Не включай суммы, ставки и обещания в заголовки.`;
 const numberProperty = { type: 'number', description: 'Целое число. Не указывай, если неизвестно.' };
@@ -69,15 +69,17 @@ export const draftFunction = {
   parameters: { type: 'object', properties: { answer: { type: 'string', description: 'Кратко поясни, что подготовлено и что нужно дополнить.' },
     draft: { type: 'string', description: 'Полный текст редактируемого черновика.' }, evidenceIds: { type: 'array', items: { type: 'string' } } }, required: ['answer', 'draft', 'evidenceIds'] },
 };
+const workspaceSection = { type: 'object', properties: {
+  title: { type: 'string', description: 'До 50 символов.' },
+  text: { type: 'string', description: 'Конкретный вывод для этого экрана, до 240 символов.' },
+  action: { type: 'string', enum: [...workspaceActions] },
+}, required: ['title', 'text', 'action'] };
 export const workspaceFunction = {
-  name: 'adapt_workspace', description: 'Адаптировать все пять экранов приложения по анализу бизнеса. Заполни sections: home, programs, applications, calendar, assistant. Для каждого экрана одна запись. Не меняй профиль и расчёты.',
+  name: 'adapt_workspace', description: 'Адаптировать все пять экранов приложения по анализу бизнеса. Верни summary, evidenceIds, sections и priorities без обёртки personalization. sections — объект: home, programs, applications, calendar, assistant; все пять ключей обязательны. Для неизвестных источников и отсутствующих приоритетов используй пустые массивы evidenceIds и priorities. Не меняй профиль и расчёты.',
   parameters: { type: 'object', properties: {
     summary: { type: 'string', description: 'Вывод о бизнесе и его ближайших задачах, до 700 символов.' },
     evidenceIds: { type: 'array', items: { type: 'string' } },
-    sections: { type: 'array', items: { type: 'object', properties: {
-      page: { type: 'string', enum: [...workspacePages] }, title: { type: 'string', description: 'До 50 символов.' },
-      text: { type: 'string', description: 'Конкретный вывод для этого экрана, до 240 символов.' }, action: { type: 'string', enum: [...workspaceActions] },
-    }, required: ['page', 'title', 'text', 'action'] } },
+    sections: { type: 'object', properties: Object.fromEntries(workspacePages.map((page) => [page, workspaceSection])), required: [...workspacePages] },
     priorities: { type: 'array', items: { type: 'object', properties: { programId: { type: 'string' }, reason: { type: 'string' } }, required: ['programId', 'reason'] } },
   }, required: ['summary', 'evidenceIds', 'sections', 'priorities'] },
 };

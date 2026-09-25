@@ -31,7 +31,7 @@ export function useBusinessAnalysis(context: AIRequest['context'] | null, source
             }
           } catch { /* Storage is optional. */ }
           controller.signal.throwIfAborted();
-          const data = await requestAI({ task: 'workspace', question: 'Проанализируй бизнес и адаптируй все разделы приложения под его ситуацию: главную, каталог поддержки, заявки, календарь и помощника. Учитывай текущие цели и подготовку заявок. Верни personalization.', context }, AbortSignal.any([controller.signal, AbortSignal.timeout(70000)]));
+          const data = await requestAI({ task: 'workspace', question: 'Проанализируй бизнес и адаптируй все разделы приложения под его ситуацию: главную, каталог поддержки, заявки, календарь и помощника. Учитывай текущие цели и подготовку заявок.', context }, AbortSignal.any([controller.signal, AbortSignal.timeout(70000)]));
           if (controller.signal.aborted) return;
           if (data.mode !== 'llm' || !validPersonalization(data.personalization)) { setState({ fingerprint, status: 'unavailable' }); return; }
           const at = Date.now(); setState({ fingerprint, status: 'ready', data, at });

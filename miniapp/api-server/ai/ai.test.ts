@@ -130,7 +130,7 @@ test('forced GigaChat functions are bounded, use abort signals and reject wrong/
   assert.deepEqual(body.function_call, { name: 'plan_support' }); assert.equal(body.functions.length, 1);
   const workspaceTransport = (async (_url: unknown, init: any) => {
     const wire = JSON.parse(String(init.body)); assert.equal(wire.function_call.name, 'adapt_workspace');
-    assert.equal(wire.functions[0].parameters.properties.sections.type, 'array');
+    assert.equal(wire.functions[0].parameters.properties.sections.type, 'object');
     return new Response(JSON.stringify({ choices: [{ message: { function_call: { name: 'adapt_workspace', arguments: {
       summary: 'План бизнеса', evidenceIds: [], priorities: [], sections: workspacePages.map((page) => ({ page, title: page, text: 'Уточните цель', action: 'funding' })),
     } } } }] }));
@@ -141,6 +141,34 @@ test('forced GigaChat functions are bounded, use abort signals and reject wrong/
   const malformed = createAIModel('https://api.giga.chat/v1/chat/completions', 'GigaChat-2-Pro', async () => 'test', (async () => new Response(JSON.stringify({ choices: [{ finish_reason: 'length', message: { content: 'unfinished' } }] }))) as typeof fetch);
   await assert.rejects(() => malformed('answer', {}, AbortSignal.timeout(1000)));
 });
+test('workspace accepts equivalent envelopes but never invents missing sections or actions', async () => {
+  const sections = Object.fromEntries(workspacePages.map((page) => [page, { title: page, text: 'Уточните задачу бизнеса.', action: 'funding' }]));
+  const valid = { summary: 'Нужно уточнить цель бизнеса.', evidenceIds: [], priorities: [], sections };
+  for (const variant of ['object', 'envelope', 'array', 'missing', 'invalid_action', 'duplicate', 'no_evidence']) {
+    let calls = 0;
+    let value: any = structuredClone(valid);
+    if (variant === 'envelope') value = { personalization: { summary: valid.summary, sections, priorities: [] }, evidenceIds: [] };
+    if (variant === 'array' || variant === 'duplicate') value.sections = workspacePages.map((page) => ({ page, ...sections[page] }));
+    if (variant === 'duplicate') value.sections.push(value.sections[0]);
+    if (variant === 'missing') delete value.sections.calendar;
+    if (variant === 'invalid_action') value.sections.home.action = 'approve_loan';
+    if (variant === 'no_evidence') delete value.evidenceIds;
+    const model = createAIModel('https://api.giga.chat/v1/chat/completions', 'GigaChat-2-Pro', async () => 'test', (async (_url, init) => {
+      calls++; const wire = JSON.parse(String(init?.body));
+      if (calls === 1) assert.deepEqual(wire.functions[0].parameters.properties.sections.required, [...workspacePages]);
+      return new Response(JSON.stringify({ choices: [{ message: calls === 1
+        ? { function_call: { name: 'adapt_workspace', arguments: value } }
+        : { content: JSON.stringify(value) } }] }));
+    }) as typeof fetch);
+    const result = await runAssistant({ ...input, task: 'workspace' }, model);
+    const accepted = ['object', 'envelope', 'array'].includes(variant);
+    assert.equal(result.mode, accepted ? 'llm' : 'local', variant);
+    assert.equal(calls, accepted ? 1 : 2, variant);
+    if (accepted) assert.deepEqual(Object.keys(result.personalization!.sections), [...workspacePages]);
+    else { assert.equal(result.personalization, undefined); assert.equal(result.providerFailure, 'INVALID_RESPONSE'); }
+  }
+});
+
 test('chat accepts actual model text without a function call, while reviews still require structured output', async () => {
   let wire: any;
   const model = createAIModel('https://api.giga.chat/v1/chat/completions', 'GigaChat-2-Pro', async () => 'test', (async (_url, init) => {
