@@ -1,0 +1,49 @@
+[
+  {
+    "id": "empty-question",
+    "status": "pass",
+    "http": 400
+  },
+  {
+    "id": "unknown-task",
+    "status": "pass",
+    "http": 400
+  },
+  {
+    "id": "system-history",
+    "status": "pass",
+    "http": 400
+  },
+  {
+    "id": "unknown-program",
+    "status": "pass",
+    "http": 400
+  },
+  {
+    "id": "negative-budget",
+    "status": "pass",
+    "http": 400
+  },
+  {
+    "id": "oversize-body",
+    "status": "pass",
+    "http": 400
+  },
+  {
+    "id": "health",
+    "status": "pass"
+  },
+  {
+    "id": "public-api-without-login",
+    "status": "limitation",
+    "detail": "API принимает запрос без пароля интерфейса; серверной пользовательской авторизации нет."
+  },
+  {
+    "id": "rate-15-per-minute",
+    "status": "pass"
+  },
+  {
+    "id": "concurrency-4",
+    "status": "pass"
+  }
+]

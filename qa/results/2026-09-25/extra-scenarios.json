@@ -1,0 +1,97 @@
+[
+  {
+    "id": "AUTH-wrong",
+    "status": "pass",
+    "detail": "Неверный пароль не открывает интерфейс"
+  },
+  {
+    "id": "AUTH-correct",
+    "status": "pass",
+    "detail": "Верный пароль открывает интерфейс"
+  },
+  {
+    "id": "PROFILE-invalid-inn",
+    "status": "pass",
+    "detail": "Неверная длина ИНН отклонена"
+  },
+  {
+    "id": "PROFILE-manual-after-error",
+    "status": "pass",
+    "detail": "После отказа источника профиль сохранён вручную"
+  },
+  {
+    "id": "HOME-removed",
+    "status": "pass",
+    "detail": "Удалён весь блок пояснения"
+  },
+  {
+    "id": "CATALOG-search-empty",
+    "status": "pass",
+    "detail": "Поиск без совпадений и возврат списка"
+  },
+  {
+    "id": "DRAFT-fallback",
+    "status": "pass",
+    "detail": "Сбой модели даёт явно помеченный локальный шаблон"
+  },
+  {
+    "id": "EXPORT-browser-txt",
+    "status": "pass",
+    "detail": "Браузер скачивает TXT"
+  },
+  {
+    "id": "EXPORT-max-dialog",
+    "status": "pass",
+    "detail": "В имитации MAX открывается экспорт и текст копируется"
+  },
+  {
+    "id": "DRAFT-reload",
+    "status": "pass",
+    "detail": "Правки черновика восстановлены после перезагрузки"
+  },
+  {
+    "id": "DOC-empty",
+    "status": "pass",
+    "message": "Не удалось извлечь текст. Вставьте нужный фрагмент вручную."
+  },
+  {
+    "id": "DOC-unsupported",
+    "status": "pass",
+    "message": "Поддерживаются TXT, PDF, DOCX, PNG и JPG."
+  },
+  {
+    "id": "DOC-size",
+    "status": "pass",
+    "message": "Выберите файл до 10 МБ."
+  },
+  {
+    "id": "DOC-characters",
+    "status": "pass",
+    "message": "В документе больше 60 000 символов. Выберите нужные страницы или вставьте фрагмент текста."
+  },
+  {
+    "id": "DOC-docx-corrupt",
+    "status": "pass",
+    "message": "End of data reached (data length = 3, asked index = 4). Corrupted zip ?"
+  },
+  {
+    "id": "DOC-pdf-corrupt",
+    "status": "pass",
+    "message": "Invalid PDF structure."
+  },
+  {
+    "id": "DOC-cancelled",
+    "status": "pass",
+    "message": "signal is aborted without reason"
+  },
+  {
+    "id": "DOC-boundaries",
+    "status": "pass",
+    "detail": "Пустой, неподдерживаемый, повреждённый, большой файл и отмена отклонены"
+  },
+  {
+    "id": "DOC-single-page-45000",
+    "status": "partial",
+    "detail": "Чтение на клиенте: 45000 символов; API HTTP 400. Лимит страницы API 40000 ниже лимита файла 60000."
+  }
+]

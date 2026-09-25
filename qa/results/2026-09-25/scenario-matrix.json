@@ -1,0 +1,1008 @@
+{
+  "startedAt": "2026-09-25T10:27:02.057Z",
+  "endedAt": "2026-09-25T10:27:02.489Z",
+  "kind": "deterministic-and-simulated",
+  "ai": {
+    "cases": [
+      {
+        "id": "MATRIX-incomplete-chat-success",
+        "profile": "incomplete",
+        "task": "chat",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-chat-unavailable",
+        "profile": "incomplete",
+        "task": "chat",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-chat-malformed",
+        "profile": "incomplete",
+        "task": "chat",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-chat-truncated",
+        "profile": "incomplete",
+        "task": "chat",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-chat-abort",
+        "profile": "incomplete",
+        "task": "chat",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-intake-success",
+        "profile": "incomplete",
+        "task": "intake",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-intake-unavailable",
+        "profile": "incomplete",
+        "task": "intake",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-intake-malformed",
+        "profile": "incomplete",
+        "task": "intake",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-intake-truncated",
+        "profile": "incomplete",
+        "task": "intake",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-intake-abort",
+        "profile": "incomplete",
+        "task": "intake",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-search-success",
+        "profile": "incomplete",
+        "task": "search",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-search-unavailable",
+        "profile": "incomplete",
+        "task": "search",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-search-malformed",
+        "profile": "incomplete",
+        "task": "search",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-search-truncated",
+        "profile": "incomplete",
+        "task": "search",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-search-abort",
+        "profile": "incomplete",
+        "task": "search",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-analysis-success",
+        "profile": "incomplete",
+        "task": "analysis",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-analysis-unavailable",
+        "profile": "incomplete",
+        "task": "analysis",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-analysis-malformed",
+        "profile": "incomplete",
+        "task": "analysis",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-analysis-truncated",
+        "profile": "incomplete",
+        "task": "analysis",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-analysis-abort",
+        "profile": "incomplete",
+        "task": "analysis",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-strategy-success",
+        "profile": "incomplete",
+        "task": "strategy",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-strategy-unavailable",
+        "profile": "incomplete",
+        "task": "strategy",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-strategy-malformed",
+        "profile": "incomplete",
+        "task": "strategy",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-strategy-truncated",
+        "profile": "incomplete",
+        "task": "strategy",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-strategy-abort",
+        "profile": "incomplete",
+        "task": "strategy",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-review-success",
+        "profile": "incomplete",
+        "task": "review",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-review-unavailable",
+        "profile": "incomplete",
+        "task": "review",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-review-malformed",
+        "profile": "incomplete",
+        "task": "review",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-review-truncated",
+        "profile": "incomplete",
+        "task": "review",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-review-abort",
+        "profile": "incomplete",
+        "task": "review",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-draft-success",
+        "profile": "incomplete",
+        "task": "draft",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-draft-unavailable",
+        "profile": "incomplete",
+        "task": "draft",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-draft-malformed",
+        "profile": "incomplete",
+        "task": "draft",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-draft-truncated",
+        "profile": "incomplete",
+        "task": "draft",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-draft-abort",
+        "profile": "incomplete",
+        "task": "draft",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-changes-success",
+        "profile": "incomplete",
+        "task": "changes",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-changes-unavailable",
+        "profile": "incomplete",
+        "task": "changes",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-changes-malformed",
+        "profile": "incomplete",
+        "task": "changes",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-changes-truncated",
+        "profile": "incomplete",
+        "task": "changes",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-changes-abort",
+        "profile": "incomplete",
+        "task": "changes",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-workspace-success",
+        "profile": "incomplete",
+        "task": "workspace",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-workspace-unavailable",
+        "profile": "incomplete",
+        "task": "workspace",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-workspace-malformed",
+        "profile": "incomplete",
+        "task": "workspace",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-workspace-truncated",
+        "profile": "incomplete",
+        "task": "workspace",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-incomplete-workspace-abort",
+        "profile": "incomplete",
+        "task": "workspace",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-chat-success",
+        "profile": "company",
+        "task": "chat",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-chat-unavailable",
+        "profile": "company",
+        "task": "chat",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-chat-malformed",
+        "profile": "company",
+        "task": "chat",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-chat-truncated",
+        "profile": "company",
+        "task": "chat",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-chat-abort",
+        "profile": "company",
+        "task": "chat",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-intake-success",
+        "profile": "company",
+        "task": "intake",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-intake-unavailable",
+        "profile": "company",
+        "task": "intake",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-intake-malformed",
+        "profile": "company",
+        "task": "intake",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-intake-truncated",
+        "profile": "company",
+        "task": "intake",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-intake-abort",
+        "profile": "company",
+        "task": "intake",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-search-success",
+        "profile": "company",
+        "task": "search",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-search-unavailable",
+        "profile": "company",
+        "task": "search",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-search-malformed",
+        "profile": "company",
+        "task": "search",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-search-truncated",
+        "profile": "company",
+        "task": "search",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-search-abort",
+        "profile": "company",
+        "task": "search",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-analysis-success",
+        "profile": "company",
+        "task": "analysis",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-analysis-unavailable",
+        "profile": "company",
+        "task": "analysis",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-analysis-malformed",
+        "profile": "company",
+        "task": "analysis",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-analysis-truncated",
+        "profile": "company",
+        "task": "analysis",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-analysis-abort",
+        "profile": "company",
+        "task": "analysis",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-strategy-success",
+        "profile": "company",
+        "task": "strategy",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-strategy-unavailable",
+        "profile": "company",
+        "task": "strategy",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-strategy-malformed",
+        "profile": "company",
+        "task": "strategy",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-strategy-truncated",
+        "profile": "company",
+        "task": "strategy",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-strategy-abort",
+        "profile": "company",
+        "task": "strategy",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-review-success",
+        "profile": "company",
+        "task": "review",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-review-unavailable",
+        "profile": "company",
+        "task": "review",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-review-malformed",
+        "profile": "company",
+        "task": "review",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-review-truncated",
+        "profile": "company",
+        "task": "review",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-review-abort",
+        "profile": "company",
+        "task": "review",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-draft-success",
+        "profile": "company",
+        "task": "draft",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-draft-unavailable",
+        "profile": "company",
+        "task": "draft",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-draft-malformed",
+        "profile": "company",
+        "task": "draft",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-draft-truncated",
+        "profile": "company",
+        "task": "draft",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-draft-abort",
+        "profile": "company",
+        "task": "draft",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-changes-success",
+        "profile": "company",
+        "task": "changes",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-changes-unavailable",
+        "profile": "company",
+        "task": "changes",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-changes-malformed",
+        "profile": "company",
+        "task": "changes",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-changes-truncated",
+        "profile": "company",
+        "task": "changes",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-changes-abort",
+        "profile": "company",
+        "task": "changes",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-workspace-success",
+        "profile": "company",
+        "task": "workspace",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-workspace-unavailable",
+        "profile": "company",
+        "task": "workspace",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-workspace-malformed",
+        "profile": "company",
+        "task": "workspace",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-workspace-truncated",
+        "profile": "company",
+        "task": "workspace",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-company-workspace-abort",
+        "profile": "company",
+        "task": "workspace",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-chat-success",
+        "profile": "project",
+        "task": "chat",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-chat-unavailable",
+        "profile": "project",
+        "task": "chat",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-chat-malformed",
+        "profile": "project",
+        "task": "chat",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-chat-truncated",
+        "profile": "project",
+        "task": "chat",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-chat-abort",
+        "profile": "project",
+        "task": "chat",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-intake-success",
+        "profile": "project",
+        "task": "intake",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-intake-unavailable",
+        "profile": "project",
+        "task": "intake",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-intake-malformed",
+        "profile": "project",
+        "task": "intake",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-intake-truncated",
+        "profile": "project",
+        "task": "intake",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-intake-abort",
+        "profile": "project",
+        "task": "intake",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-search-success",
+        "profile": "project",
+        "task": "search",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-search-unavailable",
+        "profile": "project",
+        "task": "search",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-search-malformed",
+        "profile": "project",
+        "task": "search",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-search-truncated",
+        "profile": "project",
+        "task": "search",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-search-abort",
+        "profile": "project",
+        "task": "search",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-analysis-success",
+        "profile": "project",
+        "task": "analysis",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-analysis-unavailable",
+        "profile": "project",
+        "task": "analysis",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-analysis-malformed",
+        "profile": "project",
+        "task": "analysis",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-analysis-truncated",
+        "profile": "project",
+        "task": "analysis",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-analysis-abort",
+        "profile": "project",
+        "task": "analysis",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-strategy-success",
+        "profile": "project",
+        "task": "strategy",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-strategy-unavailable",
+        "profile": "project",
+        "task": "strategy",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-strategy-malformed",
+        "profile": "project",
+        "task": "strategy",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-strategy-truncated",
+        "profile": "project",
+        "task": "strategy",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-strategy-abort",
+        "profile": "project",
+        "task": "strategy",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-review-success",
+        "profile": "project",
+        "task": "review",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-review-unavailable",
+        "profile": "project",
+        "task": "review",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-review-malformed",
+        "profile": "project",
+        "task": "review",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-review-truncated",
+        "profile": "project",
+        "task": "review",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-review-abort",
+        "profile": "project",
+        "task": "review",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-draft-success",
+        "profile": "project",
+        "task": "draft",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-draft-unavailable",
+        "profile": "project",
+        "task": "draft",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-draft-malformed",
+        "profile": "project",
+        "task": "draft",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-draft-truncated",
+        "profile": "project",
+        "task": "draft",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-draft-abort",
+        "profile": "project",
+        "task": "draft",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-changes-success",
+        "profile": "project",
+        "task": "changes",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-changes-unavailable",
+        "profile": "project",
+        "task": "changes",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-changes-malformed",
+        "profile": "project",
+        "task": "changes",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-changes-truncated",
+        "profile": "project",
+        "task": "changes",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-changes-abort",
+        "profile": "project",
+        "task": "changes",
+        "condition": "abort",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-workspace-success",
+        "profile": "project",
+        "task": "workspace",
+        "condition": "success",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-workspace-unavailable",
+        "profile": "project",
+        "task": "workspace",
+        "condition": "unavailable",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-workspace-malformed",
+        "profile": "project",
+        "task": "workspace",
+        "condition": "malformed",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-workspace-truncated",
+        "profile": "project",
+        "task": "workspace",
+        "condition": "truncated",
+        "status": "pass"
+      },
+      {
+        "id": "MATRIX-project-workspace-abort",
+        "profile": "project",
+        "task": "workspace",
+        "condition": "abort",
+        "status": "pass"
+      }
+    ],
+    "total": 135,
+    "passed": 135
+  },
+  "funding": {
+    "profiles": [
+      "incomplete",
+      "company",
+      "project",
+      "large",
+      "unknownSme",
+      "entrepreneur",
+      "idea"
+    ],
+    "purposes": [
+      "покупка оборудования",
+      "оборотные средства",
+      "разработка продукта",
+      "найм сотрудников",
+      "экспорт",
+      "аренда / недвижимость",
+      "сельхозтехника",
+      "запуск производства",
+      "масштабирование"
+    ],
+    "amounts": [
+      null,
+      1,
+      400000,
+      100000000,
+      2000000000
+    ],
+    "terms": [
+      null,
+      3,
+      600
+    ],
+    "ownFunds": [
+      null,
+      0,
+      70000000
+    ],
+    "collateral": [
+      null,
+      false,
+      true
+    ],
+    "combinations": 8505,
+    "checks": 51030,
+    "statuses": {
+      "need_more_data": 7479,
+      "not_eligible": 26541,
+      "expired": 17010
+    },
+    "failures": []
+  }
+}
