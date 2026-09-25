@@ -12,6 +12,8 @@ interface ImportMeta {
 interface Window {
   WebApp?: {
     ready: () => void;
+    platform?: 'ios' | 'android' | 'desktop' | 'web' | null;
+    getViewportSize?: () => Promise<{ height: string; width: string }>;
     initData?: string;
     initDataUnsafe?: { start_param?: string };
     downloadFile?: (url: string, name: string) => void;

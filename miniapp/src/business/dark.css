@@ -12,7 +12,7 @@
   .sidebar, .modal-toolbar { background: var(--canvas); border-color: var(--line); }
   .sidebar nav, .sidebar .assistant-nav { background: var(--surface); border-color: var(--line); }
   .sidebar .nav-item { color: var(--muted); }
-  .sidebar nav .nav-item.active { background: #45291e; color: #ff9b66; }
+  .sidebar nav .nav-item.active { background: #272d30; color: #ff5000; }
   .sidebar .assistant-nav.active { background: #342851; color: #c6b4ff; }
   .top-actions .icon-button, .icon-button, .soft-round, .empty-symbol { background: #292c35; color: var(--ink); }
   .sidebar .brand { color: var(--ink); }

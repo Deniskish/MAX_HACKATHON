@@ -2,6 +2,7 @@
    on top of scrollable content. Business logic remains in its existing modules. */
 .sidebar .nav-item > .mobile-nav-label { display: none; }
 .footer-logo { color: var(--ink); }
+.page-overview footer { border-top: 0; }
 .funding-card-heading { display: flex; flex-wrap: nowrap; align-items: flex-start; gap: 12px; padding: 0; }
 .funding-card-tags { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; flex: 1; min-width: 0; }
 .funding-card-heading .save-program { position: static; flex: 0 0 44px; width: 44px; height: 44px; margin: -6px -6px 0 0; }
@@ -36,7 +37,8 @@ dialog .modal { padding-top: 24px; }
   .sidebar .nav-item > .desktop-nav-label, .sidebar .nav-item small { display: none; }
   .sidebar .nav-item > .mobile-nav-label { display: block; font-size: 10px; white-space: nowrap; }
   .sidebar .nav-item > svg { width: 22px; height: 22px; }
-  .sidebar nav .nav-item.active { background: #fff0e8; color: #c84000; }
+  .sidebar nav .nav-item.active { background: #e5e8ed; color: #e04500; }
+  .sidebar nav .nav-item:not(.active) { background: transparent; }
   .sidebar nav .nav-item.nav-calendar, .sidebar nav .nav-item.nav-profile { display: none; }
   .sidebar .assistant-nav { width: 60px; height: 60px; min-width: 60px; flex: 0 0 60px; padding: 0; margin: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); box-shadow: none; backdrop-filter: none; color: var(--muted); }
   .sidebar .assistant-nav > span { display: none; }
