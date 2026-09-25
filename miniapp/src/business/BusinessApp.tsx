@@ -382,7 +382,9 @@ export default function BusinessApp() {
               className={'nav-item nav-' + n.id + ' ' + (page === n.id ? 'active' : '')}
               onClick={() => setPage(n.id)}
             >
-              <Icon name={n.icon} />
+              {n.id === 'overview'
+                ? <img className="nav-logo" src="/brand/opora-logo.svg" width={20} height={20} alt="" aria-hidden="true" />
+                : <Icon name={n.icon} />}
               <span className="desktop-nav-label">{n.label}</span>
               <span className="mobile-nav-label">{n.id === 'programs' ? 'Поддержка' : n.id === 'applications' ? 'Заявки' : n.label}</span>
               {n.id === 'applications' && apps.length > 0 && <small>{apps.length}</small>}
