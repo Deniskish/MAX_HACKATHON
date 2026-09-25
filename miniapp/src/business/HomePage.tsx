@@ -22,7 +22,7 @@ function Arrow() {
 
 export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNotifications, onApplications, onBusiness, personalized, hasNotifications, analysis, onAIAction }: HomePageProps) {
   const insight = analysis.data?.personalization?.sections.home;
-  return <div className="home-dashboard">
+  return <div className={`home-dashboard${personalized ? ' home-personalized' : ''}`}>
     <header className="home-topbar">
       <BrandWordmark className="home-wordmark-small" />
       <button type="button" className="home-notifications" aria-label={hasNotifications ? 'Уведомления — есть новые события' : 'Уведомления'} onClick={onNotifications}>
@@ -32,10 +32,12 @@ export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNoti
     </header>
     <div className="home-scroll">
       <section className="home-hero" aria-label="Опора — поддержка бизнеса">
-        <img className="home-hero-shapes" src="/assets/hero-shapes.png" width={1254} height={1254} alt="" draggable={false} />
-        <BrandWordmark className="home-wordmark-hero" />
-        <div className="home-hero-index" aria-hidden="true"><span>01 <i /></span><span>02</span><span>03</span></div>
-        <p className="home-hero-caption" aria-hidden="true">БИЗНЕС<br />РАЗВИВАЕТСЯ<br />С ПОДДЕРЖКОЙ</p>
+        <div className="home-hero-artwork">
+          <img className="home-hero-shapes" src="/assets/hero-shapes.png" width={1254} height={1254} alt="" draggable={false} />
+          <BrandWordmark className="home-wordmark-hero" />
+          <div className="home-hero-index" aria-hidden="true"><span>01 <i /></span><span>02</span><span>03</span></div>
+          <p className="home-hero-caption" aria-hidden="true">БИЗНЕС<br />РАЗВИВАЕТСЯ<br />С ПОДДЕРЖКОЙ</p>
+        </div>
       </section>
       <section className="home-actions" aria-label="Возможности для бизнеса">
         <div className="home-action-pair">
@@ -59,7 +61,7 @@ export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNoti
           </span>
           <Arrow />
         </button>
-        {personalized && <details className="home-analysis-details"><summary>{insight ? 'Почему этот шаг важен' : 'Как подстраивается приложение'}</summary><p>{analysis.data?.personalization?.summary ?? 'AI анализирует профиль, потребность и состояние заявок. Его выводы используются на главной, в поддержке, заявках, календаре и чате. Изменение данных обновляет анализ.'}</p><button onClick={analysis.refresh} disabled={analysis.status === 'loading'}>{analysis.status === 'loading' ? 'Анализируем…' : 'Обновить AI-анализ'}</button></details>}
+        {personalized && <details className="home-analysis-details"><summary>{insight ? 'Почему этот шаг важен' : 'Как подстраивается приложение'}</summary>{insight && <p>{insight.text}</p>}<p>{analysis.data?.personalization?.summary ?? 'AI анализирует профиль, потребность и состояние заявок. Его выводы используются на главной, в поддержке, заявках, календаре и чате. Изменение данных обновляет анализ.'}</p><button onClick={analysis.refresh} disabled={analysis.status === 'loading'}>{analysis.status === 'loading' ? 'Анализируем…' : 'Обновить AI-анализ'}</button></details>}
       </section>
     </div>
     <AppNavigation active="overview" onNavigate={(page) => {
