@@ -11,6 +11,8 @@ import { SourceStore, trustedSource, extractSource } from './sources';
 import { officialFundingCatalog } from '../funding-catalog/official-catalog';
 import { createApp } from '../app';
 import { workspacePages } from './types';
+import { PrivacyError } from '../privacy';
+import { emptyFundingNeed } from '../funding-catalog/types';
 
 const id = officialFundingCatalog[0].id;
 const input = { task: 'chat', question: 'Хочу купить оборудование за 200 млн рублей, залога нет. А если уменьшить сумму?',
@@ -67,7 +69,7 @@ test('model proposals are validated, scenarios calculated by code, and actions u
   } : answer, tokens: 10 }; };
   const result = await runAssistant(input, model);
   assert.equal(result.mode, 'llm'); assert.equal(result.proposedNeed?.amount, 200000000);
-  assert.deepEqual(result.proposedProfile, { region: 'Самарская область' }); assert.equal(result.scenarios.length, 1);
+  assert.equal(result.proposedProfile, undefined); assert.equal(result.scenarios.length, 1);
   assert.equal(result.scenarios[0].need.amount, 100000000); assert.equal(result.usage?.calls, 2);
   assert.ok(result.actions.every((a) => !a.programId || officialFundingCatalog.some((p) => p.id === a.programId)));
   assert.ok(!result.matches.some((m) => m.id === 'fake')); assert.equal(result.citations[0].url, officialFundingCatalog[0].source.url);
@@ -137,6 +139,39 @@ test('forced GigaChat functions are bounded, use abort signals and reject wrong/
   const malformed = createAIModel('https://api.giga.chat/v1/chat/completions', 'GigaChat-2-Pro', async () => 'test', (async () => new Response(JSON.stringify({ choices: [{ finish_reason: 'length', message: { content: 'unfinished' } }] }))) as typeof fetch);
   await assert.rejects(() => malformed('answer', {}, AbortSignal.timeout(1000)));
 });
+test('chat accepts actual model text without a function call, while reviews still require structured output', async () => {
+  let wire: any;
+  const model = createAIModel('https://api.giga.chat/v1/chat/completions', 'GigaChat-2-Pro', async () => 'test', (async (_url, init) => {
+    wire = JSON.parse(String(init?.body));
+    return new Response(JSON.stringify({ choices: [{ message: { content: 'Поручительство помогает с обеспечением кредита.' } }], usage: { total_tokens: 12 } }));
+  }) as typeof fetch);
+  const result = await model('answer', { request: { task: 'chat' } }, AbortSignal.timeout(1000));
+  assert.match((result.value as any).answer, /обеспечением/);
+  assert.equal(wire.functions, undefined); assert.equal(result.tokens, 12);
+  await assert.rejects(() => model('answer', { request: { task: 'review' } }, AbortSignal.timeout(1000)), (e: any) => e.code === 'NO_FUNCTION_CALL');
+});
+
+test('chat recovers from an unstructured plan without inventing changes to the business', async () => {
+  const result = await runAssistant(input, async (stage) => {
+    if (stage === 'plan') throw new PrivacyError('NO_FUNCTION_CALL');
+    return { value: answer };
+  });
+  assert.equal(result.mode, 'llm'); assert.equal(result.providerFailure, undefined);
+  assert.equal(result.proposedNeed, undefined); assert.equal(result.proposedProfile, undefined);
+});
+
+test('unchanged needs are not offered again, and unavailable programmes are not recommendation buttons', async () => {
+  const need = { ...emptyFundingNeed, purpose: 'запуск производства', amount: 400000, preferredTermMonths: 3 };
+  const result = await runAssistant({ ...input, context: { ...input.context, need } }, async (stage) => ({ value: stage === 'plan'
+    ? { query: '', opportunityIds: [], need, profile: { region: input.context.profile.region } } : answer }));
+  assert.equal(result.proposedNeed, undefined); assert.equal(result.proposedProfile, undefined);
+  assert.ok(!result.actions.some((a) => a.type === 'open_funding'));
+  for (const action of result.actions) if (action.programId) assert.ok(result.matches.some((m) => m.id === action.programId && !['not_eligible', 'expired', 'upcoming'].includes(m.status)));
+  const fallback = await runAssistant({ ...input, context: { ...input.context, need } });
+  assert.equal(fallback.mode, 'local'); assert.ok(fallback.answer.length < 1100);
+  assert.doesNotMatch(fallback.answer, /Выполнено:|Неизвестно:/);
+});
+
 test('semantic retrieval caches public vectors but not private queries; invalid dimensions do not score', async () => {
   assert.equal(cosine([1, 0], [1, 0]), 1); assert.equal(cosine([1], [1, 2]), 0);
   const inputs: string[][] = [];

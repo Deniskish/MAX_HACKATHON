@@ -1,4 +1,16 @@
 /* Shared product palette and mobile frame, derived from the approved home. */
+.funding-searching { min-height: min(460px, 65dvh); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px; text-align: center; padding: 24px 0; }
+.funding-searching h2, .funding-searching p { margin: 0; }
+.funding-search-animation { position: relative; width: 140px; height: 140px; display: grid; place-items: center; }
+.funding-search-animation img { object-fit: contain; animation: funding-breathe 1.8s ease-in-out infinite; }
+.funding-search-animation span { position: absolute; inset: 0; border: 2px solid #8064ff20; border-top-color: #8064ff; border-radius: 50%; animation: funding-turn 1.3s linear infinite; }
+.funding-results-page { display: grid; gap: 20px; animation: funding-arrive .25s ease-out; }
+.funding-result-intro h2 { font-size: 24px; margin: 10px 0; overflow-wrap: anywhere; }
+.funding-result-intro p { color: #9293a0; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+@keyframes funding-turn { to { transform: rotate(360deg); } }
+@keyframes funding-breathe { 50% { transform: scale(.92); opacity: .8; } }
+@keyframes funding-arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .funding-search-animation img, .funding-search-animation span, .funding-results-page { animation: none; } }
 :root {
   color-scheme: dark; --ink: #ebebf3; --muted: #9293a0; --surface: #1c1d23;
   --canvas: #191a1f; --line: #ffffff0f; --accent: #8064ff; --brand: #ff5a1f;

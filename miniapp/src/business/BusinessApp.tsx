@@ -2,13 +2,14 @@ import { AssistantPage } from './AssistantPage';
 // Общее состояние экранов, профиля и заявок. Условия программ считаются в domain.
 import { CompanySources, FieldSource } from './CompanySource';
 import { editCompanyProfile, mergeCompanyProfile, requestCompanyData } from './company-data';
-import { FundingExperience, FundingOpportunityCard } from './FundingExperience';
+import { FundingExperience, FundingOpportunityCard, FundingResults } from './FundingExperience';
+import { fundingFingerprint } from './funding';
 import { OfficialDetails, ProjectOnboarding } from './OfficialExperience';
 import { officialFundingCatalog } from '../../api-server/funding-catalog/official-catalog';
 import { matchFundingOpportunity, rankFundingMatches } from '../../api-server/funding-catalog/matching';
 import { toFundingProfile } from '../../api-server/funding-catalog/input';
 import { fundingKindLabels } from '../../api-server/funding-catalog/presentation';
-import type { FundingProfile, ProjectProfile } from '../../api-server/funding-catalog/types';
+import type { FundingProfile, ProjectProfile, FundingResponse } from '../../api-server/funding-catalog/types';
 import { loadWorkspace, saveWorkspace, projectAsProfile, applicationStatus, applicationLabels, calendarICS, fundingEvents, personalFunding, trackedFunding } from './workspace';
 import {
   DocumentChecklist,
@@ -84,6 +85,7 @@ export default function BusinessApp() {
   const [projectOnboard, setProjectOnboard] = useState(false);
   const [aiProjectSeed, setAIProjectSeed] = useState<ProjectProfile | null>(null);
   const [need, setNeed] = useState(initial.fundingNeed);
+  const [fundingResult, setFundingResult] = useState<{ data: FundingResponse; fingerprint: string } | null>(null);
   const profile = companyProfile ?? (projectProfile ? projectAsProfile(projectProfile) : null);
   const fundingProfile: FundingProfile = projectProfile && !companyProfile
     ? { region: projectProfile.region, applicantType: 'project', stage: projectProfile.stage, industry: projectProfile.industry }
@@ -382,8 +384,6 @@ export default function BusinessApp() {
     setMessages((m) => [...m, { role: 'user', text }]);
     setSending(true);
     const controller = new AbortController(); chatRequest.current = controller;
-    const chosen = program ? matches.find((m) => m.opportunity.id === program.id) : matches.find((m) => m.status !== 'not_eligible' && m.status !== 'expired');
-    const fallback = chosen ? `${chosen.opportunity.title}: ${chosen.explanation}` : 'Укажите цель в разделе «Главная» и выполните подбор.';
     const application = apps.find((a) => a.programId === program?.id);
     try {
       const data = await requestAI({ task: task === 'strategy' ? 'strategy' : 'chat', question: text,
@@ -397,8 +397,8 @@ export default function BusinessApp() {
       setAssistantMode(data.mode === 'llm' ? 'GigaChat · контекстный помощник' : 'Ответ по правилам');
     } catch (error) {
       if (controller.signal.aborted || chatRequest.current !== controller) return;
-      setMessages((m) => [...m, { role: 'assistant', text: `${error instanceof Error && error.name === 'TimeoutError' ? 'Время ожидания GigaChat истекло.' : error instanceof Error ? error.message : 'AI недоступен.'}\n\nРасчёт по правилам:\n${fallback}`, opportunityIds: chosen ? [chosen.opportunity.id] : [] }]);
-      setAssistantMode('Ответ по правилам · GigaChat недоступен');
+      setMessages((m) => [...m, { role: 'assistant', text: `${error instanceof Error && error.name === 'TimeoutError' ? 'Помощник не успел ответить.' : 'Не удалось получить ответ помощника.'} Попробуйте отправить вопрос ещё раз. Подбор по условиям программ доступен в разделе поддержки.` }]);
+      setAssistantMode('GigaChat временно недоступен');
     } finally {
       if (chatRequest.current === controller) { chatRequest.current = null; setSending(false); }
     }
@@ -414,10 +414,20 @@ export default function BusinessApp() {
   return (
     <div className={`app-shell page-${page}`}>
       {page !== 'overview' && page !== 'assistant' && <AppHeader
-        title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', assistant: 'AI-помощник' }[page]}
-        backLabel={['assistant', 'calendar'].includes(page) ? 'В мой бизнес' : 'На главную'} onBack={() => navigate(['assistant', 'calendar'].includes(page) ? 'profile' : 'overview')} onNotifications={() => setHomePanel('events')} hasNotifications={hasNotifications}
+        title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', 'funding-results': 'Варианты поддержки' }[page]}
+        backLabel={page === 'funding-results' ? 'К параметрам подбора' : page === 'calendar' ? 'В мой бизнес' : 'На главную'} onBack={() => page === 'funding-results' ? setHomePanel('funding') : navigate(page === 'calendar' ? 'profile' : 'overview')} onNotifications={() => setHomePanel('events')} hasNotifications={hasNotifications}
       />}
       <main ref={mainRef} className="app-content">
+          {page === 'funding-results' && profile && <section className="funding-results-page">
+            {fundingResult?.fingerprint === fundingFingerprint(fundingProfile, need) ? <>
+              <div className="funding-result-intro"><span className="hub-eyebrow">ПОД ВАШУ ЗАДАЧУ</span><h2>{need.purpose}</h2>
+                <p>{profile.name}{need.amount ? ` · ${need.amount.toLocaleString('ru-RU')} ₽` : ''}{need.preferredTermMonths ? ` · ${need.preferredTermMonths} мес.` : ''}</p>
+                <ActionButton className="secondary" onClick={() => setHomePanel('funding')}>Изменить параметры</ActionButton>
+              </div>
+              <FundingResults result={fundingResult.data} onOpen={openFunding} onSave={toggleSaved} saved={saved} />
+              <ActionButton className="secondary" onClick={() => void ask('Кратко сравни найденные варианты для моей цели, суммы и срока. Что стоит рассмотреть и что нужно уточнить?', null, 'strategy')}>Обсудить варианты с AI</ActionButton>
+            </> : <section className="empty-state"><h2>Обновите подбор</h2><p>Параметры бизнеса или задачи изменились. Выполните подбор заново, чтобы увидеть актуальные варианты.</p><ActionButton className="primary" onClick={() => setHomePanel('funding')}>Подобрать заново</ActionButton></section>}
+          </section>}
           {page === 'overview' && <HomePage
             onFindSupport={() => navigate('programs')}
             onAddBusiness={() => profile ? navigate('profile') : setHomePanel('business')}
@@ -919,7 +929,7 @@ export default function BusinessApp() {
                     </div>
                   </>
                 )}
-                {form.inn && (
+                {form.inn && step === 0 && (
                   <ActionButton type="button" className="secondary" onClick={() => void loadCompany()}>
                     {companyLoading ? 'Получаем данные…' : 'Получить данные компании'}
                   </ActionButton>
@@ -1067,8 +1077,9 @@ export default function BusinessApp() {
           <ActionButton className="secondary" onClick={() => { setHomePanel(null); setProjectOnboard(true); }}>У меня пока нет компании</ActionButton>
         </div>}
         {homePanel === 'funding' && profile && <>
-          <section className="widget business-summary"><span className="tag">{companyProfile ? 'Ваш бизнес' : 'Проект без юридического лица'}</span><h1>{profile.name}</h1><p>{profile.region} · {companyProfile ? `ОКВЭД ${profile.okved || 'не указан'} · МСП: ${profile.isSme === 'yes' ? 'да' : profile.isSme === 'no' ? 'нет' : 'неизвестно'}` : projectProfile?.industry}</p><ActionButton className="secondary" onClick={openProfile}>Редактировать профиль</ActionButton></section>
-          <FundingExperience key={companyProfile?.inn ?? 'project'} profile={fundingProfile} initialNeed={need} onNeed={setNeed} onOpen={openFunding} onSave={toggleSaved} saved={saved} />
+          <FundingExperience key={companyProfile?.inn ?? 'project'} profile={fundingProfile} initialNeed={need} onNeed={setNeed} onOpen={openFunding} onResult={(data, fingerprint) => {
+            setFundingResult({ data, fingerprint }); setHomePanel(null); setPage('funding-results');
+          }} />
         </>}
         {homePanel === 'events' && <div className="home-panel-actions events-panel">
           {!hasNotifications && <p>Новых уведомлений пока нет.</p>}

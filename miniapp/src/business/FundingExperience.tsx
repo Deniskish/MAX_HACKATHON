@@ -70,9 +70,9 @@ export function FundingResults({ result, onOpen, onSave, saved = [] }: { result:
 }
 
 // key по ИНН задаётся в родителе только для локального хранения; matching ИНН не получает.
-export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onSave, saved, storageId = '' }: {
+export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onResult, storageId = '' }: {
   profile: FundingProfile; initialNeed?: FundingNeed; onNeed?: (need: FundingNeed) => void;
-  onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: string[]; storageId?: string;
+  onOpen?: (id: string) => void; onResult: (result: FundingResponse, fingerprint: string) => void; storageId?: string;
 }) {
   const storageKey = `opora.funding-need.v1.${storageId}`;
   const [need, setNeed] = useState<FundingNeed>(() => {
@@ -80,11 +80,15 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onSave
     try { return restoreFundingNeed(localStorage.getItem(storageKey)); }
     catch { return { ...emptyFundingNeed }; }
   });
-  const [result, setResult] = useState<{ fingerprint: string; data: FundingResponse } | null>(null);
   const [error, setError] = useState('');
   const [storageNotice, setStorageNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const pending = React.useRef<AbortController | null>(null);
+  const panel = React.useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    panel.current?.closest('.project-dialog')?.scrollTo({ top: 0 });
+    panel.current?.closest('dialog')?.scrollTo({ top: 0 });
+  }, [loading]);
   const fingerprint = fundingFingerprint(profile, need);
   useEffect(() => {
     pending.current?.abort();
@@ -105,11 +109,10 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onSave
     pending.current = controller;
     const timeout = setTimeout(() => controller.abort(), 15000);
     setLoading(true);
-    setResult(null);
     setError('');
     try {
-      const data = await requestFunding(profile, need, controller.signal);
-      if (!controller.signal.aborted && pending.current === controller) setResult({ fingerprint, data });
+      const [data] = await Promise.all([requestFunding(profile, need, controller.signal), new Promise<void>((resolve) => setTimeout(resolve, 650))]);
+      if (!controller.signal.aborted && pending.current === controller) onResult(data, fingerprint);
     } catch (err) {
       if (pending.current === controller) setError(controller.signal.aborted
         ? 'Время ожидания истекло. Повторите подбор.'
@@ -119,7 +122,12 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onSave
       if (pending.current === controller) { pending.current = null; setLoading(false); }
     }
   }
-  return <section className="funding-experience">
+  if (loading) return <section ref={panel} className="funding-searching" role="status" aria-live="polite">
+    <div className="funding-search-animation" aria-hidden="true"><img src="/assets/orb.png" width={100} height={100} alt="" /><span /></div>
+    <h2>Подбираем поддержку</h2><p>Сравниваем вашу цель и параметры бизнеса с условиями программ.</p>
+    <ActionButton className="secondary" onClick={() => { pending.current?.abort(); pending.current = null; setLoading(false); }}>Отменить подбор</ActionButton>
+  </section>;
+  return <section ref={panel} className="funding-experience">
     <details className="ai-entry"><summary>Описать потребность своими словами</summary><AIPanel title="Умный подбор" task="intake" context={{ profile, need: need.purpose ? need : undefined, page: 'funding' }} onNeed={setNeed} onOpen={onOpen} /></details>
     <form className="widget" onSubmit={submit}>
       <h2>Что нужно вашему бизнесу?</h2>
@@ -151,6 +159,5 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onSave
       {error && <p className="error" role="alert">{error}</p>}
       {storageNotice && <p role="status">{storageNotice}</p>}
     </form>
-    {result && result.fingerprint === fingerprint && <><AIPanel title="Сравнить варианты с AI" task="strategy" context={{ profile, need, page: 'funding' }} initialQuestion="Объясни приоритеты, сравни варианты и предложи следующий шаг. Если данных недостаточно, задай вопросы." onNeed={setNeed} onOpen={onOpen} /><FundingResults result={result.data} onOpen={onOpen} onSave={onSave} saved={saved} /></>}
   </section>;
 }
