@@ -13,11 +13,13 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved }: { match
   const rate = rateLabel(o), term = termLabel(o);
   return <article className="widget funding-card">
     <div className="funding-card-heading">
+      <div className="funding-card-tags">
       <span className="tag">{fundingKindLabels[o.kind]}</span>
       <span className="tag">{o.source.type === 'demo' ? 'Учебные данные' : 'Официальный источник'}</span>
+      </div>
+      {onSave && <button className={`save-program${saved ? ' is-saved' : ''}`} aria-label={`${saved ? 'Убрать из сохранённых' : 'Сохранить'}: ${o.title}`} aria-pressed={Boolean(saved)} onClick={() => onSave(o.id)}><Icon name="bookmark" size={19} /></button>}
     </div>
     <h3>{o.title}</h3>
-    {onSave && <button className={`save-program${saved ? ' is-saved' : ''}`} aria-label={`${saved ? 'Убрать из сохранённых' : 'Сохранить'}: ${o.title}`} aria-pressed={Boolean(saved)} onClick={() => onSave(o.id)}><Icon name="bookmark" size={19} /></button>}
     <p className="muted">{o.providerName}</p>
     <strong>{amountLabel(o)}</strong>
     {rate && <p>{rate}</p>}

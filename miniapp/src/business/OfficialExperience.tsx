@@ -3,6 +3,7 @@ import type { FundingMatch, ProjectProfile } from '../../api-server/funding-cata
 import { fundingPurposes } from '../../api-server/funding-catalog/types';
 import { amountLabel, rateLabel, termLabel, fundingStatusLabels, scoreNotice } from '../../api-server/funding-catalog/presentation';
 import { ActionButton, BusinessInput } from './MaxControls';
+import { ModalSheet } from './ModalSheet';
 export const opportunityStateLabels = { active: 'Приём открыт', closed: 'Приём завершён', upcoming: 'Ожидается открытие', unknown: 'Доступность требует проверки' };
 export function OfficialDetails({ match, onAsk }: { match: FundingMatch; onAsk: () => void }) {
   const o = match.opportunity;
@@ -24,7 +25,7 @@ export function OfficialDetails({ match, onAsk }: { match: FundingMatch; onAsk: 
 export function ProjectOnboarding({ initial, onSave, onCancel }: { initial: ProjectProfile | null; onSave: (project: ProjectProfile) => void; onCancel: () => void }) {
   const [form, setForm] = React.useState<ProjectProfile>(initial ?? { name: '', region: '', industry: '', stage: 'idea', teamSize: null, fundingNeed: null, fundingPurpose: '', hasLegalEntity: false });
   function submit(e: FormEvent) { e.preventDefault(); onSave({ ...form, name: form.name.trim(), region: form.region.trim(), industry: form.industry.trim() }); }
-  return <div className="project-overlay" role="dialog" aria-modal="true" aria-label="Проект без компании"><section className="widget project-dialog">
+  return <ModalSheet title="Проект без компании" onClose={onCancel}>
     <h2>У меня пока нет компании</h2><p>Рассмотрим только программы, допускающие проект или физическое лицо. Соответствие остальным условиям проверяется отдельно.</p>
     <form onSubmit={submit}><div className="form-grid">
       {(['name', 'region', 'industry'] as const).map((key) => <label className="field" key={key}>{{ name: 'Название проекта', region: 'Регион', industry: 'Отрасль / направление' }[key]}<BusinessInput required maxLength={120} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} /></label>)}
@@ -33,5 +34,5 @@ export function ProjectOnboarding({ initial, onSave, onCancel }: { initial: Proj
       <label className="field">Цель<select value={form.fundingPurpose} onChange={(e) => setForm({ ...form, fundingPurpose: e.target.value })}><option value="">Укажу позже</option>{fundingPurposes.map((p) => <option key={p}>{p}</option>)}</select></label>
       <label className="field">Сумма финансирования, ₽<BusinessInput type="number" min="1" step="1" value={form.fundingNeed ?? ''} onChange={(e) => setForm({ ...form, fundingNeed: e.target.value ? Number(e.target.value) : null })} /></label>
     </div><div className="modal-actions"><ActionButton type="button" className="secondary" onClick={onCancel}>Отмена</ActionButton><ActionButton className="primary" type="submit">Сохранить проект</ActionButton></div></form>
-  </section></div>;
+  </ModalSheet>;
 }

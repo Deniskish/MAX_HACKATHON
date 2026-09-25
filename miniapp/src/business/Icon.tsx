@@ -1,11 +1,11 @@
 // Один набор контурных SVG-иконок для всех экранов.
-import { type ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, ReactNode> = {
     home: (
-      <>
+      <React.Fragment>
         <path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9" />
-      </>
+      </React.Fragment>
     ),
     chat: (
       <>

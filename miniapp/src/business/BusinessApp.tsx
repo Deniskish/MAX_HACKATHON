@@ -15,6 +15,7 @@ import {
 } from './AgentExperience';
 import { BusinessCard, DetailSteps, Orb } from './VisualWidgets';
 import { Icon } from './Icon';
+import { ModalSheet } from './ModalSheet';
 import { Spinner } from '@maxhub/max-ui';
 import { ActionButton, BusinessInput, BusinessTextarea } from './MaxControls';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -164,6 +165,9 @@ export default function BusinessApp() {
   const [assistantMode, setAssistantMode] = useState('Проверяем доступность GigaChat');
   useEffect(() => { const controller = new AbortController(); fetch('/api/ai/status', { signal: controller.signal }).then((r) => r.json()).then((data) => setAssistantMode(data.status === 'ready' ? 'GigaChat подключён' : data.configured ? 'GigaChat настроен · соединение ещё не подтверждено' : 'GigaChat не настроен')).catch(() => { if (!controller.signal.aborted) setAssistantMode('Статус AI недоступен'); }); return () => controller.abort(); }, []);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [page]);
+  useEffect(() => { dialogRef.current?.querySelector('.modal')?.scrollTo({ top: 0 }); }, [selected?.id, onboard, step]);
   const chatEnd = useRef<HTMLDivElement>(null);
   useEffect(() => {
     // Параметр запуска открывает публичную карточку, но не подтверждает личность пользователя.
@@ -379,7 +383,8 @@ export default function BusinessApp() {
               onClick={() => setPage(n.id)}
             >
               <Icon name={n.icon} />
-              <span>{n.label}</span>
+              <span className="desktop-nav-label">{n.label}</span>
+              <span className="mobile-nav-label">{n.id === 'programs' ? 'Поддержка' : n.id === 'applications' ? 'Заявки' : n.label}</span>
               {n.id === 'applications' && apps.length > 0 && <small>{apps.length}</small>}
             </button>
           ))}
@@ -450,7 +455,7 @@ export default function BusinessApp() {
             </button>
           </div>
         </header>
-        <main>
+        <main ref={mainRef}>
           {showEvents && <section className="widget events-panel"><h2>События</h2><p className="muted">Вычислены при открытии приложения. Фонового мониторинга нет.</p>{events.length ? events.map((event) => <button className="widget-link-row" key={event.id} onClick={() => { openFunding(event.opportunityId); setShowEvents(false); }}>{event.text}</button>) : <p>Новых событий нет. Сохраните интересующие программы.</p>}<ActionButton className="secondary" onClick={() => { setPage('calendar'); setShowEvents(false); }}>Открыть календарь</ActionButton></section>}
           {page !== 'overview' && (
             <div className="page-heading">
@@ -821,10 +826,9 @@ export default function BusinessApp() {
               </form>
             </section>
           )}
-          <footer>
+          {page === 'overview' && <footer>
             <span className="footer-logo">опора.</span>
-            <span>Официальные источники · Опора MVP</span>
-          </footer>
+          </footer>}
         </main>
       </div>
       <dialog
@@ -835,10 +839,19 @@ export default function BusinessApp() {
           if (e.target === e.currentTarget) close();
         }}
       >
-        <div className="modal">
+        <div className="modal-toolbar">
           <button className="modal-close icon-button" aria-label="Закрыть" onClick={close}>
             <Icon name="close" />
           </button>
+          <span>{onboard ? 'Профиль бизнеса' : activeApp ? 'Подготовка заявки' : 'Мера поддержки'}</span>
+          {selected && <button
+            className={'save-program ' + (saved.includes(selected.id) ? 'is-saved' : '')}
+            aria-label={saved.includes(selected.id) ? 'Убрать из сохранённых' : 'Сохранить программу'}
+            aria-pressed={saved.includes(selected.id)}
+            onClick={() => toggleSaved(selected.id)}
+          ><Icon name="bookmark" /></button>}
+        </div>
+        <div className="modal">
           {onboard && (
             <form onSubmit={saveProfile}>
               <span className="eyebrow">ПРОФИЛЬ БИЗНЕСА · ШАГ {step + 1} ИЗ 2</span>
@@ -1032,18 +1045,6 @@ export default function BusinessApp() {
           )}
           {selected && (
             <>
-              <button
-                className={
-                  'detail-bookmark save-program ' + (saved.includes(selected.id) ? 'is-saved' : '')
-                }
-                aria-label={
-                  saved.includes(selected.id) ? 'Убрать из сохранённых' : 'Сохранить программу'
-                }
-                aria-pressed={saved.includes(selected.id)}
-                onClick={() => toggleSaved(selected.id)}
-              >
-                <Icon name="bookmark" />
-              </button>
               <div className={'detail-emblem ' + selected.id}>
                 <Icon name={selected.icon} size={38} />
               </div>
@@ -1152,7 +1153,7 @@ export default function BusinessApp() {
           )}
         </div>
       </dialog>
-      {exportText && <div className="project-overlay" role="dialog" aria-modal="true" aria-label="Экспорт текста"><section className="widget project-dialog"><h2>Текст черновика</h2><p>Скопируйте текст в редактор и сохраните как TXT. Документ остаётся на вашем устройстве.</p><BusinessTextarea readOnly rows={12} value={exportText} /><div className="modal-actions"><ActionButton className="primary" onClick={() => navigator.clipboard.writeText(exportText).then(() => setToast('Текст скопирован')).catch(() => setToast('Выделите и скопируйте текст вручную.'))}>Копировать текст</ActionButton><ActionButton className="secondary" onClick={() => setExportText('')}>Закрыть</ActionButton></div></section></div>}
+      {exportText && <ModalSheet title="Экспорт текста" onClose={() => setExportText('')}><h2>Текст черновика</h2><p>Скопируйте текст в редактор и сохраните как TXT. Документ остаётся на вашем устройстве.</p><BusinessTextarea aria-label="Текст для экспорта" readOnly rows={12} value={exportText} /><div className="modal-actions"><ActionButton className="primary" onClick={() => navigator.clipboard.writeText(exportText).then(() => setToast('Текст скопирован')).catch(() => setToast('Выделите и скопируйте текст вручную.'))}>Копировать текст</ActionButton><ActionButton className="secondary" onClick={() => setExportText('')}>Закрыть</ActionButton></div></ModalSheet>}
       {projectOnboard && <ProjectOnboarding initial={projectProfile} onCancel={() => setProjectOnboard(false)} onSave={(project) => { setProjectProfile(project); setProfile(null); setNeed({ ...need, purpose: project.fundingPurpose, amount: project.fundingNeed }); setProjectOnboard(false); setPage('overview'); }} />}
       {toast && (
         <div className="toast" role="status">
