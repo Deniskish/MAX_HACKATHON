@@ -382,9 +382,7 @@ export default function BusinessApp() {
               className={'nav-item nav-' + n.id + ' ' + (page === n.id ? 'active' : '')}
               onClick={() => setPage(n.id)}
             >
-              {n.id === 'overview'
-                ? <img className="nav-logo" src="/brand/opora-logo.svg" width={20} height={20} alt="" aria-hidden="true" />
-                : <Icon name={n.icon} />}
+              <Icon name={n.icon} />
               <span className="desktop-nav-label">{n.label}</span>
               <span className="mobile-nav-label">{n.id === 'programs' ? 'Поддержка' : n.id === 'applications' ? 'Заявки' : n.label}</span>
               {n.id === 'applications' && apps.length > 0 && <small>{apps.length}</small>}
@@ -423,9 +421,7 @@ export default function BusinessApp() {
       <div className="main-wrap">
         <header className="topbar">
           <button className="mobile-identity" onClick={() => setPage('profile')}>
-            <span className="identity-avatar">
-              <Icon name="building" />
-            </span>
+            <img className="identity-avatar" src="/brand/opora-logo.svg" width={43} height={43} alt="" aria-hidden="true" />
             <span>
               <b>{profile ? profile.name.replace(/ООО|ИП|«|»/g, '').trim() : 'Ваш бизнес'}</b>
             </span>
