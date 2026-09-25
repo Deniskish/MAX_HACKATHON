@@ -1,0 +1,29 @@
+.opora-theme .context-help { margin: 12px 0; border: 0; background: none; padding: 0; min-width: 0; }
+.opora-theme .context-help > summary, .opora-theme .guide-link { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 0; color: var(--muted); font: inherit; font-size: 13px; line-height: 1.4; text-align: left; cursor: pointer; list-style: none; background: none; border: 0; }
+.context-help > summary::-webkit-details-marker { display: none; }
+.context-help > summary::marker { content: ''; }
+.help-symbol { flex: 0 0 18px; width: 18px; height: 18px; border: 1px solid currentColor; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px; font-weight: 600; }
+.context-help summary > svg, .guide-link > svg { flex-shrink: 0; }
+.context-help[open] > summary > svg { transform: rotate(90deg); }
+.opora-theme .context-help-content { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); overflow-wrap: anywhere; }
+.opora-theme .context-help-content p { margin: 0; font-size: 13px; line-height: 1.6; }
+.opora-theme .context-help-content p + p { margin-top: 8px; }
+.opora-theme .help-guide { color: var(--ink); }
+.opora-theme .help-guide ol { padding: 0; margin: 0; list-style: none; display: grid; gap: 28px; }
+.opora-theme .help-guide li { min-width: 0; }
+.opora-theme .help-guide h2 { display: flex; gap: 10px; align-items: baseline; font-size: 20px; line-height: 1.3; margin: 16px 0 8px; }
+.help-guide h2 > span { color: var(--accent); font-size: 14px; }
+.opora-theme .help-guide p { margin: 0; font-size: 14px; line-height: 1.65; color: var(--muted); }
+.guide-illustration { padding: 20px 16px 14px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
+.guide-preview { display: flex; align-items: center; gap: 16px; max-width: 210px; margin: 0 auto 18px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; color: var(--accent); }
+.guide-preview > div { flex: 1; display: grid; gap: 7px; }
+.guide-preview i { height: 4px; border-radius: 3px; background: var(--muted); opacity: .3; }
+.guide-preview i:nth-child(2) { width: 70%; }
+.guide-preview i:nth-child(3) { width: 85%; }
+.guide-flow { display: flex; justify-content: center; gap: 6px; }
+.guide-flow span { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--muted); }
+.guide-flow b { font-size: 11px; font-weight: 500; }
+.opora-theme .help-guide .guide-note { margin-top: 24px; padding: 16px; border-left: 2px solid var(--accent); background: var(--surface); border-radius: 0 12px 12px 0; }
+.opora-theme .guide-done { display: flex; justify-content: center; align-items: center; gap: 12px; width: 100%; min-height: 48px; margin-top: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.guide-link:hover, .context-help > summary:hover { color: var(--accent); }
+.guide-link:focus-visible, .context-help > summary:focus-visible, .guide-done:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

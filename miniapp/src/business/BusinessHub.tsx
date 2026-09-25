@@ -16,13 +16,13 @@ export function BusinessHub({ profile, project, confirmed, pending, applications
       <h2>Поддержка под<br />ваши задачи</h2>
       <p>Добавьте бизнес для персонального подбора поддержки.</p>
       <ActionButton className="primary" onClick={onAdd}>Добавить бизнес <Icon name="arrow" /></ActionButton>
-      <button className="hub-browse" onClick={onSupport}>Продолжить просмотр каталога</button>
+      <button className="hub-browse" onClick={onSupport}>Смотреть каталог</button>
     </section>
     <section className="hub-benefits" aria-label="После добавления бизнеса">
       <h3>После добавления бизнеса</h3>
-      <div><Icon name="compass" /><span><b>Персональная поддержка</b><small>Регион, деятельность, параметры бизнеса и цель</small></span></div>
-      <div><Icon name="spark" /><span><b>AI-помощник</b><small>Разбор вашей ситуации и помощь с документами</small></span></div>
-      <div><Icon name="calendar" /><span><b>Заявки и календарь</b><small>Черновики, комплект документов и важные сроки</small></span></div>
+      <div><Icon name="compass" /><span><b>Персональный подбор</b></span></div>
+      <div><Icon name="spark" /><span><b>AI-помощник</b></span></div>
+      <div><Icon name="calendar" /><span><b>Заявки и календарь</b></span></div>
     </section>
   </div>;
   return <div className="business-hub">
@@ -44,7 +44,7 @@ export function BusinessHub({ profile, project, confirmed, pending, applications
       <b>{insight?.title ?? (!purpose ? 'Расскажите, на что нужны средства' : applications ? 'Продолжить подготовку заявки' : 'Посмотреть персональную подборку')}</b>
       <Icon name="arrow" />
     </button>
-    {!confirmed && <p className="hub-hint">{pending ? `Для ${pending} программ нужно уточнить условия или сведения о бизнесе. Это ещё не подтверждение соответствия.` : 'Пока нет программ, соответствующих вашему профилю. Можно посмотреть весь каталог или уточнить сведения.'}</p>}
+    {!confirmed && <p className="hub-hint">{pending ? `Нужно уточнить соответствие: ${pending} программ.` : 'Совпадений пока нет. Уточните профиль или посмотрите каталог.'}</p>}
     <button className="hub-need-link" onClick={onNeed}><Icon name="compass" size={18} />{purpose ? 'Изменить цель и сумму' : 'Настроить подбор'}<Icon name="chevron" size={15} /></button>
   </div>;
 }

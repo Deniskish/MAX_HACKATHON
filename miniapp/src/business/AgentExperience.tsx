@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 
 import { ActionButton, BusinessTextarea } from './MaxControls';
 import { Icon } from './Icon';
 import { AIPanel } from './AIExperience';
+import { AIDataHelp, ContextHelp } from './ContextHelp';
 import { readDocument } from './document-reader';
 import { requestAI, type AIDocument } from './ai-client';
 import { toFundingProfile } from '../../api-server/funding-catalog/input';
@@ -80,7 +81,7 @@ export function DocumentChecklist({
               </span>
             </label>
             <details>
-              <summary>Зачем нужен и как подготовить</summary>
+              <summary>Подготовить документ</summary>
               <dl>
                 <dt>Зачем</dt>
                 <dd>{guide.why}</dd>
@@ -101,10 +102,8 @@ export function DocumentChecklist({
                   }}
                 />
               </label>
-              <p className="widget-footnote">
-                TXT, PDF, DOCX и сканы до 10 МБ читаются на устройстве. Текст хранится только в этой вкладке.
-                Для AI-проверки используйте кнопку под комплектом документов. DOCX отображается как один текстовый раздел.
-              </p>
+              <p className="widget-footnote">PDF, DOCX, TXT или скан · до 10 МБ</p>
+              <ContextHelp title="Как обрабатывается файл"><p>Файл читается на устройстве. Извлечённый текст хранится в этой вкладке; для отправки в AI запустите проверку под комплектом документов.</p><p>DOCX и вручную отредактированный текст считаются одним разделом. Перед проверкой убедитесь, что текст распознан верно.</p></ContextHelp>
               {reading === name && <ActionButton className="secondary" onClick={() => { reader.current?.abort(); reader.current = null; setReading(''); setErrors((old) => ({ ...old, [name]: 'Чтение отменено.' })); }}>Отменить чтение</ActionButton>}
               <label className="field">
                 Проверка текста документа
@@ -157,8 +156,8 @@ export function DocumentChecklist({
           </section>
         );
       })}
-      <details className="ai-entry"><summary>AI-проверка комплекта и заявки</summary>
-        <p className="widget-footnote">Передаются только показанные выше тексты, описание проекта и текущий черновик. После ручного редактирования текста он считается одним разделом. Суммарно — до 60 000 символов документов.</p>
+      <details className="ai-entry"><summary>AI-проверка заявки</summary>
+        <ContextHelp title="Что входит в проверку"><p>Тексты выбранных документов, описание проекта и текущий черновик. Общий объём документов — до 60 000 символов.</p></ContextHelp>
         <AIPanel title="Проверить перед подачей" task="review" context={{ profile: profile ? toFundingProfile(profile) : {},
           identifiers: profile ? { name: profile.name, inn: profile.inn } : undefined, programId: program.id, project: app.project,
           draft: app.generatedDraft?.slice(0, 18000), budget: app.budget.trim() ? Number(app.budget) : null,
@@ -278,10 +277,7 @@ export function DraftComposer({
           </details>
         </>
       )}
-      <p className="widget-footnote">
-        Черновик сохраняется на устройстве. При генерации GigaChat получает описание проекта, бюджет, условия программы и тексты загруженных выше документов.
-        Известные реквизиты скрываются. Проверьте текст перед подачей.
-      </p>
+      <AIDataHelp>Для черновика GigaChat получает описание проекта, бюджет, условия программы и тексты выбранных документов. Черновик сохраняется на устройстве; проверьте его перед подачей.</AIDataHelp>
     </section>
   );
 }

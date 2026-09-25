@@ -4,6 +4,7 @@ import { requestAI, type AIRequest, type AIResult } from './ai-client';
 import type { FundingNeed, FundingProfile } from '../../api-server/funding-catalog/types';
 import { fundingStatusLabels } from '../../api-server/funding-catalog/presentation';
 import { Icon } from './Icon';
+import { AIDataHelp } from './ContextHelp';
 
 type Handlers = {
   onOpen?: (id: string) => void; onPrepare?: (id: string) => void; onFunding?: () => void;
@@ -45,7 +46,7 @@ export function AIResultView({ result, onOpen, onPrepare, onFunding, onNeed, onP
         : a.type === 'open_funding' ? onFunding : undefined;
       return run ? <ActionButton className="secondary" key={i} onClick={run}>{a.label}</ActionButton> : null;
     })}</div>
-    {onQuestion && !!result.followups.length && <div className="ai-followups"><small>Уточните — нажмите на вопрос, чтобы ответить</small>{result.followups.map((q) => <button key={q} onClick={() => onQuestion(`${q}\nМой ответ: `)}>{q}</button>)}</div>}
+    {onQuestion && !!result.followups.length && <div className="ai-followups"><small>Уточним детали</small>{result.followups.map((q) => <button key={q} onClick={() => onQuestion(`${q}\nМой ответ: `)}>{q}</button>)}</div>}
   </div>;
 }
 export function AIPanel({ title, task, context, initialQuestion = '', button = 'Разобрать с AI', onResult, ...handlers }: Handlers & {
@@ -73,7 +74,7 @@ export function AIPanel({ title, task, context, initialQuestion = '', button = '
   }
   return <section className="widget ai-panel"><div className="widget-heading"><h2>{title}</h2><Icon name="spark" /></div>
     <label className="field">Задача для помощника<BusinessTextarea rows={3} maxLength={2000} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Опишите задачу своими словами" /></label>
-    <p className="widget-footnote">Запрос и нужные сведения будут обработаны GigaChat. Известные реквизиты скрываются; не добавляйте лишние персональные данные.</p>
+    <AIDataHelp>GigaChat получает запрос и сведения, нужные для этой задачи. Для проверки заявки — также текст проекта, черновика и выбранных документов.</AIDataHelp>
     <ActionButton className="primary" disabled={busy || !question.trim()} onClick={() => void run()}>{busy ? 'Анализируем…' : error ? 'Повторить запрос' : button}</ActionButton>
     {busy && <ActionButton className="text-button" onClick={() => { pending.current?.abort(); pending.current = null; setBusy(false); }}>Отменить</ActionButton>}
     {error && <p className="error" role="alert">{error}</p>}

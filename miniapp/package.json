@@ -8,7 +8,7 @@
     "test:production": "node --test scripts/serve.test.cjs scripts/restart-api.test.cjs",
     "check:production": "node scripts/check-production.cjs",
     "preview": "vite preview",
-    "test": "tsx --test src/business/domain.test.ts src/business/agent.test.ts src/business/business-analysis.test.ts dev-server.test.ts src/business/company-data.test.ts src/business/funding.test.ts src/business/workspace.test.ts"
+    "test": "tsx --require ./scripts/static-render-setup.cjs --test src/business/domain.test.ts src/business/agent.test.ts src/business/business-analysis.test.ts dev-server.test.ts src/business/company-data.test.ts src/business/funding.test.ts src/business/workspace.test.ts"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "5.3.0",

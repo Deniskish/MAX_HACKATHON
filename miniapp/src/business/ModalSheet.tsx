@@ -10,7 +10,7 @@ export function ModalSheet({ title, onClose, children }: { title: string; onClos
     return () => dialog.close();
   }, []);
   return <dialog ref={ref} className="modal-sheet" aria-label={title}
-    onCancel={(event) => { event.preventDefault(); onClose(); }}
+    onCancel={(event) => { event.preventDefault(); event.stopPropagation(); onClose(); }}
     onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <div className="modal-toolbar">
       <button className="modal-close icon-button" aria-label="Закрыть" onClick={onClose}><Icon name="close" /></button>

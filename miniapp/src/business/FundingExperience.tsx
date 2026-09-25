@@ -9,6 +9,7 @@ import { amountLabel, fundingKindLabels, fundingSourceLabel, fundingStatusLabels
   rateLabel, scoreNotice, termLabel } from '../../api-server/funding-catalog/presentation';
 import { fundingFingerprint, requestFunding, restoreFundingNeed } from './funding';
 import { AIPanel } from './AIExperience';
+import { ContextHelp, GuideLink } from './ContextHelp';
 
 export function FundingOpportunityCard({ match, onOpen, onSave, saved, personalized = true, aiReason }: { match: FundingMatch; onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: boolean; personalized?: boolean; aiReason?: string }) {
   const o = match.opportunity;
@@ -42,7 +43,7 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved, personali
         {' '}Сложность: {{ low: 'низкая', medium: 'средняя', high: 'высокая' }[o.difficulty]}.</p>
       <p className="widget-footnote">{fundingSourceLabel(o)} · версия {o.version} · {o.source.verifiedAt ?? o.source.updatedAt}.</p>
     </details>
-    <p className="widget-footnote">Срок приёма: {o.deadline ?? 'не указан'}.</p>
+    {o.deadline && <p className="widget-footnote">Приём до {o.deadline}</p>}
     {o.source.url && /^https:\/\//.test(o.source.url) &&
       <a href={o.source.url} target="_blank" rel="noreferrer">Источник условий</a>}
     {onOpen && <ActionButton className="primary" onClick={() => onOpen(o.id)}>Подробнее</ActionButton>}
@@ -57,16 +58,17 @@ export function FundingResults({ result, onOpen, onSave, saved = [] }: { result:
     { title: 'Следить за открытием', matches: result.matches.filter((m) => ['expired', 'upcoming'].includes(m.status)) },
   ];
   return <div className="funding-results" aria-live="polite">
-    <section className="widget funding-strategy"><span className="tag">{result.mode === 'demo' ? 'Учебные данные' : 'Официальные источники'} · подбор по правилам</span>
-      <h2>Стратегия финансирования</h2><p>{result.strategy.summary}</p>
+    <GuideLink topic="funding" />
+    <section className="widget funding-strategy">{result.mode === 'demo' && <span className="tag">Учебные данные</span>}
+      <h2>Варианты финансирования</h2><p>{result.strategy.summary}</p>
       <ol>{result.strategy.options.map((option) => <li key={option.opportunityId}>{option.role === 'support' ? 'Сопутствующая поддержка: ' : 'Вариант финансирования: '}{onOpen ? <button className="text-button" onClick={() => onOpen(option.opportunityId)}>{option.text}</button> : option.text}</li>)}</ol>
-      {result.strategy.notices.map((notice) => <p className="widget-footnote" key={notice}>{notice}</p>)}
+      {!!result.strategy.notices.length && <ContextHelp title="Что учесть при выборе">{result.strategy.notices.map((notice) => <p key={notice}>{notice}</p>)}</ContextHelp>}
     </section>
-    {groups.map((group) => <section key={group.title}><h2>{group.title}</h2>
-      {!group.matches.length && <p className="muted">Нет вариантов с этим статусом. Уточните профиль или посмотрите другие группы.</p>}
+    {!result.matches.length && <p className="muted">Вариантов пока нет. Попробуйте изменить параметры подбора.</p>}
+    {groups.filter((group) => group.matches.length).map((group) => <section key={group.title}><h2>{group.title}</h2>
       <div className="funding-grid">{group.matches.map((match) => <FundingOpportunityCard key={match.opportunity.id} match={match} onOpen={onOpen} onSave={onSave} saved={saved.includes(match.opportunity.id)} />)}</div>
     </section>)}
-    <details className="widget"><summary>Есть несоответствия</summary><div className="funding-grid">{result.matches.filter((m) => m.status === 'not_eligible').map((match) => <FundingOpportunityCard key={match.opportunity.id} match={match} onOpen={onOpen} />)}</div></details>
+    {result.matches.some((m) => m.status === 'not_eligible') && <details className="widget"><summary>Не подходят по условиям</summary><div className="funding-grid">{result.matches.filter((m) => m.status === 'not_eligible').map((match) => <FundingOpportunityCard key={match.opportunity.id} match={match} onOpen={onOpen} />)}</div></details>}
   </div>;
 }
 
@@ -125,7 +127,7 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onResu
   }
   if (loading) return <section ref={panel} className="funding-searching" role="status" aria-live="polite">
     <div className="funding-search-animation" aria-hidden="true"><ThemedImage src="/assets/orb.png" width={100} height={100} alt="" /><span /></div>
-    <h2>Подбираем поддержку</h2><p>Сравниваем вашу цель и параметры бизнеса с условиями программ.</p>
+    <h2>Подбираем поддержку</h2>
     <ActionButton className="secondary" onClick={() => { pending.current?.abort(); pending.current = null; setLoading(false); }}>Отменить подбор</ActionButton>
   </section>;
   return <section ref={panel} className="funding-experience">
@@ -152,7 +154,7 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onResu
           </select>
         </label>
       </div>
-      <p className="widget-footnote">Требуемая сумма — запрос на внешнее финансирование. Собственные средства указываются отдельно.</p>
+      <GuideLink topic="funding" />
       <ActionButton type="submit" className="primary" disabled={loading}>
         {loading ? 'Подбираем варианты…' : 'Найти варианты'}
       </ActionButton>

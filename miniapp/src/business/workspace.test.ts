@@ -78,7 +78,11 @@ test('notifications report actual closed bookmarks and snapshot updates only on 
 test('official details show source/date, unknown criteria and next actions; project onboarding requires no INN', () => {
   const match = matchFundingOpportunity({}, { ...emptyFundingNeed, purpose: 'покупка оборудования' }, officialFundingCatalog[0]);
   const html = renderToStaticMarkup(React.createElement(OfficialDetails, { match, onAsk() {} }));
-  for (const label of ['Почему подходит', 'Что нужно уточнить', 'Что не соответствует', 'Следующие действия', 'Открыть официальный источник', '2026-09-22']) assert.ok(html.includes(label));
+  for (const label of ['Следующие действия', 'Открыть официальный источник', '2026-09-22']) assert.ok(html.includes(label));
+  for (const [label, checks] of [['Почему подходит', match.fulfilledRequirements], ['Что нужно уточнить', match.unknownRequirements], ['Что не соответствует', match.missingRequirements]] as const) {
+    assert.equal(html.includes(`<h3>${label}</h3>`), checks.length > 0);
+    for (const check of checks) assert.ok(html.includes(check.label));
+  }
   assert.doesNotMatch(html, /Учебные данные|кредит одобрен/i);
   const project = { name: 'Проект', region: 'Москва', industry: 'Технологии', stage: 'idea' as const, teamSize: null, fundingNeed: null, fundingPurpose: '', hasLegalEntity: false as const };
   assert.equal(projectAsProfile(project).inn, '');

@@ -1,4 +1,5 @@
 import { AssistantPage } from './AssistantPage';
+import { AIDataHelp, ContextHelp, GuideLink } from './ContextHelp';
 import { GlassArt } from './GlassArt';
 // Общее состояние экранов, профиля и заявок. Условия программ считаются в domain.
 import { CompanySources, FieldSource } from './CompanySource';
@@ -526,9 +527,9 @@ export default function BusinessApp() {
                   </ActionButton>
                 </div>
               )}
-              <p className="widget-footnote catalogue-disclaimer">
+              <ContextHelp title="Как работает подбор"><p>
                 Условия проверены по официальным страницам; перед подачей сверяйте актуальную редакцию. Совпадение правил не подтверждает право на поддержку.
-              </p>
+              </p></ContextHelp>
             </>
           )}
           {page === 'applications' && !profile && <section className="empty-state guest-applications"><GlassArt shape="tiles" size={120} /><h2>Заявки вашего бизнеса</h2><p>Добавьте бизнес, чтобы подготовить заявку.</p><ActionButton className="primary" onClick={() => setHomePanel('business')}>Добавить бизнес</ActionButton><ActionButton className="secondary" onClick={() => browse()}>Посмотреть программы</ActionButton></section>}
@@ -950,7 +951,7 @@ export default function BusinessApp() {
                     <Icon name="arrow" size={17} />
                   </ActionButton>
                 </div>
-                {step === 1 && <p className="widget-footnote">После сохранения GigaChat анализирует параметры бизнеса и подстраивает все разделы. Известные реквизиты скрываются; исходные файлы автоматически не отправляются.</p>}
+                {step === 1 && <AIDataHelp>После сохранения GigaChat анализирует параметры бизнеса для персонального подбора. Исходные файлы автоматически не отправляются.</AIDataHelp>}
               </fieldset>
             </form>
           )}
@@ -959,10 +960,13 @@ export default function BusinessApp() {
               <div className={'detail-emblem ' + selected.id}>
                 <Icon name={selected.icon} size={38} />
               </div>
-              <span className="tag">{selected.type} · официальный источник</span>
+              <span className="tag">{selected.type}</span>
               <h2>{selected.title}</h2>
+              <details className="application-conditions" open={!activeApp}>
+              <summary>Условия программы</summary>
               <p className="muted">{selected.description}</p>
               <OfficialDetails personalized={!!profile} match={matches.find((m) => m.opportunity.id === selected.id)!} onAsk={() => { const program = selected; close(); void ask('Объясни следующий шаг', program, 'strategy'); }} />
+              </details>
               {activeApp && profile ? (
                 <>
                   <DetailSteps
@@ -972,6 +976,7 @@ export default function BusinessApp() {
                     hasBudget={Number(activeApp.budget) > 0}
                   />
                   <h3 id="application-documents">Подготовка документов</h3>
+                  <GuideLink topic="documents" />
                   {!selected.documents.length && <p>Точный перечень документов не подтвержден. Сверьте комплект с официальным оператором.</p>}
                   <DocumentChecklist
                     key={`checklist:${selected.id}`}
