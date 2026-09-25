@@ -49,7 +49,7 @@ jobs:
               pm2 delete opora-frontend
             fi
             pm2 start ecosystem.config.cjs --only opora-frontend
-            pm2 restart opora-api
+            node miniapp/scripts/restart-api.cjs
             if pm2 describe opora-bot >/dev/null 2>&1; then
               pm2 restart opora-bot
             fi
