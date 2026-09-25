@@ -10,3 +10,42 @@
 .funding-status-not_eligible, .funding-status-expired { background: #f5ebea; color: #88433d; }
 .funding-status-need_more_data { background: #f6f1e4; color: #795c21; }
 @media (max-width: 760px) { .funding-grid { grid-template-columns: 1fr; } }
+
+/* Catalogue hierarchy, scoped away from Home and other funding workflows. */
+.opora-theme .app-shell.page-programs { background: var(--canvas); }
+.opora-theme .page-programs .catalog-guest-context,
+.opora-theme .page-programs .catalog-glass-context {
+  padding: 20px 0 24px; background: transparent; border: 0; border-bottom: 1px solid var(--line);
+  border-radius: 0; box-shadow: none; margin-bottom: 24px;
+}
+.opora-theme .page-programs .catalog-guest-context p { color: var(--ink); font-size: 16px; line-height: 1.6; }
+.opora-theme .page-programs .catalog-guest-context button { margin-top: 12px; font-size: 14px; line-height: 1.5; }
+.opora-theme .page-programs .catalog-personal-context { font-size: 15px; }
+.opora-theme .page-programs .catalog-toolbar { gap: 16px; }
+.opora-theme .page-programs .catalog-state { font-size: 14px; margin-bottom: 24px; }
+.opora-theme .page-programs .catalog-results-header h2 { font-size: 25px; line-height: 1.25; }
+.opora-theme .page-programs .catalog-results-header > span { font-size: 14px; }
+.opora-theme .page-programs .filter-chips > button { font-size: 14px; padding: 10px 14px; box-shadow: none; }
+.opora-theme .page-programs .funding-grid { gap: 20px; }
+.opora-theme .page-programs .funding-card {
+  background: var(--surface); border: 0; box-shadow: none; border-radius: 24px; padding: 24px 20px; gap: 14px;
+}
+.opora-theme .page-programs .funding-card h3 { font-size: 24px; line-height: 1.3; letter-spacing: -.5px; }
+.opora-theme .page-programs .funding-card > p.muted { font-size: 14px; line-height: 1.5; color: var(--muted); }
+.opora-theme .page-programs .funding-card > strong { font-size: clamp(27px, 7.5vw, 32px); line-height: 1.25; letter-spacing: -.8px; color: var(--ink); margin-top: 6px; }
+.opora-theme .page-programs .funding-key-facts { font-size: 15px; line-height: 1.5; color: var(--ink); gap: 6px 16px; }
+.opora-theme .page-programs .funding-card .tag { font-size: 13px; border: 0; background: transparent; padding: 0; box-shadow: none; color: var(--muted); }
+.opora-theme .page-programs .funding-card .funding-status { align-self: flex-start; font-size: 14px; line-height: 1.5; padding: 6px 10px; }
+.opora-theme .page-programs .funding-card > details {
+  margin: 4px 0 0; padding: 14px 0 0; border: 0; border-top: 1px solid var(--line);
+  border-radius: 0; box-shadow: none; background: transparent;
+}
+.opora-theme .page-programs .funding-card summary { font-size: 15px; line-height: 1.5; color: var(--ink); }
+.opora-theme .page-programs .funding-card details p,
+.opora-theme .page-programs .funding-card details li { font-size: 16px; line-height: 1.6; }
+.opora-theme .page-programs .funding-card .widget-footnote { font-size: 14px; line-height: 1.5; color: var(--muted); }
+.opora-theme .page-programs .funding-card > a { font-size: 14px; line-height: 1.5; color: var(--accent); }
+.opora-theme .page-programs .funding-card > .opora-action { min-height: 48px; font-size: 15px; box-shadow: none; }
+@media (prefers-color-scheme: dark) {
+  .opora-theme .page-programs { --canvas: #14151a; --surface: #1e1f26; --muted: #b0adbd; }
+}

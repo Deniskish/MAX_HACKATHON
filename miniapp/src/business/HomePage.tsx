@@ -6,6 +6,7 @@ import type { BusinessAnalysis } from './useBusinessAnalysis';
 import type { WorkspaceInsight } from '../../api-server/ai/types';
 
 type HomePageProps = {
+  showNavigation?: boolean;
   onFindSupport: () => void;
   onAddBusiness: () => void;
   onAssistant: () => void;
@@ -22,9 +23,8 @@ function Arrow() {
   return <span className="home-arrow" aria-hidden="true"><Icon name="arrow" size={20} /></span>;
 }
 
-export function HomePage({ onFindSupport, onAddBusiness, onAssistant, onNotifications, onApplications, onBusiness, personalized, hasNotifications, analysis, onAIAction }: HomePageProps) {
-  const insight = personalized ? analysis.data?.personalization?.sections.home : undefined;
-  const analyzing = personalized && analysis.status === 'loading';
+export function HomePage({ showNavigation = true, onFindSupport, onAddBusiness, onOpportunities, onNotifications, onApplications, onBusiness, personalized, hasNotifications, analysis, onAIAction }: HomePageProps) {
+  const insight = analysis.data?.personalization?.sections.home;
   return <div className={`home-dashboard${personalized ? ' home-personalized' : ''}`}>
     <header className="home-topbar">
       <BrandWordmark className="home-wordmark-small" />
@@ -68,11 +68,11 @@ export function HomePage({ onFindSupport, onAddBusiness, onAssistant, onNotifica
         </ContextHelp>}
       </section>
     </div>
-    <AppNavigation active="overview" onNavigate={(page) => {
+    {showNavigation && <AppNavigation active="overview" onNavigate={(page) => {
       if (page === 'programs') onFindSupport();
       else if (page === 'applications') onApplications();
       else if (page === 'profile') onBusiness();
       else document.querySelector('.home-scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
-    }} />
+    }} />}
   </div>;
 }

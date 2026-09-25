@@ -30,7 +30,7 @@ for name, (source, widths, size) in specs.items():
             resized.save(output, 'WEBP', quality=86, method=6, alpha_quality=100)
             assert Image.open(output).getchannel('A').tobytes() == resized.getchannel('A').tobytes()
             symbol = f'{theme}_{name.replace("-", "_")}_{width}'
-            imports.append(f"import {symbol} from '../assets/artwork/{filename}';")
+            imports.append(f"const {symbol} = new URL('../assets/artwork/{filename}', import.meta.url).href;")
             variants.append((width, symbol))
             report.append({'source': str(original.relative_to(root)), 'file': filename,
                            'originalBytes': original.stat().st_size, 'bytes': output.stat().st_size})

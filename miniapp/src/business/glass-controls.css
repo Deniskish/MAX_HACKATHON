@@ -52,6 +52,7 @@
     radial-gradient(ellipse at 90% 100%, #8064ff14, transparent 65%);
 }
 .app-shell .home-nav {
+  position: relative; isolation: isolate;
   width: 100%;
   background: radial-gradient(ellipse at 12% 0%, #ffffff14, transparent 52%),
     linear-gradient(115deg, #33333e82, #24232da8 50%, #39313e7a);
@@ -66,11 +67,20 @@
   transition: background-color .18s ease, box-shadow .18s ease, color .18s ease;
 }
 .app-shell .home-nav > button[aria-current="page"] {
-  background: var(--glass-selected);
-  box-shadow: inset 0 1px 0 #ffffff40, inset 0 0 0 1px #e4d6ff18,
-    inset 0 -1px 0 #ffffff0b, 0 3px 10px #00000026;
   color: #ff5a1f;
 }
+.home-nav-indicator {
+  position: absolute; z-index: -1; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 4);
+  pointer-events: none; border-radius: 26px; background: var(--glass-selected);
+  box-shadow: inset 0 1px 0 #ffffff40, inset 0 0 0 1px #e4d6ff18, inset 0 -1px 0 #ffffff0b, 0 3px 10px #00000026;
+  transition: transform 260ms cubic-bezier(.22,.8,.25,1);
+}
+.home-nav[data-active="1"] > .home-nav-indicator { transform: translateX(100%); }
+.home-nav[data-active="2"] > .home-nav-indicator { transform: translateX(200%); }
+.home-nav[data-active="3"] > .home-nav-indicator { transform: translateX(300%); }
+.opora-theme .app-shell .home-nav > button { background: transparent; box-shadow: none; }
+.home-nav > button > svg { transition: transform 140ms ease-out; }
+.home-nav > button:active > svg { transform: scale(.94); }
 
 /* Tactile circular and secondary controls, with no extra overlay on hit targets. */
 .opora-theme :is(.app-back, .home-notifications, .assistant-icon-button,
@@ -189,16 +199,6 @@
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
 }
-.opora-theme .assistant-page .message.assistant {
-  background: var(--glass-surface);
-  border: 1px solid var(--glass-edge);
-  box-shadow: var(--glass-shadow);
-}
-.opora-theme .assistant-page .message.user {
-  background: linear-gradient(140deg, #bca5ff1f, transparent), #604dca40;
-  border: 1px solid #bba5ff38;
-  box-shadow: inset 0 1px 0 #ffffff14;
-}
 .opora-theme .toast {
   background: linear-gradient(145deg, #ffffff0e, transparent), #26232bed;
   border-color: #d7c6ff44;
@@ -238,4 +238,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .app-shell .home-nav > button { transition: none; }
+  .home-nav-indicator, .home-nav > button > svg { transition: none; }
 }

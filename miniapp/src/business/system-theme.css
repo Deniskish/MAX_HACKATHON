@@ -119,6 +119,7 @@
     border-radius: 26px;
   }
   .opora-theme .home-nav > button { color: var(--muted); border-radius: 20px; }
+  .opora-theme .home-nav-indicator { border-radius: 20px; box-shadow: none; }
   .opora-theme .home-nav > button[aria-current="page"] {
     color: #bc3c0d;
     box-shadow: none;

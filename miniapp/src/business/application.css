@@ -143,6 +143,7 @@ dialog::backdrop { background: #090a10b3; }
 .modal-toolbar .icon-button, .modal-toolbar .save-program { background: #242229; border: 1px solid var(--line); color: var(--ink); border-radius: 50%; }
 dialog .modal, .modal-sheet .project-dialog { min-height: 0; max-height: none; height: auto; width: 100%; padding: 24px 20px calc(28px + var(--app-safe-bottom)); background: #191a1f; color: var(--ink); }
 .modal > h2, .modal form > h2, .project-dialog h2 { font-size: 25px; font-weight: 600; letter-spacing: -.6px; }
+.modal-sheet .project-dialog:focus { outline: none; }
 .modal .eyebrow { color: #b0a0e7; font-size: 10px; letter-spacing: .1em; }
 .company-profile-heading { display: grid; gap: 8px; margin-bottom: 24px; }
 .company-profile-heading h2 { margin: 0; font-size: 25px; font-weight: 600; line-height: 1.25; letter-spacing: -.6px; }
@@ -184,4 +185,18 @@ dialog .modal, .modal-sheet .project-dialog { min-height: 0; max-height: none; h
 @media (max-height: 580px) {
   .chat-panel { gap: 8px; }
   .chat-panel .chat-header, .chat-panel .suggestions { display: none; }
+}
+
+/* One dock persists across the four tabs. Home keeps its original header/hero geometry. */
+.app-shell.shared-navigation { position: relative; }
+.app-shell.shared-navigation.page-overview { display: grid; grid-template-rows: minmax(0, 1fr) calc(78px + var(--app-safe-bottom)); }
+.shared-navigation.page-overview > .app-content { grid-row: 1; }
+.shared-navigation.page-overview .home-dashboard { grid-template-rows: calc(64px + var(--app-safe-top)) minmax(0, 1fr); }
+.app-shell.shared-navigation.page-overview > .home-nav-wrap { grid-row: 2; }
+.app-shell > .tab-snapshot { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; z-index: 4; pointer-events: none; }
+.tab-snapshot :is(.app-topbar, .home-topbar) { backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+.opora-theme .guest-applications > .opora-action {
+  display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px;
+  margin: 12px 0 0; padding: 14px 16px; border-radius: 18px; font-size: 14px; line-height: 22px;
 }

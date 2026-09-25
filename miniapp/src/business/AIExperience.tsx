@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActionButton, BusinessTextarea } from './MaxControls';
-import { requestAI, type AIRequest, type AIResult } from './ai-client';
+import { aiErrorMessage, requestAI, type AIRequest, type AIResult } from './ai-client';
 import type { FundingNeed, FundingProfile } from '../../api-server/funding-catalog/types';
 import { fundingStatusLabels } from '../../api-server/funding-catalog/presentation';
 import { Icon } from './Icon';
@@ -14,6 +14,40 @@ type Handlers = {
 const fieldLabels: Record<string, string> = { purpose: 'Цель', amount: 'Нужно, ₽', ownFunds: 'Свои средства, ₽', preferredTermMonths: 'Срок, мес.', needsCollateralSupport: 'Помощь с залогом',
   region: 'Регион', industry: 'Направление', okved: 'ОКВЭД', companyType: 'Форма бизнеса', applicantType: 'Заявитель', ageMonths: 'Возраст, мес.', employees: 'Сотрудники', revenue: 'Оборот, ₽', isSme: 'Статус МСП', stage: 'Стадия' };
 const values: Record<string, string> = { legal_entity: 'Компания', individual_entrepreneur: 'ИП', project: 'Проект', team: 'Команда', individual: 'Физическое лицо', idea: 'Идея', prototype: 'Прототип', mvp: 'MVP', revenue: 'Есть выручка', yes: 'Да', no: 'Нет', unknown: 'Неизвестно' };
+
+/** Native disclosure keeps keyboard semantics and form state while its height settles. */
+export function AIIntakeDisclosure({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  const animation = useRef<Animation | null>(null);
+  const expanded = useRef(false);
+  useEffect(() => {
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const settle = () => {
+      animation.current?.cancel(); animation.current = null;
+      if (ref.current) { ref.current.open = expanded.current; ref.current.classList.remove('is-toggling'); }
+    };
+    motion.addEventListener('change', settle);
+    window.addEventListener('resize', settle);
+    return () => { settle(); motion.removeEventListener('change', settle); window.removeEventListener('resize', settle); };
+  }, []);
+  return <details ref={ref} className="ai-entry business-intake-ai"><summary onClick={(event) => {
+    const element = ref.current!;
+    event.preventDefault();
+    const start = element.getBoundingClientRect().height;
+    animation.current?.cancel();
+    expanded.current = !expanded.current;
+    element.open = expanded.current;
+    const end = element.getBoundingClientRect().height;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !element.animate) return;
+    element.open = true;
+    element.classList.add('is-toggling');
+    const transition = element.animate([{ height: `${start}px` }, { height: `${end}px` }], {
+      duration: 240, easing: 'cubic-bezier(.22,.8,.25,1)',
+    });
+    animation.current = transition;
+    transition.onfinish = () => { element.open = expanded.current; element.classList.remove('is-toggling'); animation.current = null; };
+  }}>Заполнить с помощью AI</summary>{children}</details>;
+}
 function Facts({ data }: { data: object }) {
   return <dl className="ai-facts">{Object.entries(data).map(([k, v]) => <div key={k}><dt>{fieldLabels[k] ?? k}</dt><dd>{v == null ? 'Не указано' : typeof v === 'boolean' ? v ? 'Да' : 'Нет' : typeof v === 'number' ? v.toLocaleString('ru-RU') : values[String(v)] ?? String(v)}</dd></div>)}</dl>;
 }
@@ -64,15 +98,15 @@ export function AIPanel({ title, task, context, initialQuestion = '', button = '
     pending.current?.abort(); const controller = new AbortController(); pending.current = controller;
     setBusy(true); setError(''); setResult(null);
     try {
-      const answer = await requestAI({ task, question: text, context }, AbortSignal.any([controller.signal, AbortSignal.timeout(70000)]));
+      const answer = await requestAI({ task, question: text, context }, controller.signal);
       if (pending.current === controller && !controller.signal.aborted) {
         if (task === 'review' && answer.mode === 'local') setError('Не удалось проверить заявку. Попробуйте ещё раз — ваши данные остались в форме.');
-        else { setResult(answer); onResult?.(answer); }
+        else { setResult(answer); if (answer.providerFailure) setError(aiErrorMessage(answer.providerFailure)); onResult?.(answer); }
       }
-    } catch (e) { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'Не удалось выполнить анализ.'); }
+    } catch (e) { if (pending.current === controller && !controller.signal.aborted) setError(aiErrorMessage(e)); }
     finally { if (pending.current === controller) { pending.current = null; setBusy(false); } }
   }
-  return <section className="widget ai-panel"><div className="widget-heading"><h2>{title}</h2><Icon name="spark" /></div>
+  return <section className="widget ai-panel" aria-busy={busy}><div className="widget-heading"><h2>{title}</h2><Icon name="spark" /></div>
     <label className="field">Задача для помощника<BusinessTextarea rows={3} maxLength={2000} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Опишите задачу своими словами" /></label>
     <AIDataHelp>GigaChat получает запрос и сведения, нужные для этой задачи. Для проверки заявки — также текст проекта, черновика и выбранных документов.</AIDataHelp>
     <ActionButton className="primary" disabled={busy || !question.trim()} onClick={() => void run()}>{busy ? 'Анализируем…' : error ? 'Повторить запрос' : button}</ActionButton>

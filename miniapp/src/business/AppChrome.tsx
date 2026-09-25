@@ -13,7 +13,8 @@ export function AppNavigation({ active, onNavigate }: {
   active: AppPage; onNavigate: (page: AppPage) => void;
 }) {
   return <div className="home-nav-wrap">
-    <nav className="home-nav" aria-label="Основная навигация">
+    <nav className="home-nav" data-active={active === 'overview' ? 0 : ['programs', 'funding-results'].includes(active) ? 1 : active === 'applications' ? 2 : 3} aria-label="Основная навигация">
+      <span className="home-nav-indicator" aria-hidden="true" />
       {([
         ['overview', 'home', 'Главная'], ['programs', 'compass', 'Поддержка'], ['applications', 'file', 'Заявки'],
       ] as const).map(([page, icon, label]) => <button key={page} type="button" className={`nav-${page}`}

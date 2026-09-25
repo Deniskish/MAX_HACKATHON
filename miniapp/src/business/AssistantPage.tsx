@@ -11,6 +11,7 @@ export function AssistantPage({ businessName, guest = false, backLabel = 'В м�
   question: string; onQuestion: (text: string) => void; sending: boolean; onSend: (text: string) => void;
   onStop: () => void; onBack: () => void; onClear: () => void; context: (close: () => void) => ReactNode;
   program?: { title: string; onOpen: () => void; onRemove: () => void };
+  error?: string; onRetry: () => void;
 }) {
   const [infoOpen, setInfoOpen] = useState(false);
   const [awayFromBottom, setAwayFromBottom] = useState(false);
@@ -26,7 +27,7 @@ export function AssistantPage({ businessName, guest = false, backLabel = 'В м�
   };
   useLayoutEffect(() => {
     if (pinned.current || messages.at(-1)?.role === 'user') latest();
-  }, [messages, sending]);
+  }, [messages, sending, error]);
   useLayoutEffect(() => {
     const element = input.current;
     if (!element) return;
@@ -72,6 +73,7 @@ export function AssistantPage({ businessName, guest = false, backLabel = 'В м�
         </div>}
         {messages.map((message, index) => <article key={index} className={`message ${message.role}`} aria-label={message.role === 'user' ? 'Вы' : 'Опора AI'}>{renderMessage(index)}</article>)}
         {sending && <div className="assistant-typing" role="status"><span />Готовлю ответ…</div>}
+        {error && <div className="assistant-error"><p role="alert">{error}</p><button type="button" disabled={sending} onClick={onRetry}>Повторить запрос</button></div>}
       </div>
       {awayFromBottom && <button className="assistant-latest" onClick={latest}>К последним сообщениям ↓</button>}
     </div>

@@ -57,7 +57,7 @@
 .application-row > .application-art { width: 54px; height: 54px; }
 .app-shell .assistant-welcome { padding-top: 2px; }
 .assistant-welcome > .assistant-welcome-art { width: 112px; height: 112px; margin-bottom: 4px; }
-.app-shell .assistant-prompts button, .app-shell .assistant-page .message.assistant {
+.app-shell .assistant-prompts button {
   background: var(--glass-surface); border: 1px solid var(--glass-edge); box-shadow: inset 0 1px 0 #ffffff08;
 }
 .app-shell .assistant-input-wrap { background: var(--glass-surface); border-color: #ffffff20; box-shadow: inset 0 1px 0 #ffffff0c; }

@@ -25,9 +25,10 @@ import type { WorkspaceInsight } from '../../api-server/ai/types';
 import { Icon } from './Icon';
 import { ModalSheet } from './ModalSheet';
 import { HomePage } from './HomePage';
+import { useTabTransition } from './useTabTransition';
 import { AppHeader, AppNavigation, type AppPage as Page } from './AppChrome';
-import { AIPanel, AIResultView } from './AIExperience';
-import { requestAI, readAIHistory, saveAIHistory, type AIResult, type AIDocument } from './ai-client';
+import { AIPanel, AIResultView, AIIntakeDisclosure } from './AIExperience';
+import { aiErrorMessage, requestAI, readAIHistory, saveAIHistory, type AIResult, type AIDocument } from './ai-client';
 import { ActionButton, BusinessInput, BusinessTextarea } from './MaxControls';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
@@ -80,7 +81,9 @@ export default function BusinessApp() {
       } else { setSelected(null); setExportText(text); }
     } else browserDownload(text, name, type);
   }
-  const [page, setPage] = useState<Page>('overview');
+  const [page, setPageState] = useState<Page>('overview');
+  const { shell, prepare } = useTabTransition(page);
+  const setPage = (next: Page) => { prepare(next); setPageState(next); };
   const [initial] = useState(() => loadWorkspace(localStorage, programs.map((p) => p.id)));
   const [companyProfile, setProfile] = useState<Profile | null>(initial.profile);
   const [projectProfile, setProjectProfile] = useState<ProjectProfile | null>(initial.projectProfile);
@@ -219,6 +222,8 @@ export default function BusinessApp() {
   }, [companyProfile, projectProfile, need]);
   const [question, setQuestion] = useState('');
   const [sending, setSending] = useState(false);
+  const [chatFailure, setChatFailure] = useState<{ message: string; text: string; program: Program | null; task?: 'strategy' | 'documents' } | null>(null);
+  useEffect(() => { setChatFailure(null); }, [companyProfile, projectProfile, need]);
   const [assistantMode, setAssistantMode] = useState('Проверяем доступность GigaChat');
   const [assistantBack, setAssistantBack] = useState<'overview' | 'profile'>('overview');
   useEffect(() => { const controller = new AbortController(); fetch('/api/ai/status', { signal: controller.signal }).then((r) => r.json()).then((data) => setAssistantMode(data.status === 'ready' ? 'GigaChat подключён' : data.configured ? 'GigaChat настроен · соединение ещё не подтверждено' : 'GigaChat не настроен')).catch(() => { if (!controller.signal.aborted) setAssistantMode('Статус AI недоступен'); }); return () => controller.abort(); }, []);
@@ -379,12 +384,14 @@ export default function BusinessApp() {
     text: string,
     program: Program | null = chatProgram,
     task?: 'strategy' | 'documents',
+    retry = false,
   ) {
     if (!text.trim() || sending) return;
     setPage('assistant');
     setChatProgram(program);
     setQuestion('');
-    setMessages((m) => [...m, { role: 'user', text }]);
+    if (!retry) setMessages((m) => [...m, { role: 'user', text }]);
+    setChatFailure(null);
     setSending(true);
     const controller = new AbortController(); chatRequest.current = controller;
     const application = profile ? apps.find((a) => a.programId === program?.id) : undefined;
@@ -394,13 +401,14 @@ export default function BusinessApp() {
         context: { ...aiContext, programId: program?.id, project: application?.project, draft: application?.generatedDraft,
           preparedDocuments: application && program ? program.documents.filter((d) => application.documents[d]) : [],
           budget: application?.budget.trim() ? Number(application.budget) : null } },
-        AbortSignal.any([controller.signal, AbortSignal.timeout(70000)]));
+        controller.signal);
       if (controller.signal.aborted || chatRequest.current !== controller) return;
       setMessages((m) => [...m.slice(-29), { role: 'assistant', text: data.answer, result: !profile && data.mode === 'local' ? undefined : data }]);
       setAssistantMode(data.mode === 'llm' ? 'GigaChat · контекстный помощник' : 'Ответ по правилам');
+      if (data.providerFailure) setChatFailure({ message: aiErrorMessage(data.providerFailure), text, program, task });
     } catch (error) {
       if (controller.signal.aborted || chatRequest.current !== controller) return;
-      setMessages((m) => [...m, { role: 'assistant', text: `${error instanceof Error && error.name === 'TimeoutError' ? 'Помощник не успел ответить.' : 'Не удалось получить ответ помощника.'} Попробуйте отправить вопрос ещё раз. Подбор по условиям программ доступен в разделе поддержки.` }]);
+      setChatFailure({ message: aiErrorMessage(error), text, program, task });
       setAssistantMode('GigaChat временно недоступен');
     } finally {
       if (chatRequest.current === controller) { chatRequest.current = null; setSending(false); }
@@ -415,7 +423,7 @@ export default function BusinessApp() {
   }
 
   return (
-    <div className={`app-shell page-${page}`}>
+    <div ref={shell} className={`app-shell shared-navigation page-${page}`}>
       {page !== 'overview' && page !== 'assistant' && <AppHeader
         title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', 'funding-results': 'Варианты поддержки' }[page]}
         backLabel={page === 'funding-results' ? 'К параметрам подбора' : page === 'calendar' ? 'В мой бизнес' : 'На главную'} onBack={() => page === 'funding-results' ? setHomePanel('funding') : navigate(page === 'calendar' ? 'profile' : 'overview')} onNotifications={() => setHomePanel('events')} hasNotifications={hasNotifications}
@@ -432,6 +440,7 @@ export default function BusinessApp() {
             </> : <section className="empty-state"><h2>Обновите подбор</h2><p>Параметры бизнеса или задачи изменились. Выполните подбор заново, чтобы увидеть актуальные варианты.</p><ActionButton className="primary" onClick={() => setHomePanel('funding')}>Подобрать заново</ActionButton></section>}
           </section>}
           {page === 'overview' && <HomePage
+            showNavigation={false}
             onFindSupport={() => navigate('programs')}
             onAddBusiness={() => profile ? navigate('profile') : setHomePanel('business')}
             onAssistant={() => navigate('assistant')}
@@ -721,11 +730,18 @@ export default function BusinessApp() {
                 </div>
               </details>
             ) : null)}
+<<<<<<< HEAD
           {page === 'assistant' && <AssistantPage
             businessName={profile?.name ?? 'Вопросы о бизнесе'} guest={!profile} backLabel={assistantBack === 'overview' ? 'На главную' : 'В мой бизнес'} status={assistantMode} messages={messages} question={question} onQuestion={setQuestion}
             sending={sending} onSend={(text) => { void ask(text); }} onBack={() => navigate(assistantBack)}
+=======
+          {page === 'assistant' && profile && <AssistantPage
+            businessName={profile.name} status={assistantMode} messages={messages} question={question} onQuestion={setQuestion}
+            sending={sending} onSend={(text) => { void ask(text); }} onBack={() => navigate('profile')}
+            error={chatFailure?.message} onRetry={() => { if (chatFailure) void ask(chatFailure.text, chatFailure.program, chatFailure.task, true); }}
+>>>>>>> e5a57d6 (Добавил анимации и некоторые вкладки)
             onStop={() => { chatRequest.current?.abort(); chatRequest.current = null; setSending(false); }}
-            onClear={() => { chatRequest.current?.abort(); chatRequest.current = null; setSending(false); setMessages([]); setChatProgram(null); setQuestion(''); }}
+            onClear={() => { chatRequest.current?.abort(); chatRequest.current = null; setSending(false); setMessages([]); setChatProgram(null); setQuestion(''); setChatFailure(null); }}
             program={chatProgram ? { title: chatProgram.title, onOpen: () => setSelected(chatProgram), onRemove: () => setChatProgram(null) } : undefined}
             context={(closeInfo) => <>
               {profile ? <p><b>{profile.name}</b> · {profile.region}<br />Цель: {need.purpose || 'пока не указана'}. Ответы учитывают этот профиль.</p>
@@ -742,7 +758,10 @@ export default function BusinessApp() {
             }}
           />}
       </main>
-      {page !== 'overview' && page !== 'assistant' && <AppNavigation active={page} onNavigate={navigate} />}
+      {page !== 'assistant' && <AppNavigation active={page} onNavigate={(next) => {
+        if (next === 'overview' && page === 'overview') mainRef.current?.querySelector('.home-scroll')?.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        else navigate(next);
+      }} />}
       <dialog
         aria-label={onboard ? 'Профиль бизнеса' : selected?.title || 'Программа'}
         ref={dialogRef}
@@ -1079,7 +1098,7 @@ export default function BusinessApp() {
       {homePanel && <ModalSheet title={{ business: 'Ваш бизнес', funding: 'Подбор поддержки', events: 'Уведомления' }[homePanel]} onClose={() => setHomePanel(null)}>
         {homePanel === 'business' && <div className="home-panel-actions">
           <h2>Расскажите о бизнесе</h2>
-          <details className="ai-entry business-intake-ai"><summary>Заполнить с помощью AI</summary><AIPanel title="Расскажите своими словами" task="intake" context={aiContext} {...aiHandlers} /></details>
+          <AIIntakeDisclosure><AIPanel title="Расскажите своими словами" task="intake" context={aiContext} {...aiHandlers} /></AIIntakeDisclosure>
           <ActionButton className="primary" onClick={openProfile}>{profile ? 'Редактировать профиль' : 'Добавить компанию по ИНН'}</ActionButton>
           <ActionButton className="secondary" onClick={() => { setHomePanel(null); setProjectOnboard(true); }}>У меня пока нет компании</ActionButton>
         </div>}

@@ -28,6 +28,7 @@
 
 /* Only the business-intake sheet: one surface around the composer, not a nested widget. */
 .opora-theme .business-intake-ai { min-width: 0; margin: 0; padding: 20px; }
+.business-intake-ai.is-toggling { overflow: clip; }
 .opora-theme .business-intake-ai[open] > summary { margin-bottom: 20px; }
 .opora-theme .business-intake-ai > .ai-panel {
   min-width: 0; margin: 0; padding: 0; gap: 16px;
@@ -43,6 +44,7 @@
 .business-intake-ai .ai-panel > .field { margin: 0; gap: 10px; }
 .opora-theme .business-intake-ai .opora-native-textarea {
   display: block; min-height: 144px; padding: 16px; font-size: 16px; line-height: 1.5;
+  background: var(--canvas); box-shadow: none; border-color: var(--line);
 }
 .opora-theme .business-intake-ai .ai-panel > .widget-footnote {
   font-size: 12px; line-height: 1.5; font-weight: 400; color: var(--muted);
