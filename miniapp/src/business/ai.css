@@ -1,0 +1,27 @@
+.ai-entry { margin: 16px 0; border: 1px solid #8064ff33; border-radius: 20px; background: #604dca0d; padding: 14px; }
+.ai-entry > summary { cursor: pointer; font-size: 14px; color: #c9bfff; line-height: 1.5; }
+.ai-entry[open] > summary { margin-bottom: 16px; }
+.ai-entry > .ai-panel { border: 0; background: transparent; padding: 0; box-shadow: none; }
+.ai-panel { display: grid; gap: 16px; margin-bottom: 16px; }
+.ai-panel .widget-heading h2 { font-size: 20px; }
+.ai-panel p, .ai-result p { margin: 0; }
+.opora-theme .ai-panel .opora-action.primary:hover { background: linear-gradient(130deg, #6d59d7, #594caa); }
+.ai-result { display: grid; gap: 14px; min-width: 0; }
+.ai-result > .tag { justify-self: start; }
+.ai-answer { white-space: pre-wrap; line-height: 1.65; }
+.ai-proposal, .ai-finding { padding: 16px; border: 1px solid #ffffff0f; border-radius: 18px; background: #242229; }
+.ai-proposal h3 { font-size: 16px; margin: 0 0 12px; }
+.ai-facts { display: grid; gap: 10px; margin: 0 0 16px; font-size: 13px; }
+.ai-facts > div { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ai-facts dt { color: #9293a0; }.ai-facts dd { margin: 0; overflow-wrap: anywhere; }
+.ai-actions, .ai-followups { display: grid; gap: 8px; }
+.ai-followups button { text-align: left; border: 1px solid #8064ff33; border-radius: 16px; padding: 12px; color: #c9bfff; background: #604dca1a; }
+.ai-sources { font-size: 12px; color: #9293a0; }
+.ai-sources > div { margin-top: 14px; overflow-wrap: anywhere; }
+.ai-sources small { display: block; }.ai-sources p { margin-top: 6px; max-height: 160px; overflow: auto; white-space: pre-wrap; }
+.ai-finding blockquote { margin: 12px 0; padding-left: 12px; border-left: 2px solid #8064ff; font-size: 13px; }
+.ai-finding small { color: #b0a0e7; }
+.ai-result a { color: #c9bfff; }
+.message > .ai-result { margin-top: 16px; white-space: normal; }
+.chat-input .ai-stop { flex-shrink: 0; width: 36px; background: #242229; color: #ebebf3; border: 0; border-radius: 50%; }
+.message:has(.ai-result) { overflow-wrap: anywhere; }

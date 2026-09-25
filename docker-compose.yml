@@ -10,8 +10,11 @@ services:
       GIGACHAT_AUTH_KEY: ${GIGACHAT_AUTH_KEY:-}
       GIGACHAT_SCOPE: ${GIGACHAT_SCOPE:-GIGACHAT_API_PERS}
       GIGACHAT_MODEL: ${GIGACHAT_MODEL:-GigaChat-2-Pro}
+      OPORA_SOURCE_DIR: /data/sources
+      AI_SOURCE_SYNC: ${AI_SOURCE_SYNC:-on}
     volumes:
       - ${FNS_DATA_DIR:-./fns-data}:/data/fns:ro
+      - opora-sources:/data/sources
     ports:
       - "127.0.0.1:3002:3002"
     healthcheck:
@@ -40,3 +43,5 @@ services:
       MINIAPP_URL: ${MINIAPP_URL:-}
       MAX_BOT_USERNAME: ${MAX_BOT_USERNAME:-}
     restart: unless-stopped
+volumes:
+  opora-sources:

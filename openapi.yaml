@@ -380,8 +380,403 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/ai/assist:
+    post:
+      summary: AI с контекстом, историей, источниками и проверяемыми предложениями
+      description: Свободный текст сохраняет смысл после минимизации известных
+        реквизитов. Не изменяет состояние пользователя. До 384 КБ JSON, 60 000
+        символов документов и четырёх одновременных запросов. При недоступном
+        провайдере возможен ответ 200 с mode=local.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIContextRequest"
+      responses:
+        "200":
+          description: AI-ответ или явно обозначенный расчёт по правилам
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIContextResult"
+        "400": &a1
+          description: Ошибка запроса или провайдера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429": *a1
+        "502": *a1
+  /api/funding/updates:
+    get:
+      summary: Состояние мониторинга официальных страниц и обнаруженные изменения
+      responses:
+        "200":
+          description: События отражают изменения текста страницы; условия требуют сверки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkedAt:
+                    type: string
+                    nullable: true
+                  pages:
+                    type: integer
+                  errors:
+                    type: integer
+                  updates:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AISourceUpdate"
+                required:
+                  - checkedAt
+                  - pages
+                  - errors
+                  - updates
+        "429": *a1
 components:
   schemas:
+    AIContextRequest:
+      type: object
+      properties:
+        task:
+          type: string
+          enum:
+            - chat
+            - intake
+            - search
+            - analysis
+            - strategy
+            - review
+            - draft
+            - changes
+        question:
+          type: string
+          maxLength: 2000
+          minLength: 1
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+                enum:
+                  - user
+                  - assistant
+              text:
+                type: string
+                maxLength: 12000
+            required:
+              - role
+              - text
+          maxItems: 20
+        context:
+          type: object
+          properties:
+            profile:
+              $ref: "#/components/schemas/FundingProfile"
+            need:
+              $ref: "#/components/schemas/FundingNeed"
+            programId:
+              type: string
+              maxLength: 100
+            page:
+              type: string
+              maxLength: 40
+            project:
+              type: string
+              maxLength: 10000
+            budget:
+              type: number
+              nullable: true
+              minimum: 0
+              maximum: 1000000000000000
+            draft:
+              type: string
+              maxLength: 18000
+            draftKind:
+              type: string
+              maxLength: 100
+            preparedDocuments:
+              type: array
+              items:
+                type: string
+                maxLength: 160
+              maxItems: 30
+            documents:
+              type: array
+              items:
+                $ref: "#/components/schemas/AIDocument"
+              maxItems: 8
+            identifiers:
+              type: object
+              description: Известные реквизиты для удаления из свободного текста; не
+                передаются провайдеру.
+              additionalProperties:
+                type: string
+                maxLength: 500
+      required:
+        - task
+        - question
+        - context
+    AIDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 60
+          pattern: ^[\w-]+$
+        name:
+          type: string
+          maxLength: 200
+        pages:
+          type: array
+          items:
+            type: object
+            properties:
+              page:
+                type: integer
+                minimum: 1
+                maximum: 1000
+              text:
+                type: string
+                maxLength: 40000
+            required:
+              - page
+              - text
+          maxItems: 40
+      required:
+        - id
+        - pages
+    AIEvidence:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 160
+        title:
+          type: string
+          maxLength: 200
+        text:
+          type: string
+          maxLength: 20000
+        url:
+          type: string
+          format: uri
+        checkedAt:
+          type: string
+          maxLength: 30
+        page:
+          type: integer
+        documentId:
+          type: string
+          maxLength: 60
+        opportunityId:
+          type: string
+          maxLength: 100
+      required:
+        - id
+        - title
+        - text
+    AIContextResult:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+            - llm
+            - local
+        answer:
+          type: string
+          maxLength: 12000
+        notice:
+          type: string
+          maxLength: 1000
+        followups:
+          type: array
+          items:
+            type: string
+            maxLength: 300
+          maxItems: 3
+        citations:
+          type: array
+          items:
+            $ref: "#/components/schemas/AIEvidence"
+        actions:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum:
+                  - open_program
+                  - prepare_application
+                  - open_funding
+              label:
+                type: string
+                maxLength: 300
+              programId:
+                type: string
+                maxLength: 100
+            required:
+              - type
+              - label
+        proposedNeed:
+          $ref: "#/components/schemas/FundingNeed"
+        proposedProfile:
+          $ref: "#/components/schemas/FundingProfile"
+        draft:
+          type: string
+          maxLength: 18000
+        findings:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+                maxLength: 120
+              detail:
+                type: string
+                maxLength: 1000
+              severity:
+                type: string
+                enum:
+                  - check
+                  - warning
+              evidenceId:
+                type: string
+                maxLength: 160
+              quote:
+                type: string
+                maxLength: 800
+            required:
+              - title
+              - detail
+              - severity
+          maxItems: 15
+        matches:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                maxLength: 100
+              title:
+                type: string
+                maxLength: 200
+              status:
+                type: string
+                maxLength: 40
+              score:
+                type: number
+              explanation:
+                type: string
+                maxLength: 5000
+            required:
+              - id
+              - title
+              - status
+              - score
+              - explanation
+        scenarios:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+                maxLength: 100
+              need:
+                $ref: "#/components/schemas/FundingNeed"
+              matches:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      maxLength: 100
+                    title:
+                      type: string
+                      maxLength: 200
+                    status:
+                      type: string
+                      maxLength: 40
+                    score:
+                      type: number
+                  required:
+                    - id
+                    - title
+                    - status
+                    - score
+            required:
+              - label
+              - need
+              - matches
+          maxItems: 3
+        tools:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+        usage:
+          type: object
+          properties:
+            calls:
+              type: integer
+            tokens:
+              type: integer
+            durationMs:
+              type: number
+          required:
+            - calls
+            - tokens
+            - durationMs
+      required:
+        - mode
+        - answer
+        - followups
+        - citations
+        - actions
+        - findings
+        - matches
+        - scenarios
+        - tools
+    AISourceUpdate:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 100
+        url:
+          type: string
+          format: uri
+        title:
+          type: string
+          maxLength: 200
+        detectedAt:
+          type: string
+          format: date-time
+        opportunityId:
+          type: string
+          maxLength: 100
+        kind:
+          type: string
+          enum:
+            - changed
+            - discovered
+      required:
+        - id
+        - url
+        - title
+        - detectedAt
+        - kind
     Error:
       type: object
       properties:

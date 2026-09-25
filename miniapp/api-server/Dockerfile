@@ -10,6 +10,7 @@ WORKDIR /app
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+RUN mkdir -p /data/sources && chown node:node /data/sources
 USER node
 EXPOSE 3002
 CMD ["node", "dist/server.js"]

@@ -2,6 +2,10 @@
 import { randomUUID } from 'node:crypto';
 import { privateCompletion, PrivacyError } from './privacy';
 import { providerJson } from './provider-json';
+import { createAIModel } from './ai/transport';
+import { runAssistant } from './ai/service';
+import type { AIEvidence } from './ai/types';
+import { createSemanticSearch, EMBEDDINGS_URL } from './ai/embeddings';
 
 export const GIGACHAT_OAUTH_URL = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth';
 export const GIGACHAT_CHAT_URL = 'https://api.giga.chat/v1/chat/completions';
@@ -71,7 +75,7 @@ export function createGigaChatClient(
     }
   }
   const authorizedTransport: typeof fetch = async (url, init) => {
-    if (String(url) !== GIGACHAT_CHAT_URL) throw new PrivacyError('INVALID_PROVIDER_URL');
+    if (![GIGACHAT_CHAT_URL, EMBEDDINGS_URL].includes(String(url))) throw new PrivacyError('INVALID_PROVIDER_URL');
     const response = await transport(url, init);
     if (response.status !== 401) return response;
     await response.body?.cancel();
@@ -81,7 +85,11 @@ export function createGigaChatClient(
     headers.set('Authorization', `Bearer ${await getToken()}`);
     return transport(url, { ...init, headers }); // One retry only, with the same protected body.
   };
+  const semantic = createSemanticSearch(getToken, authorizedTransport);
   return {
+    async assist(input: unknown, evidence: AIEvidence[] = [], signal?: AbortSignal) {
+      return runAssistant(input, createAIModel(GIGACHAT_CHAT_URL, config.model, getToken, authorizedTransport), evidence, signal, semantic);
+    },
     async complete(input: unknown) {
       // Проверяем и обезличиваем данные до авторизации у провайдера.
       const result = await privateCompletion(

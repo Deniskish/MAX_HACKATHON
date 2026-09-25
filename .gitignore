@@ -35,6 +35,8 @@ Thumbs.db
 
 # Official FNS datasets and local index
 fns-data/
+source-data/
+miniapp/public/ocr/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm

@@ -18,6 +18,8 @@ import { Icon } from './Icon';
 import { ModalSheet } from './ModalSheet';
 import { HomePage } from './HomePage';
 import { AppHeader, AppNavigation, type AppPage as Page } from './AppChrome';
+import { AIPanel, AIResultView } from './AIExperience';
+import { requestAI, readAIHistory, saveAIHistory, type AIResult, type AIDocument } from './ai-client';
 import { Spinner } from '@maxhub/max-ui';
 import { ActionButton, BusinessInput, BusinessTextarea } from './MaxControls';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -34,7 +36,7 @@ import {
   draftText,
 } from './domain';
 
-type Message = { role: 'user' | 'assistant'; text: string; opportunityIds?: string[] };
+type Message = { role: 'user' | 'assistant'; text: string; opportunityIds?: string[]; result?: AIResult };
 
 
 const date = (s: string) =>
@@ -74,6 +76,7 @@ export default function BusinessApp() {
   const [companyProfile, setProfile] = useState<Profile | null>(initial.profile);
   const [projectProfile, setProjectProfile] = useState<ProjectProfile | null>(initial.projectProfile);
   const [projectOnboard, setProjectOnboard] = useState(false);
+  const [aiProjectSeed, setAIProjectSeed] = useState<ProjectProfile | null>(null);
   const [need, setNeed] = useState(initial.fundingNeed);
   const profile = companyProfile ?? (projectProfile ? projectAsProfile(projectProfile) : null);
   const fundingProfile: FundingProfile = projectProfile && !companyProfile
@@ -89,6 +92,19 @@ export default function BusinessApp() {
     preparedDocuments: Object.keys(apps.find((a) => a.programId === o.id)?.documents ?? {}).filter((d) => apps.find((a) => a.programId === o.id)?.documents[d]),
   })));
   const events = fundingEvents(officialFundingCatalog, saved, previousSnapshot, matches);
+  const [sourceUpdates, setSourceUpdates] = useState<{ id: string; url: string; title: string; detectedAt: string; opportunityId?: string; kind: string }[]>([]);
+  const [sourcesCheckedAt, setSourcesCheckedAt] = useState<string | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    const refresh = () => fetch('/api/funding/updates', { signal: controller.signal }).then((r) => r.ok ? r.json() : null).then((data) => {
+      if (data && !controller.signal.aborted) {
+        setSourceUpdates(Array.isArray(data.updates) ? data.updates.filter((u: any) => u && typeof u.id === 'string' && typeof u.title === 'string' && typeof u.url === 'string' && u.url.startsWith('https://')).slice(0, 30) : []);
+        setSourcesCheckedAt(typeof data.checkedAt === 'string' ? data.checkedAt : null);
+      }
+    }).catch(() => {});
+    void refresh(); const timer = setInterval(() => void refresh(), 5 * 60 * 1000);
+    return () => { controller.abort(); clearInterval(timer); };
+  }, []);
   useEffect(() => { try { localStorage.setItem('opora.snapshot.v2', JSON.stringify(Object.fromEntries(officialFundingCatalog.map((o) => [o.id, o.version])))); } catch { /* Workspace storage warning handles unavailable storage. */ } }, []);
   const openFunding = (id: string) => { const p = programs.find((p) => p.id === id); if (p) { setHomePanel(null); setSelected(p); } };
   const [onlySaved, setOnlySaved] = useState(false);
@@ -98,6 +114,8 @@ export default function BusinessApp() {
       null,
   );
   const [chatProgram, setChatProgram] = useState<Program | null>(null);
+  const [applicationDocuments, setApplicationDocuments] = useState<Record<string, AIDocument>>({});
+  useEffect(() => setApplicationDocuments({}), [selected?.id]);
   const [onboard, setOnboard] = useState(false);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<Profile>(emptyProfile);
@@ -153,9 +171,16 @@ export default function BusinessApp() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('Все меры');
   const [toast, setToast] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', text: 'Какая задача сейчас важнее для вашего бизнеса?' },
-  ]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const history = readAIHistory();
+    return history.length ? history : [{ role: 'assistant', text: 'Расскажите, что хотите сделать для бизнеса. Я помогу уточнить потребность, найти поддержку и подготовить документы.' }];
+  });
+  const chatRequest = useRef<AbortController | null>(null);
+  useEffect(() => { if (!saveAIHistory(messages)) setToast('История чата не сохранилась на устройстве.'); }, [messages]);
+  useEffect(() => () => chatRequest.current?.abort(), []);
+  useEffect(() => {
+    if (chatRequest.current) { chatRequest.current.abort(); chatRequest.current = null; setSending(false); }
+  }, [companyProfile, projectProfile, need]);
   const [question, setQuestion] = useState('');
   const [sending, setSending] = useState(false);
   const [assistantMode, setAssistantMode] = useState('Проверяем доступность GigaChat');
@@ -295,7 +320,23 @@ export default function BusinessApp() {
     setPage('overview');
     setHomePanel('funding');
   }
-  // Контекст выбранной программы сохраняется при переходе в чат.
+  const aiContext = { profile: fundingProfile, need: need.purpose ? need : undefined, page,
+    identifiers: profile ? { name: profile.name, inn: profile.inn } : undefined };
+  function applyAIProfile(patch: FundingProfile) {
+    setHomePanel(null); setSelected(null);
+    if ((!companyProfile && projectProfile) || ['project', 'team', 'individual'].includes(patch.applicantType ?? '')) {
+      setAIProjectSeed({ name: projectProfile?.name ?? '', region: patch.region ?? projectProfile?.region ?? '',
+        industry: patch.industry ?? projectProfile?.industry ?? '', stage: (patch.stage as ProjectProfile['stage']) || projectProfile?.stage || 'idea',
+        teamSize: patch.employees ?? projectProfile?.teamSize ?? null, fundingNeed: need.amount, fundingPurpose: need.purpose, hasLegalEntity: false });
+      setProjectOnboard(true);
+    } else {
+      setForm({ ...(companyProfile ?? emptyProfile), ...patch }); setStep(companyProfile?.inn ? 1 : 0); setOnboard(true);
+    }
+  }
+  const aiHandlers = { onOpen: openFunding, onNeed: setNeed, onProfile: applyAIProfile,
+    onFunding: () => setHomePanel(profile ? 'funding' : 'business'),
+    onPrepare: (id: string) => { const p = programs.find((x) => x.id === id); if (p) { setHomePanel(null); setSelected(p); startApplication(p); } } };
+  // Контекст программы, проекта и последних сообщений передаётся общему AI-сервису.
   async function ask(
     text: string,
     program: Program | null = chatProgram,
@@ -307,47 +348,26 @@ export default function BusinessApp() {
     setQuestion('');
     setMessages((m) => [...m, { role: 'user', text }]);
     setSending(true);
+    const controller = new AbortController(); chatRequest.current = controller;
     const chosen = program ? matches.find((m) => m.opportunity.id === program.id) : matches.find((m) => m.status !== 'not_eligible' && m.status !== 'expired');
     const fallback = chosen ? `${chosen.opportunity.title}: ${chosen.explanation}` : 'Укажите цель в разделе «Главная» и выполните подбор.';
     const application = apps.find((a) => a.programId === program?.id);
     try {
-      const response = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: text,
-          task,
-          context: {
-            profile: fundingProfile,
-            need: need.purpose ? need : undefined,
-            programId: program?.id,
-            application:
-              application && program
-                ? {
-                    preparedDocuments: program.documents.filter((d) => application.documents[d]),
-                    budget: application.budget.trim() ? Number(application.budget) : null,
-                  }
-                : undefined,
-          },
-        }),
-        signal: AbortSignal.timeout(45000),
-      });
-      if (!response.ok) {
-        const problem = await response.json().catch(() => null);
-        throw new Error(typeof problem?.error === 'string' ? problem.error : 'GigaChat временно недоступен.');
-      }
-      const data = await response.json();
-      const opportunityIds: string[] = Array.isArray(data.opportunityIds)
-        ? data.opportunityIds.filter((id: unknown) => programs.some((p) => p.id === id)) : [];
-      setMessages((m) => [...m, { role: 'assistant', text: data.answer || fallback, opportunityIds }]);
-      setAssistantMode(
-        data.mode === 'llm' ? 'GigaChat · строгая защита данных' : 'Сценарный помощник',
-      );
+      const data = await requestAI({ task: task === 'strategy' ? 'strategy' : 'chat', question: text,
+        history: messages.slice(-8).map(({ role, text }) => ({ role, text })),
+        context: { ...aiContext, programId: program?.id, project: application?.project, draft: application?.generatedDraft,
+          preparedDocuments: application && program ? program.documents.filter((d) => application.documents[d]) : [],
+          budget: application?.budget.trim() ? Number(application.budget) : null } },
+        AbortSignal.any([controller.signal, AbortSignal.timeout(70000)]));
+      if (controller.signal.aborted || chatRequest.current !== controller) return;
+      setMessages((m) => [...m.slice(-29), { role: 'assistant', text: data.answer, result: data }]);
+      setAssistantMode(data.mode === 'llm' ? 'GigaChat · контекстный помощник' : 'Ответ по правилам');
     } catch (error) {
+      if (controller.signal.aborted || chatRequest.current !== controller) return;
       setMessages((m) => [...m, { role: 'assistant', text: `${error instanceof Error && error.name === 'TimeoutError' ? 'Время ожидания GigaChat истекло.' : error instanceof Error ? error.message : 'AI недоступен.'}\n\nРасчёт по правилам:\n${fallback}`, opportunityIds: chosen ? [chosen.opportunity.id] : [] }]);
       setAssistantMode('Ответ по правилам · GigaChat недоступен');
     } finally {
-      setSending(false);
+      if (chatRequest.current === controller) { chatRequest.current = null; setSending(false); }
     }
   }
   // Экспортируем только опубликованные в каталоге сроки, в том числе архивные.
@@ -361,7 +381,7 @@ export default function BusinessApp() {
     <div className={`app-shell page-${page}`}>
       {page !== 'overview' && <AppHeader
         title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', assistant: 'AI-помощник' }[page]}
-        onBack={() => setPage('overview')} onNotifications={() => setHomePanel('events')} hasNotifications={events.length > 0}
+        onBack={() => setPage('overview')} onNotifications={() => setHomePanel('events')} hasNotifications={events.length > 0 || sourceUpdates.some((u) => u.opportunityId && saved.includes(u.opportunityId))}
       />}
       <main ref={mainRef} className="app-content">
           {page === 'overview' && <HomePage
@@ -371,7 +391,7 @@ export default function BusinessApp() {
             onNotifications={() => setHomePanel('events')}
             onApplications={() => setPage('applications')}
             onMore={() => setHomePanel('more')}
-            hasNotifications={events.length > 0}
+            hasNotifications={events.length > 0 || sourceUpdates.some((u) => u.opportunityId && saved.includes(u.opportunityId))}
           />}
           {page === 'programs' && (
             <>
@@ -403,6 +423,7 @@ export default function BusinessApp() {
                 </label>
               </div>
               <label className="field catalog-state">Статус<select value={availability} onChange={(e) => setAvailability(e.target.value)}><option value="">Все статусы</option><option value="active">Приём открыт</option><option value="closed">Приём завершён</option><option value="upcoming">Ожидается открытие</option><option value="unknown">Требует проверки</option></select></label>
+              <details className="ai-entry"><summary>Найти поддержку по описанию задачи</summary><AIPanel title="Умный поиск" task="search" context={aiContext} initialQuestion={query} {...aiHandlers} /></details>
               <div className="catalog-results-header">
                 <h2>{filter === 'Все меры' ? 'Все возможности' : filter}</h2>
                 <span>{visiblePrograms.length} в официальном каталоге</span>
@@ -573,6 +594,7 @@ export default function BusinessApp() {
               </section>
             </div>
           )}
+          {page === 'profile' && profile && <details className="ai-entry"><summary>Проанализировать бизнес и следующий шаг</summary><AIPanel title="План развития" task="analysis" context={aiContext} initialQuestion="Проанализируй мой бизнес: какие возможности рассмотреть, чего не хватает и какой следующий шаг?" {...aiHandlers} /></details>}
           {page === 'profile' &&
             (profile ? (
               <section className="profile-panel">
@@ -662,9 +684,11 @@ export default function BusinessApp() {
               <details className="context-info">
                 <summary>Как обрабатываются данные</summary>
                 <p>
-                  Реквизиты и свободный вопрос заменяются токенами. AI получает параметры бизнеса и
-                  тип запроса; детали свободного текста пока не учитываются.
+                  GigaChat получает вопрос, последние сообщения, параметры бизнеса и выбранной заявки.
+                  Известные реквизиты скрываются. Не добавляйте лишние персональные данные.
+                  История сохраняется на этом устройстве.
                 </p>
+                <ActionButton className="text-button" onClick={() => { chatRequest.current?.abort(); chatRequest.current = null; setSending(false); setMessages([]); setChatProgram(null); }}>Очистить историю</ActionButton>
               </details>
               {chatProgram && (
                 <div className="chat-program-context">
@@ -682,6 +706,7 @@ export default function BusinessApp() {
                 {messages.map((m, i) => (
                   <div key={i} className={'message ' + m.role}>
                     {m.text}
+                    {m.result && <AIResultView result={m.result} {...aiHandlers} showAnswer={false} onQuestion={(q) => setQuestion(q)} />}
                     {!!m.opportunityIds?.length && <div className="message-links">{m.opportunityIds.map((id) => <ActionButton className="secondary" key={id} onClick={() => openFunding(id)}>Открыть: {programs.find((p) => p.id === id)!.title}</ActionButton>)}</div>}
                   </div>
                 ))}
@@ -724,6 +749,7 @@ export default function BusinessApp() {
                 >
                   <Icon name="arrow" />
                 </ActionButton>
+                {sending && <button className="ai-stop" type="button" aria-label="Остановить ответ" onClick={() => { chatRequest.current?.abort(); chatRequest.current = null; setSending(false); }}><Icon name="close" /></button>}
               </form>
             </section>
           )}
@@ -964,6 +990,9 @@ export default function BusinessApp() {
                     key={`checklist:${selected.id}`}
                     program={selected}
                     app={activeApp}
+                    profile={profile}
+                    documents={applicationDocuments}
+                    setDocuments={setApplicationDocuments}
                     onUpdate={(patch) => updateApp(activeApp.id, patch)}
                   />
                   <label className="field">
@@ -993,6 +1022,7 @@ export default function BusinessApp() {
                       program={selected}
                       profile={profile}
                       app={activeApp}
+                      documents={Object.values(applicationDocuments).filter((d) => d.pages.some((p) => p.text.trim()))}
                       onUpdate={(patch) => updateApp(activeApp.id, patch)}
                       onDownload={(text) => download(text, `opora-${selected.id}-document.txt`)}
                     />
@@ -1055,6 +1085,7 @@ export default function BusinessApp() {
       {homePanel && <ModalSheet title={{ business: 'Ваш бизнес', funding: 'Подбор поддержки', events: 'Уведомления', more: 'Ещё' }[homePanel]} onClose={() => setHomePanel(null)}>
         {homePanel === 'business' && <div className="home-panel-actions">
           <h2>Расскажите о бизнесе</h2>
+          <details className="ai-entry"><summary>Заполнить с помощью AI</summary><AIPanel title="Расскажите своими словами" task="intake" context={aiContext} {...aiHandlers} /></details>
           <ActionButton className="primary" onClick={openProfile}>{profile ? 'Редактировать профиль' : 'Добавить компанию по ИНН'}</ActionButton>
           <ActionButton className="secondary" onClick={() => { setHomePanel(null); setProjectOnboard(true); }}>У меня пока нет компании</ActionButton>
         </div>}
@@ -1063,6 +1094,11 @@ export default function BusinessApp() {
           <FundingExperience key={companyProfile?.inn ?? 'project'} profile={fundingProfile} initialNeed={need} onNeed={setNeed} onOpen={openFunding} onSave={toggleSaved} saved={saved} />
         </>}
         {homePanel === 'events' && <div className="home-panel-actions"><h2>События</h2>{events.length ? events.map((event) => <button className="widget-link-row" key={event.id} onClick={() => openFunding(event.opportunityId)}>{event.text}</button>) : <p>Новых событий нет. Сохраните интересующие программы.</p>}<ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('calendar'); }}>Открыть календарь</ActionButton></div>}
+        {homePanel === 'events' && <section className="source-updates"><h3>Обновления официальных источников</h3>
+          <p className="widget-footnote">{sourcesCheckedAt ? `Последняя проверка: ${new Date(sourcesCheckedAt).toLocaleString('ru-RU')}.` : 'Первая проверка источников ещё не завершена.'} Изменение страницы требует сверки условий программы.</p>
+          {sourceUpdates.map((u) => <article className="ai-proposal" key={u.id}><span className="tag">{u.kind === 'discovered' ? 'Найден новый материал' : saved.includes(u.opportunityId ?? '') ? 'По сохранённой программе' : 'Изменилась страница'}</span><p><a href={u.url} target="_blank" rel="noreferrer">{u.title} ↗</a></p>
+            <ActionButton className="secondary" onClick={() => { setHomePanel(null); void ask(`Оцени, как актуальные материалы по теме «${u.title}» влияют на мой бизнес. Укажи, что подтверждено и что требует проверки.`, programs.find((p) => p.id === u.opportunityId) ?? null, 'strategy'); }}>Объяснить влияние с AI</ActionButton></article>)}
+        </section>}
         {homePanel === 'more' && <div className="home-panel-actions">
           <ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('assistant'); }}>AI-помощник</ActionButton>
           <ActionButton className="secondary" onClick={() => { setHomePanel(null); setPage('profile'); }}>Мой бизнес</ActionButton>
@@ -1080,7 +1116,7 @@ export default function BusinessApp() {
           }}>Удалить</ActionButton>
         </div>
       </ModalSheet>}
-      {projectOnboard && <ProjectOnboarding initial={projectProfile} onCancel={() => setProjectOnboard(false)} onSave={(project) => { setProjectProfile(project); setProfile(null); setNeed({ ...need, purpose: project.fundingPurpose, amount: project.fundingNeed }); setProjectOnboard(false); setPage('overview'); setHomePanel('funding'); }} />}
+      {projectOnboard && <ProjectOnboarding initial={aiProjectSeed ?? projectProfile} onCancel={() => { setProjectOnboard(false); setAIProjectSeed(null); }} onSave={(project) => { setProjectProfile(project); setProfile(null); setNeed({ ...need, purpose: project.fundingPurpose, amount: project.fundingNeed }); setProjectOnboard(false); setAIProjectSeed(null); setPage('overview'); setHomePanel('funding'); }} />}
       {toast && (
         <div className="toast" role="status">
           <Icon name="check" size={18} />

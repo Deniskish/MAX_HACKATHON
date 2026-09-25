@@ -1,6 +1,7 @@
 FROM node:22-bookworm-slim AS build
 WORKDIR /app/miniapp
 COPY miniapp/package*.json ./
+COPY miniapp/scripts/ ./scripts/
 RUN npm ci
 COPY miniapp/ ./
 RUN npm run build

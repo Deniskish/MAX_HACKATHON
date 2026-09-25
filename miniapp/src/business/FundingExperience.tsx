@@ -7,6 +7,7 @@ import { emptyFundingNeed, fundingPurposes, type FundingMatch, type FundingNeed,
 import { amountLabel, fundingKindLabels, fundingSourceLabel, fundingStatusLabels,
   rateLabel, scoreNotice, termLabel } from '../../api-server/funding-catalog/presentation';
 import { fundingFingerprint, requestFunding, restoreFundingNeed } from './funding';
+import { AIPanel } from './AIExperience';
 
 export function FundingOpportunityCard({ match, onOpen, onSave, saved }: { match: FundingMatch; onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: boolean }) {
   const o = match.opportunity;
@@ -118,6 +119,7 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onSave
     }
   }
   return <section className="funding-experience">
+    <details className="ai-entry"><summary>Описать потребность своими словами</summary><AIPanel title="Умный подбор" task="intake" context={{ profile, need: need.purpose ? need : undefined, page: 'funding' }} onNeed={setNeed} onOpen={onOpen} /></details>
     <form className="widget" onSubmit={submit}>
       <h2>Что нужно вашему бизнесу?</h2>
       <p>Укажите цель — система сравнит разные способы финансирования. Остальные поля необязательны.</p>
@@ -148,6 +150,6 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onSave
       {error && <p className="error" role="alert">{error}</p>}
       {storageNotice && <p role="status">{storageNotice}</p>}
     </form>
-    {result && result.fingerprint === fingerprint && <FundingResults result={result.data} onOpen={onOpen} onSave={onSave} saved={saved} />}
+    {result && result.fingerprint === fingerprint && <><AIPanel title="Сравнить варианты с AI" task="strategy" context={{ profile, need, page: 'funding' }} initialQuestion="Объясни приоритеты, сравни варианты и предложи следующий шаг. Если данных недостаточно, задай вопросы." onNeed={setNeed} onOpen={onOpen} /><FundingResults result={result.data} onOpen={onOpen} onSave={onSave} saved={saved} /></>}
   </section>;
 }

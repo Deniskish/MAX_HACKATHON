@@ -5,7 +5,8 @@
     "start": "tsx server.ts",
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc",
     "start:prod": "node dist/server.js",
-    "test": "tsx --test privacy.test.ts gigachat.test.ts company-data/*.test.ts funding-catalog/*.test.ts app.test.ts contracts.test.ts",
+    "test": "tsx --test privacy.test.ts gigachat.test.ts company-data/*.test.ts funding-catalog/*.test.ts ai/*.test.ts app.test.ts contracts.test.ts",
+    "sync:sources": "tsx ai/sync-sources.ts",
     "sync:fns": "tsx company-data/sync.ts"
   },
   "dependencies": {
@@ -13,6 +14,7 @@
     "dotenv": "^17.2.3",
     "express": "^4.18.2",
     "iconv-lite": "^0.7.3",
+    "linkedom": "^0.18.13",
     "saxes": "^6.0.0",
     "yauzl": "^3.4.0"
   },

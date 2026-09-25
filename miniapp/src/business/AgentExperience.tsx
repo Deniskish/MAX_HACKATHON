@@ -1,28 +1,38 @@
-// Редактор документов сохраняет данные локально; модель получает только обезличенные параметры.
-import { useState } from 'react';
+// Файлы читаются на устройстве; отправка текста в AI запускается отдельной кнопкой.
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { ActionButton, BusinessTextarea } from './MaxControls';
 import { Icon } from './Icon';
+import { AIPanel } from './AIExperience';
+import { readDocument } from './document-reader';
+import { requestAI, type AIDocument } from './ai-client';
+import { toFundingProfile } from '../../api-server/funding-catalog/input';
 import { type Profile, type Program, type Application, type DraftKind,
   documentGuide, inspectDocumentText, generateDraft, draftKinds } from './domain';
 export function DocumentChecklist({
   program,
   app,
+  profile,
   onUpdate,
+  documents,
+  setDocuments,
 }: {
   program: Program;
   app: Application;
+  profile: Profile | null;
   onUpdate: (patch: Partial<Application>) => void;
+  documents: Record<string, AIDocument>;
+  setDocuments: Dispatch<SetStateAction<Record<string, AIDocument>>>;
 }) {
   const [reviews, setReviews] = useState<Record<string, ReturnType<typeof inspectDocumentText>>>(
     {},
   );
   const [texts, setTexts] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [reading, setReading] = useState('');
+  const reader = useRef<AbortController | null>(null);
+  useEffect(() => () => reader.current?.abort(), []);
   async function fileSelected(name: string, file: File) {
-    if (file.size > 2 * 1024 * 1024) {
-      setErrors((old) => ({ ...old, [name]: 'Для локальной проверки выберите файл до 2 МБ.' }));
-      return;
-    }
+    reader.current?.abort(); const controller = new AbortController(); reader.current = controller; setReading(name);
     onUpdate({ documentFiles: { ...app.documentFiles, [name]: file.name } });
     setErrors((old) => ({ ...old, [name]: '' }));
     setReviews((old) => {
@@ -30,22 +40,17 @@ export function DocumentChecklist({
       delete copy[name];
       return copy;
     });
-    if (file.name.toLowerCase().endsWith('.txt'))
-      try {
-        const text = await file.text();
-        setReviews((old) => ({ ...old, [name]: inspectDocumentText(name, text) }));
-      } catch {
-        setErrors((old) => ({
-          ...old,
-          [name]: 'Не удалось прочитать текст. Скопируйте нужные разделы в поле ниже.',
-        }));
-      }
-    else
-      setErrors((old) => ({
-        ...old,
-        [name]:
-          'Название сохранено. PDF, DOCX и изображения здесь не распознаются; вставьте текст ниже для локальной проверки.',
-      }));
+    setDocuments((old) => { const next = { ...old }; delete next[name]; return next; });
+    setTexts((old) => ({ ...old, [name]: '' }));
+    try {
+      const document = await readDocument(file, (text) => { if (!controller.signal.aborted) setErrors((old) => ({ ...old, [name]: text })); }, controller.signal);
+      if (controller.signal.aborted || reader.current !== controller) return;
+      const text = document.pages.map((p) => `[Страница ${p.page}]\n${p.text}`).join('\n\n');
+      setDocuments((old) => ({ ...old, [name]: document })); setTexts((old) => ({ ...old, [name]: text }));
+      setReviews((old) => ({ ...old, [name]: inspectDocumentText(name, text) }));
+      setErrors((old) => ({ ...old, [name]: `Прочитано страниц: ${document.pages.length}. Проверьте текст перед AI-анализом.` }));
+    } catch (e) { if (!controller.signal.aborted) setErrors((old) => ({ ...old, [name]: e instanceof Error ? e.message : 'Не удалось прочитать документ.' })); }
+    finally { if (reader.current === controller) { reader.current = null; setReading(''); } }
   }
   return (
     <div className="personal-checklist">
@@ -88,7 +93,8 @@ export function DocumentChecklist({
                 Выбрать документ
                 <input
                   type="file"
-                  accept=".txt,text/plain"
+                  accept=".txt,.pdf,.docx,.png,.jpg,.jpeg,.webp"
+                  disabled={!!reading}
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) void fileSelected(name, f);
@@ -96,18 +102,22 @@ export function DocumentChecklist({
                 />
               </label>
               <p className="widget-footnote">
-                Файл не отправляется на сервер. TXT проверяется локально; содержимое не сохраняется.
-                Готовность отметьте отдельно после проверки.
+                TXT, PDF, DOCX и сканы до 10 МБ читаются на устройстве. Текст хранится только в этой вкладке.
+                Для AI-проверки используйте кнопку под комплектом документов. DOCX отображается как один текстовый раздел.
               </p>
+              {reading === name && <ActionButton className="secondary" onClick={() => { reader.current?.abort(); reader.current = null; setReading(''); setErrors((old) => ({ ...old, [name]: 'Чтение отменено.' })); }}>Отменить чтение</ActionButton>}
               <label className="field">
                 Проверка текста документа
               <BusinessTextarea
                   aria-label={`Проверка текста документа: ${name}`}
                   rows={3}
-                  maxLength={100000}
+                  maxLength={60000}
                   value={texts[name] || ''}
                   onChange={(e) => {
                     setTexts((old) => ({ ...old, [name]: e.target.value }));
+                    const content = e.target.value;
+                    setDocuments((old) => ({ ...old, [name]: { id: old[name]?.id ?? crypto.randomUUID(), name,
+                      pages: [{ page: 1, text: content }] } }));
                     setReviews((old) => {
                       const next = { ...old };
                       delete next[name];
@@ -147,6 +157,14 @@ export function DocumentChecklist({
           </section>
         );
       })}
+      <details className="ai-entry"><summary>AI-проверка комплекта и заявки</summary>
+        <p className="widget-footnote">Передаются только показанные выше тексты, описание проекта и текущий черновик. После ручного редактирования текста он считается одним разделом. Суммарно — до 60 000 символов документов.</p>
+        <AIPanel title="Проверить перед подачей" task="review" context={{ profile: profile ? toFundingProfile(profile) : {},
+          identifiers: profile ? { name: profile.name, inn: profile.inn } : undefined, programId: program.id, project: app.project,
+          draft: app.generatedDraft?.slice(0, 18000), budget: app.budget.trim() ? Number(app.budget) : null,
+          preparedDocuments: program.documents.filter((d) => app.documents[d]), documents: Object.values(documents).filter((d) => d.pages.some((p) => p.text.trim())) }}
+          initialQuestion="Проверь комплект по требованиям программы. Найди противоречия в суммах, сроках и описании проекта, недостающие обоснования. Для замечаний к документам приведи точную цитату и страницу. Не считай отмеченный документ проверенным." />
+      </details>
     </div>
   );
 }
@@ -158,53 +176,46 @@ export function DraftComposer({
   app,
   onUpdate,
   onDownload,
+  documents,
 }: {
   program: Program;
   profile: Profile;
   app: Application;
   onUpdate: (patch: Partial<Application>) => void;
   onDownload: (text: string) => void;
+  documents: AIDocument[];
 }) {
   const [kind, setKind] = useState<DraftKind>('project');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const pending = useRef<AbortController | null>(null);
+  const documentFingerprint = JSON.stringify(documents);
+  useEffect(() => { pending.current?.abort(); pending.current = null; setBusy(false); return () => pending.current?.abort(); }, [kind, app.project, app.budget, documentFingerprint]);
   async function create() {
+    const controller = new AbortController(); pending.current = controller;
     setBusy(true);
     setNotice('');
     let text = generateDraft(kind, program, profile, app),
       origin = 'Локальный автоматический шаблон';
     try {
-      const response = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          task: 'draft',
-          draftKind: kind,
-          question: 'Подготовь черновик по выбранной программе',
-          context: {
-            profile,
-            programId: program.id,
-            application: {
-              preparedDocuments: program.documents.filter((d) => app.documents[d]),
-              budget: app.budget.trim() ? Number(app.budget) : null,
-            },
-          },
-        }),
-        signal: AbortSignal.timeout(45000),
-      });
-      if (!response.ok) throw new Error('unavailable');
-      const data = await response.json();
-      if (data.mode !== 'llm' || typeof data.answer !== 'string' || !data.answer.trim())
+      const data = await requestAI({ task: 'draft', question: 'Подготовь черновик по выбранной программе и описанию моего проекта.',
+        context: { profile: toFundingProfile(profile), identifiers: { name: profile.name, inn: profile.inn },
+          programId: program.id, draftKind: draftKinds[kind], project: app.project, documents,
+          preparedDocuments: program.documents.filter((d) => app.documents[d]), budget: app.budget.trim() ? Number(app.budget) : null } },
+        AbortSignal.any([controller.signal, AbortSignal.timeout(70000)]));
+      if (data.mode !== 'llm' || !data.draft?.trim())
         throw new Error('invalid');
       text =
         'АВТОМАТИЧЕСКИЙ ЧЕРНОВИК GIGACHAT — ПРОВЕРЬТЕ И ОТРЕДАКТИРУЙТЕ\n\n' +
-        data.answer +
+        data.draft +
         '\n\nПроверьте факты, заполните пропуски и сверяйте текст с формой оператора. Заявка не отправлена.';
-      origin = 'GigaChat · обезличенные параметры';
+      origin = 'GigaChat · по описанию проекта';
     } catch {
       setNotice('GigaChat недоступен. Подготовлен локальный шаблон с вашими данными.');
     }
+    if (controller.signal.aborted) return;
     onUpdate({ generatedDraft: text, draftOrigin: origin });
+    pending.current = null;
     setBusy(false);
   }
   return (
@@ -229,6 +240,7 @@ export function DraftComposer({
             {busy ? 'Готовим черновик…' : 'Сформировать черновик'}
             <Icon name="spark" size={17} />
           </ActionButton>
+          {busy && <ActionButton className="secondary" onClick={() => { pending.current?.abort(); pending.current = null; setBusy(false); }}>Отменить генерацию</ActionButton>}
         </>
       )}
       {notice && (
@@ -257,11 +269,18 @@ export function DraftComposer({
             <Icon name="download" size={18} />
             Скачать этот документ
           </ActionButton>
+          <details className="ai-entry"><summary>Доработать текст с AI</summary><AIPanel title="Редактор с AI" task="draft"
+            context={{ profile: toFundingProfile(profile), identifiers: { name: profile.name, inn: profile.inn }, programId: program.id,
+              project: app.project, documents, draft: app.generatedDraft.slice(0, 18000), draftKind: draftKinds[kind], budget: app.budget.trim() ? Number(app.budget) : null }}
+            initialQuestion="Улучши структуру и обоснование документа по условиям программы. Сохрани факты и цифры; недостающие сведения отметь [заполните]."
+            onDraft={(text) => onUpdate({ generatedDraft: text, draftOrigin: 'GigaChat · правки применены пользователем' })} />
+            {app.generatedDraft.length > 18000 && <p className="widget-footnote">Для AI-редактирования доступны первые 18 000 символов. Выберите нужный фрагмент перед применением результата.</p>}
+          </details>
         </>
       )}
       <p className="widget-footnote">
-        Черновик сохраняется в этом браузере. Модель получает только разрешённые параметры и официальные
-        условия; ваш исходный текст проекта ей не отправляется.
+        Черновик сохраняется на устройстве. При генерации GigaChat получает описание проекта, бюджет, условия программы и тексты загруженных выше документов.
+        Известные реквизиты скрываются. Проверьте текст перед подачей.
       </p>
     </section>
   );
