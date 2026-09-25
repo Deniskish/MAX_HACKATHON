@@ -64,6 +64,11 @@ export const reviewFunction = {
     findings: answerFunction.parameters.properties.findings,
   }, required: ['answer', 'evidenceIds', 'followups', 'findings'] },
 };
+export const draftFunction = {
+  name: 'compose_application', description: 'Подготовить редактируемый текст заявки по переданным материалам. Неизвестные сведения обозначить [заполните]. Не утверждать, что заявка подана.',
+  parameters: { type: 'object', properties: { answer: { type: 'string', description: 'Кратко поясни, что подготовлено и что нужно дополнить.' },
+    draft: { type: 'string', description: 'Полный текст редактируемого черновика.' }, evidenceIds: { type: 'array', items: { type: 'string' } } }, required: ['answer', 'draft', 'evidenceIds'] },
+};
 export const workspaceFunction = {
   name: 'adapt_workspace', description: 'Адаптировать все пять экранов приложения по анализу бизнеса. Заполни sections: home, programs, applications, calendar, assistant. Для каждого экрана одна запись. Не меняй профиль и расчёты.',
   parameters: { type: 'object', properties: {
@@ -106,8 +111,8 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
   signal.throwIfAborted();
   const originalNeed = request.context.need ?? { ...emptyFundingNeed }, originalProfile = request.context.profile ?? {};
   let plan: Record<string, any> = {}, calls = 0, tokens = 0, unavailable = !model, providerFailure: string | undefined;
-  // Review already has an explicit application and its materials; no search/extraction plan is needed.
-  if (model && request.task !== 'review') {
+  // Only dialogue, intake and search need fact extraction. Other tasks already have explicit context.
+  if (model && ['chat', 'intake', 'search'].includes(request.task)) {
     try {
       const result = await model('plan', { request, purposes: fundingPurposes,
         catalog: officialFundingCatalog.map((o) => ({ id: o.id, title: o.title, description: o.description, purposes: o.purposes })) }, signal);
@@ -116,7 +121,7 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
       if (signal.aborted) throw error;
       providerFailure = failureCode(error);
       // A missing structured plan must not discard an otherwise available chat model.
-      unavailable = request.task !== 'chat' || !['NO_FUNCTION_CALL', 'INVALID_RESPONSE'].includes(providerFailure);
+      unavailable = request.task === 'intake' || !['NO_FUNCTION_CALL', 'INVALID_RESPONSE'].includes(providerFailure);
     }
   }
   let proposedNeed: FundingNeed | undefined, proposedProfile: FundingProfile | undefined;
@@ -185,6 +190,7 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
       calls += result.calls ?? 1; tokens += result.tokens ?? 0;
       const answer = object(result.value);
       if (!concise(answer.answer, 12000)) throw new PrivacyError('INVALID_RESPONSE');
+      if (request.task === 'draft' && !concise(answer.draft, 18000)) throw new PrivacyError('INVALID_RESPONSE');
       if (request.task === 'review' && (!Array.isArray(answer.findings) || !Array.isArray(answer.evidenceIds) || !Array.isArray(answer.followups))) throw new PrivacyError('INVALID_RESPONSE');
       if (request.task === 'workspace') {
         const source = object(answer.personalization), sections = object(source.sections);

@@ -18,6 +18,7 @@ jobs:
           chmod 600 ~/.ssh/audit_key
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
           scp -i ~/.ssh/audit_key miniapp/api-server/ai/scenario-audit.cjs "$SERVER_USER@$SERVER_HOST:/tmp/opora-scenario-audit.cjs"
+          sleep 60
           ssh -i ~/.ssh/audit_key "$SERVER_USER@$SERVER_HOST" "AUDIT_REVISION=$GITHUB_SHA node /tmp/opora-scenario-audit.cjs /tmp/opora-scenario-audit.json"
           scp -i ~/.ssh/audit_key "$SERVER_USER@$SERVER_HOST:/tmp/opora-scenario-audit.json" ./scenario-audit.json
       - uses: actions/upload-artifact@v4

@@ -60,7 +60,7 @@ function makeContext(profile, task) {
     report.cases.push(result); report.updatedAt=new Date().toISOString(); fs.writeFileSync(file, JSON.stringify(report,null,2));
     console.log(JSON.stringify({ id:result.id, status:result.status, mode:result.mode, failedChecks:result.failedChecks, durationMs:result.durationMs, providerFailure:result.providerFailure }));
     // Stay below the application's 15 AI requests per minute, even with fast validation responses.
-    await new Promise(resolve => setTimeout(resolve, Math.max(0, 5000-(Date.now()-start))));
+    await new Promise(resolve => setTimeout(resolve, Math.max(0, Number(process.env.AUDIT_PACE_MS || 20000)-(Date.now()-start))));
   }
   console.log('AUDIT_TOTAL', JSON.stringify({ total:report.cases.length, passed:report.cases.filter(c=>c.status==='pass').length }));
 })().catch(error=>{console.error(error.name);process.exitCode=1;});

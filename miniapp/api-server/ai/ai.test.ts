@@ -196,6 +196,27 @@ test('chat recovers from an unstructured plan without inventing changes to the b
   assert.equal(result.proposedNeed, undefined); assert.equal(result.proposedProfile, undefined);
 });
 
+test('all conversational tasks use text without imposing document schemas', async () => {
+  for (const task of ['chat','intake','search','analysis','strategy','changes']) {
+    const model = createAIModel('https://api.giga.chat/v1/chat/completions','GigaChat-2-Pro',async()=>'test',(async(_url,init)=>{
+      const wire=JSON.parse(String(init?.body));assert.equal(wire.functions,undefined);
+      return new Response(JSON.stringify({choices:[{message:{content:'Уточните цель бизнеса.'}}]}));
+    }) as typeof fetch);
+    assert.equal((await model('answer',{request:{task}},AbortSignal.timeout(1000))).value && true,true);
+  }
+});
+
+test('draft and workspace accept validated JSON when the provider omits the function call', async () => {
+  for (const task of ['draft','workspace']) {
+    const value=task==='draft'?{answer:'Черновик готов.',draft:'Описание проекта [заполните].',evidenceIds:[]}
+      :{summary:'План',evidenceIds:[],priorities:[],sections:workspacePages.map(page=>({page,title:'План',text:'Уточните цель',action:'funding'}))};
+    const model=createAIModel('https://api.giga.chat/v1/chat/completions','GigaChat-2-Pro',async()=>'test',(async()=>new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(value)}}]}))) as typeof fetch);
+    const result=await model('answer',{request:{task}},AbortSignal.timeout(1000));
+    if(task==='draft')assert.equal((result.value as any).draft,value.draft);
+    else assert.equal(Object.keys((result.value as any).personalization.sections).length,5);
+  }
+});
+
 test('unchanged needs are not offered again, and unavailable programmes are not recommendation buttons', async () => {
   const need = { ...emptyFundingNeed, purpose: 'запуск производства', amount: 400000, preferredTermMonths: 3 };
   const result = await runAssistant({ ...input, context: { ...input.context, need } }, async (stage) => ({ value: stage === 'plan'
