@@ -14,6 +14,8 @@ test('production serves compressed builds, caches safely and preserves API reque
   await fs.writeFile(path.join(root, 'index.html'), html);
   await fs.writeFile(path.join(root, 'assets/app-a1b2c3d4.js'), script);
   await fs.writeFile(path.join(root, 'assets/orb.png'), 'image');
+  await fs.writeFile(path.join(root, 'assets/orb-a1b2c3d4.webp'), 'old-image');
+  await fs.writeFile(path.join(root, 'assets/orb-e5f6a7b8.webp'), 'new-image');
   const backend = http.createServer((req, res) => {
     let body = '';
     req.on('data', (data) => { body += data; });
@@ -41,6 +43,18 @@ test('production serves compressed builds, caches safely and preserves API reque
     assert.equal(await response.text(), script);
     const image = await fetch(origin + '/assets/orb.png');
     assert.doesNotMatch(image.headers.get('cache-control'), /immutable/);
+    assert.equal(image.headers.get('cache-control'), 'public, max-age=3600');
+    // Content-versioned images can stay cached; replacing art uses a new URL.
+    const oldArt = await fetch(origin + '/assets/orb-a1b2c3d4.webp');
+    assert.equal(oldArt.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+    assert.match(oldArt.headers.get('content-type'), /image\/webp/);
+    assert.equal(await oldArt.text(), 'old-image');
+    const newArt = await fetch(origin + '/assets/orb-e5f6a7b8.webp');
+    assert.equal(await newArt.text(), 'new-image');
+    assert.equal((await fetch(origin + '/assets/orb-a1b2c3d4.webp', {
+      headers: { 'If-None-Match': oldArt.headers.get('etag'), 'Cache-Control': 'max-age=0' },
+    })).status, 304);
+    assert.equal((await fetch(origin + '/assets/missing-a1b2c3d4.webp')).status, 404);
     assert.equal((await fetch(origin + '/assets/app-a1b2c3d4.js', { method: 'HEAD' })).status, 200);
     for (const route of ['/assets/missing.js', '/src/main.tsx', '/@vite/client', '/node_modules/private', '/.env', '/api-server/server.ts']) {
       assert.equal((await fetch(origin + route)).status, 404, route);

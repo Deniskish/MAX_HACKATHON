@@ -5,7 +5,7 @@ export type AppPage = 'overview' | 'programs' | 'applications' | 'calendar' | 'p
 
 export function BrandWordmark({ className = '' }: { className?: string }) {
   return <span className={`home-wordmark ${className}`}>
-    <ThemedImage src="/assets/opora-logo.png" width={1254} height={1254} alt="опора." draggable={false} />
+    <ThemedImage src="/assets/opora-logo.png" sizes={className.includes('hero') ? '260px' : '140px'} width={1254} height={1254} alt="опора." draggable={false} />
   </span>;
 }
 

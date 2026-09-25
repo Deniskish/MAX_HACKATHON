@@ -24,7 +24,7 @@ function createApp({ root = path.resolve(__dirname, '../dist'), api = 'http://12
   app.use(express.static(root, {
     dotfiles: 'deny',
     setHeaders(res, filename) {
-      const hashed = /-[\w-]{8,}\.(?:js|css|woff2)$/.test(path.basename(filename));
+      const hashed = /-[\w-]{8,}\.(?:js|css|woff2|webp|avif|png|jpe?g|svg)$/.test(path.basename(filename));
       res.setHeader('Cache-Control', filename.endsWith('.html') ? 'no-cache'
         : hashed ? 'public, max-age=31536000, immutable' : 'public, max-age=3600');
     },

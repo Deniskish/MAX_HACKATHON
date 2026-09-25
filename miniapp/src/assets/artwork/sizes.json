@@ -1,0 +1,194 @@
+[
+  {
+    "source": "public\\assets\\hero-shapes.png",
+    "file": "dark-hero-shapes-480.webp",
+    "originalBytes": 1316256,
+    "bytes": 48148
+  },
+  {
+    "source": "public\\assets\\hero-shapes.png",
+    "file": "dark-hero-shapes-960.webp",
+    "originalBytes": 1316256,
+    "bytes": 157624
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\hero-shapes.webp",
+    "file": "light-hero-shapes-480.webp",
+    "originalBytes": 678422,
+    "bytes": 33032
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\hero-shapes.webp",
+    "file": "light-hero-shapes-960.webp",
+    "originalBytes": 678422,
+    "bytes": 97110
+  },
+  {
+    "source": "public\\assets\\opora-logo.png",
+    "file": "dark-opora-logo-384.webp",
+    "originalBytes": 317387,
+    "bytes": 13850
+  },
+  {
+    "source": "public\\assets\\opora-logo.png",
+    "file": "dark-opora-logo-768.webp",
+    "originalBytes": 317387,
+    "bytes": 34448
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\opora-logo.webp",
+    "file": "light-opora-logo-384.webp",
+    "originalBytes": 186648,
+    "bytes": 10216
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\opora-logo.webp",
+    "file": "light-opora-logo-768.webp",
+    "originalBytes": 186648,
+    "bytes": 26732
+  },
+  {
+    "source": "public\\assets\\document.png",
+    "file": "dark-document-240.webp",
+    "originalBytes": 843754,
+    "bytes": 9202
+  },
+  {
+    "source": "public\\assets\\document.png",
+    "file": "dark-document-480.webp",
+    "originalBytes": 843754,
+    "bytes": 21168
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\document.webp",
+    "file": "light-document-240.webp",
+    "originalBytes": 736400,
+    "bytes": 19296
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\document.webp",
+    "file": "light-document-480.webp",
+    "originalBytes": 736400,
+    "bytes": 51882
+  },
+  {
+    "source": "public\\assets\\briefcase.png",
+    "file": "dark-briefcase-240.webp",
+    "originalBytes": 1065966,
+    "bytes": 10714
+  },
+  {
+    "source": "public\\assets\\briefcase.png",
+    "file": "dark-briefcase-480.webp",
+    "originalBytes": 1065966,
+    "bytes": 24842
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\briefcase.webp",
+    "file": "light-briefcase-240.webp",
+    "originalBytes": 748998,
+    "bytes": 20396
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\briefcase.webp",
+    "file": "light-briefcase-480.webp",
+    "originalBytes": 748998,
+    "bytes": 58294
+  },
+  {
+    "source": "public\\assets\\orb.png",
+    "file": "dark-orb-160.webp",
+    "originalBytes": 747670,
+    "bytes": 4944
+  },
+  {
+    "source": "public\\assets\\orb.png",
+    "file": "dark-orb-320.webp",
+    "originalBytes": 747670,
+    "bytes": 11002
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\orb.webp",
+    "file": "light-orb-160.webp",
+    "originalBytes": 627198,
+    "bytes": 7710
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\orb.webp",
+    "file": "light-orb-320.webp",
+    "originalBytes": 627198,
+    "bytes": 20230
+  },
+  {
+    "source": "public\\assets\\glass\\ring.png",
+    "file": "dark-ring-240.webp",
+    "originalBytes": 1277317,
+    "bytes": 19206
+  },
+  {
+    "source": "public\\assets\\glass\\ring.png",
+    "file": "dark-ring-480.webp",
+    "originalBytes": 1277317,
+    "bytes": 48930
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\ring.webp",
+    "file": "light-ring-240.webp",
+    "originalBytes": 918454,
+    "bytes": 21898
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\ring.webp",
+    "file": "light-ring-480.webp",
+    "originalBytes": 918454,
+    "bytes": 57892
+  },
+  {
+    "source": "public\\assets\\glass\\loop.png",
+    "file": "dark-loop-240.webp",
+    "originalBytes": 1060314,
+    "bytes": 14692
+  },
+  {
+    "source": "public\\assets\\glass\\loop.png",
+    "file": "dark-loop-480.webp",
+    "originalBytes": 1060314,
+    "bytes": 35650
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\loop.webp",
+    "file": "light-loop-240.webp",
+    "originalBytes": 709818,
+    "bytes": 15974
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\loop.webp",
+    "file": "light-loop-480.webp",
+    "originalBytes": 709818,
+    "bytes": 41042
+  },
+  {
+    "source": "public\\assets\\glass\\tiles.png",
+    "file": "dark-tiles-240.webp",
+    "originalBytes": 1235432,
+    "bytes": 13786
+  },
+  {
+    "source": "public\\assets\\glass\\tiles.png",
+    "file": "dark-tiles-480.webp",
+    "originalBytes": 1235432,
+    "bytes": 34516
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\tiles.webp",
+    "file": "light-tiles-240.webp",
+    "originalBytes": 877212,
+    "bytes": 20290
+  },
+  {
+    "source": "public\\assets\\light\\neutral\\tiles.webp",
+    "file": "light-tiles-480.webp",
+    "originalBytes": 877212,
+    "bytes": 54616
+  }
+]

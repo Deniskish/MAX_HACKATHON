@@ -8,5 +8,5 @@ export function GlassArt({ shape, size = 112, className = '' }: {
 }) {
   return <ThemedImage className={`glass-art glass-art-${shape} ${className}`}
     src={`/assets/glass/${shape}.png`} alt="" aria-hidden="true"
-    width={size} height={size} draggable={false} decoding="async" />;
+    width={size} height={size} sizes={`${size}px`} draggable={false} decoding="async" loading="lazy" />;
 }
