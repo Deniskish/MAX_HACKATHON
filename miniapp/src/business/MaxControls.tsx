@@ -28,10 +28,11 @@ export function ActionButton({ className = '', type = 'button', ...props }: Reac
     />
   );
 }
-export function BusinessInput(props: InputProps) {
+export function BusinessInput({ className = '', ...props }: InputProps) {
   return (
     <Input
       {...props}
+      className={`opora-input-control ${className}`}
       size="medium"
       withClearButton={false}
       innerClassNames={{

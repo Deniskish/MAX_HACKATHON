@@ -98,6 +98,13 @@
   padding: 0;
   box-shadow: none;
 }
+.opora-theme .opora-input-control {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+}
 .opora-theme .opora-native-input {
   font: inherit;
   font-size: 14px;

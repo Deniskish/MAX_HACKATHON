@@ -762,9 +762,11 @@ export default function BusinessApp() {
         </div>
         <div className="modal">
           {onboard && (
-            <form onSubmit={saveProfile}>
-              <h2>{step === 0 ? 'ИНН вашего бизнеса' : 'Данные для подбора'}</h2>
-              <p className="muted">Шаг {step + 1} из 2</p>
+            <form className="company-profile-form" onSubmit={saveProfile}>
+              <header className="company-profile-heading">
+                <h2>{step === 0 ? 'ИНН вашего бизнеса' : 'Данные для подбора'}</h2>
+                <p className="muted">Шаг {step + 1} из 2</p>
+              </header>
               <CompanySources profile={form} />
               <fieldset className="company-form-fields" disabled={companyLoading}>
                 {step === 0 ? (
