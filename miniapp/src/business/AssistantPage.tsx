@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from './Icon';
 import { ModalSheet } from './ModalSheet';
+import { GlassArt } from './GlassArt';
 
 type ChatMessage = { role: 'user' | 'assistant'; text: string };
 
@@ -64,7 +65,7 @@ export function AssistantPage({ businessName, status, messages, renderMessage, q
         setAwayFromBottom(!pinned.current);
       }}>
         {!messages.some((message) => message.role === 'user') && <div className="assistant-welcome">
-          <img src="/assets/orb.png" alt="" width={64} height={64} />
+          <GlassArt shape="loop" size={112} className="assistant-welcome-art" />
           <h2>С чего начнём?</h2><p>Помогу найти поддержку и разобраться с документами для вашего бизнеса.</p>
           <div className="assistant-prompts">{['Что мне подходит?', 'Какой следующий шаг?', 'Какие документы нужны?'].map((text) => <button key={text} disabled={sending} onClick={() => send(text)}>{text}<Icon name="arrow" size={16} /></button>)}</div>
         </div>}

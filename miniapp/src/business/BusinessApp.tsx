@@ -1,4 +1,5 @@
 import { AssistantPage } from './AssistantPage';
+import { GlassArt } from './GlassArt';
 // Общее состояние экранов, профиля и заявок. Условия программ считаются в domain.
 import { CompanySources, FieldSource } from './CompanySource';
 import { editCompanyProfile, mergeCompanyProfile, requestCompanyData } from './company-data';
@@ -420,7 +421,7 @@ export default function BusinessApp() {
       <main ref={mainRef} className="app-content">
           {page === 'funding-results' && profile && <section className="funding-results-page">
             {fundingResult?.fingerprint === fundingFingerprint(fundingProfile, need) ? <>
-              <div className="funding-result-intro"><span className="hub-eyebrow">ПОД ВАШУ ЗАДАЧУ</span><h2>{need.purpose}</h2>
+              <div className="funding-result-intro"><div className="funding-result-mark"><span className="hub-eyebrow">ПОД ВАШУ ЗАДАЧУ</span><GlassArt shape="ring" size={80} /></div><h2>{need.purpose}</h2>
                 <p>{profile.name}{need.amount ? ` · ${need.amount.toLocaleString('ru-RU')} ₽` : ''}{need.preferredTermMonths ? ` · ${need.preferredTermMonths} мес.` : ''}</p>
                 <ActionButton className="secondary" onClick={() => setHomePanel('funding')}>Изменить параметры</ActionButton>
               </div>
@@ -440,8 +441,8 @@ export default function BusinessApp() {
           />}
           {page === 'programs' && (
             <>
-              {profile ? <><AdaptiveInsight analysis={businessAnalysis} section="programs" onAction={followInsight} /><details className="catalog-personal-context"><summary>{profile.name}</summary><p>{profile.region} · {need.purpose || 'Укажите цель для более точного подбора'}</p><button onClick={() => setHomePanel('funding')}>Изменить цель и параметры подбора <Icon name="arrow" size={14} /></button></details></>
-                : <section className="catalog-guest-context"><p>Вы смотрите общий каталог. Добавьте бизнес, чтобы проверить, какие программы подходят именно вам.</p><button onClick={() => navigate('profile')}>Настроить поддержку для себя <Icon name="arrow" size={14} /></button></section>}
+              {profile ? <><AdaptiveInsight analysis={businessAnalysis} section="programs" onAction={followInsight} /><div className="catalog-glass-context"><details className="catalog-personal-context"><summary>{profile.name}</summary><p>{profile.region} · {need.purpose || 'Укажите цель для более точного подбора'}</p><button onClick={() => setHomePanel('funding')}>Изменить цель и параметры подбора <Icon name="arrow" size={14} /></button></details><GlassArt shape="ring" size={88} /></div></>
+                : <section className="catalog-guest-context"><div><p>Вы смотрите общий каталог. Добавьте бизнес, чтобы проверить, какие программы подходят именно вам.</p><button onClick={() => navigate('profile')}>Настроить поддержку для себя <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={104} /></section>}
               {profile && <div className="catalog-scopes" aria-label="Область подбора">{([['personal', 'Для вас'], ['all', 'Все меры'], ['saved', `Сохранённые · ${saved.length}`]] as const).map(([scope, title]) => <button key={scope} aria-pressed={catalogScope === scope} onClick={() => { setCatalogScope(scope); setOnlySaved(scope === 'saved'); }}>{title}</button>)}</div>}
               <div className="catalog-toolbar">
                 {!profile && <div className="segmented-control" aria-label="Показать программы">
@@ -530,7 +531,7 @@ export default function BusinessApp() {
               </p>
             </>
           )}
-          {page === 'applications' && !profile && <section className="empty-state guest-applications"><Icon name="file" size={38} /><h2>Заявки вашего бизнеса</h2><p>Добавьте компанию или проект — появятся персональные условия, подготовка документов и черновики заявок.</p><ActionButton className="primary" onClick={() => setHomePanel('business')}>Добавить бизнес</ActionButton><ActionButton className="secondary" onClick={() => browse()}>Посмотреть программы</ActionButton></section>}
+          {page === 'applications' && !profile && <section className="empty-state guest-applications"><GlassArt shape="tiles" size={120} /><h2>Заявки вашего бизнеса</h2><p>Добавьте компанию или проект — появятся персональные условия, подготовка документов и черновики заявок.</p><ActionButton className="primary" onClick={() => setHomePanel('business')}>Добавить бизнес</ActionButton><ActionButton className="secondary" onClick={() => browse()}>Посмотреть программы</ActionButton></section>}
           {page === 'applications' && profile &&
             <AdaptiveInsight analysis={businessAnalysis} section="applications" onAction={followInsight} />}
           {page === 'applications' && profile &&
@@ -541,9 +542,7 @@ export default function BusinessApp() {
                   const count = p.documents.filter((d) => a.documents[d]).length;
                   return (
                     <article className="application-row" key={a.id}>
-                      <span className="program-icon">
-                        <Icon name={p.icon} />
-                      </span>
+                      <GlassArt shape="tiles" size={54} className="application-art" />
                       <div className="application-info">
                         <span className="tag">{applicationLabels[applicationStatus(a, officialFundingCatalog.find((o) => o.id === a.programId)!)]} · не отправлено</span>
                         <h3>{p.title}</h3>
@@ -565,7 +564,7 @@ export default function BusinessApp() {
               </div>
             ) : (
               <div className="empty-state">
-                <Icon name="file" size={42} />
+                <GlassArt shape="tiles" size={120} />
                 <h2>Пока нет заявок</h2>
                 <ActionButton className="primary" onClick={() => navigate('programs')}>
                   Выбрать программу <Icon name="arrow" size={17} />
@@ -577,7 +576,7 @@ export default function BusinessApp() {
               <AdaptiveInsight analysis={businessAnalysis} section="calendar" onAction={followInsight} />
               <p className="calendar-context">Сроки для {profile.name}. Здесь — сохранённые программы и программы, по которым вы готовите заявки.</p>
               <div className="catalog-scopes"><button aria-pressed={!allCalendar} onClick={() => setAllCalendar(false)}>Мои сроки</button><button aria-pressed={allCalendar} onClick={() => setAllCalendar(true)}>Весь каталог</button></div>
-              {!calendarPrograms.length && <section className="empty-state"><Icon name="calendar" size={32} /><h2>Опубликованных сроков нет</h2><p>{tracked.length ? 'У выбранных программ нет точных дат в каталоге. Сверяйте сроки на сайте оператора.' : 'Сохраните программу или начните подготовку заявки — её опубликованный срок появится здесь.'}</p><ActionButton className="secondary" onClick={() => navigate('programs')}>Найти поддержку</ActionButton></section>}
+              {!calendarPrograms.length && <section className="empty-state"><GlassArt shape="ring" size={104} /><h2>Опубликованных сроков нет</h2><p>{tracked.length ? 'У выбранных программ нет точных дат в каталоге. Сверяйте сроки на сайте оператора.' : 'Сохраните программу или начните подготовку заявки — её опубликованный срок появится здесь.'}</p><ActionButton className="secondary" onClick={() => navigate('programs')}>Найти поддержку</ActionButton></section>}
               <div className="section-title">
                 <ActionButton
                   className="secondary"

@@ -1,5 +1,6 @@
 import { ActionButton } from './MaxControls';
 import { Icon } from './Icon';
+import { GlassArt } from './GlassArt';
 import type { Profile } from './domain';
 import type { WorkspaceInsight } from '../../api-server/ai/types';
 
@@ -11,7 +12,7 @@ export function BusinessHub({ profile, project, confirmed, pending, applications
 }) {
   if (!profile) return <div className="business-hub guest-hub">
     <section className="hub-welcome">
-      <img src="/assets/briefcase.png" alt="" width={160} height={160} />
+      <GlassArt shape="tiles" size={150} className="hub-welcome-art" />
       <span className="hub-eyebrow">МОЙ БИЗНЕС</span>
       <h2>Поддержка под<br />ваши задачи</h2>
       <p>Сейчас вам доступен весь каталог. Добавьте компанию или проект, чтобы видеть возможности с учётом вашей ситуации.</p>
@@ -27,7 +28,7 @@ export function BusinessHub({ profile, project, confirmed, pending, applications
   </div>;
   return <div className="business-hub">
     <section className="hub-identity">
-      <span className="hub-eyebrow">{project ? 'ВАШ ПРОЕКТ' : 'ВАШ БИЗНЕС'}</span>
+      <div className="hub-identity-mark"><span className="hub-eyebrow">{project ? 'ВАШ ПРОЕКТ' : 'ВАШ БИЗНЕС'}</span><GlassArt shape="tiles" size={76} /></div>
       <div className="hub-identity-title"><h2>{profile.name}</h2><button aria-label="Редактировать профиль" onClick={onEdit}><Icon name="edit" /></button></div>
       <p>{profile.region}{project ? ' · Без юридического лица' : profile.okved ? ` · ОКВЭД ${profile.okved}` : ''}</p>
       <span className="hub-personal"><i />Подбор по вашему профилю</span>
