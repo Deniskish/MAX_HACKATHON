@@ -35,7 +35,6 @@ export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNoti
         <div className="home-hero-artwork">
           <img className="home-hero-shapes" src="/assets/hero-shapes.png" width={1254} height={1254} alt="" draggable={false} />
           <BrandWordmark className="home-wordmark-hero" />
-          <div className="home-hero-index" aria-hidden="true"><span>01 <i /></span><span>02</span><span>03</span></div>
           <p className="home-hero-caption" aria-hidden="true">БИЗНЕС<br />РАЗВИВАЕТСЯ<br />С ПОДДЕРЖКОЙ</p>
         </div>
       </section>

@@ -33,10 +33,6 @@ body:has(.home-dashboard), .opora-theme:has(.home-dashboard) { background: #191a
 .home-hero-artwork { position: relative; width: min(100%, calc(var(--home-hero-height) * 1.176647)); aspect-ratio: 393 / 334; flex: none; }
 .home-hero-shapes { position: absolute; z-index: 1; width: 74%; height: auto; max-width: none; left: 14.5%; top: 6.7%; }
 .home-wordmark-hero { position: absolute; z-index: 2; width: 54%; left: 16.5%; top: 56.8%; }
-.home-hero-index { position: absolute; z-index: 3; left: 7.1%; top: 30%; display: grid; gap: 10px; font-size: 10px; font-weight: 400; color: #5f606b; line-height: 1.3; }
-.home-hero-index > span { display: flex; align-items: center; gap: 9px; }
-.home-hero-index > span:first-child { color: #ebebf3; }
-.home-hero-index i { display: block; width: 18px; height: 1px; background: #ebebf3; }
 .home-hero-caption { position: absolute; z-index: 3; left: 81%; top: 65%; margin: 0; font-size: clamp(5.6px, 1.64vw, 7px); font-weight: 400; letter-spacing: .055em; line-height: 1.65; color: #9293a0; white-space: nowrap; }
 .home-hero-caption::before { content: ''; display: block; width: 24px; height: 1px; background: #ffffff12; margin: 0 0 8px -16px; }
 .home-actions { margin: 0 5.1%; }
