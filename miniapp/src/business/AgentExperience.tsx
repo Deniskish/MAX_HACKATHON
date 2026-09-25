@@ -163,7 +163,7 @@ export function DocumentChecklist({
           identifiers: profile ? { name: profile.name, inn: profile.inn } : undefined, programId: program.id, project: app.project,
           draft: app.generatedDraft?.slice(0, 18000), budget: app.budget.trim() ? Number(app.budget) : null,
           preparedDocuments: program.documents.filter((d) => app.documents[d]), documents: Object.values(documents).filter((d) => d.pages.some((p) => p.text.trim())) }}
-          initialQuestion="Проверь комплект по требованиям программы. Найди противоречия в суммах, сроках и описании проекта, недостающие обоснования. Для замечаний к документам приведи точную цитату и страницу. Не считай отмеченный документ проверенным." />
+          button="Проверить заявку" initialQuestion="Проверь заявку: чего не хватает и что нужно исправить перед подачей?" />
       </details>
     </div>
   );

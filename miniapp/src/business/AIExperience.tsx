@@ -64,14 +64,17 @@ export function AIPanel({ title, task, context, initialQuestion = '', button = '
     setBusy(true); setError(''); setResult(null);
     try {
       const answer = await requestAI({ task, question: text, context }, AbortSignal.any([controller.signal, AbortSignal.timeout(70000)]));
-      if (pending.current === controller && !controller.signal.aborted) { setResult(answer); onResult?.(answer); }
+      if (pending.current === controller && !controller.signal.aborted) {
+        if (task === 'review' && answer.mode === 'local') setError('Не удалось проверить заявку. Попробуйте ещё раз — ваши данные остались в форме.');
+        else { setResult(answer); onResult?.(answer); }
+      }
     } catch (e) { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'Не удалось выполнить анализ.'); }
     finally { if (pending.current === controller) { pending.current = null; setBusy(false); } }
   }
   return <section className="widget ai-panel"><div className="widget-heading"><h2>{title}</h2><Icon name="spark" /></div>
     <label className="field">Задача для помощника<BusinessTextarea rows={3} maxLength={2000} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Опишите задачу своими словами" /></label>
     <p className="widget-footnote">Запрос и нужные сведения будут обработаны GigaChat. Известные реквизиты скрываются; не добавляйте лишние персональные данные.</p>
-    <ActionButton className="primary" disabled={busy || !question.trim()} onClick={() => void run()}>{busy ? 'Анализируем…' : button}</ActionButton>
+    <ActionButton className="primary" disabled={busy || !question.trim()} onClick={() => void run()}>{busy ? 'Анализируем…' : error ? 'Повторить запрос' : button}</ActionButton>
     {busy && <ActionButton className="text-button" onClick={() => { pending.current?.abort(); pending.current = null; setBusy(false); }}>Отменить</ActionButton>}
     {error && <p className="error" role="alert">{error}</p>}
     {result && <AIResultView result={result} {...handlers} onNeed={handlers.onNeed ? (need) => { applying.current = JSON.stringify(context.need) !== JSON.stringify(need); handlers.onNeed!(need); } : undefined} onQuestion={(q) => { setQuestion(q); }} />}

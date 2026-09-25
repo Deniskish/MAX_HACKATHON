@@ -107,7 +107,9 @@ test('provider failure is explicitly local; no invented document review or gener
   const broken: AIModel = async () => { throw new Error('PRIVATE_PROVIDER_SECRET'); };
   for (const task of ['chat', 'review', 'draft']) {
     const result = await runAssistant({ ...input, task }, broken);
-    assert.equal(result.mode, 'local'); assert.ok(result.notice); assert.equal(result.draft, undefined);
+    assert.equal(result.mode, 'local');
+    if (task !== 'review') assert.ok(result.notice, 'catalogue fallback must explain its source');
+    assert.equal(result.draft, undefined);
     assert.doesNotMatch(JSON.stringify(result), /PRIVATE_PROVIDER_SECRET/);
     if (task === 'review') assert.match(result.answer, /не сформирован/);
   }
@@ -148,7 +150,41 @@ test('chat accepts actual model text without a function call, while reviews stil
   const result = await model('answer', { request: { task: 'chat' } }, AbortSignal.timeout(1000));
   assert.match((result.value as any).answer, /обеспечением/);
   assert.equal(wire.functions, undefined); assert.equal(result.tokens, 12);
-  await assert.rejects(() => model('answer', { request: { task: 'review' } }, AbortSignal.timeout(1000)), (e: any) => e.code === 'NO_FUNCTION_CALL');
+  await assert.rejects(() => model('answer', { request: { task: 'review' } }, AbortSignal.timeout(1000)), (e: any) => e.code === 'INVALID_RESPONSE');
+});
+
+test('document review skips planning, keeps the selected source and validates quoted findings', async () => {
+  const result = await runAssistant({ ...input, task: 'review', context: { ...input.context, programId: id,
+    documents: [{ id: 'budget', name: 'budget.txt', pages: [{ page: 2, text: 'Бюджет проекта 400000 рублей.' }] }] } }, async (stage, payload: any) => {
+    assert.equal(stage, 'answer');
+    assert.ok(payload.evidence.every((e: any) => !e.opportunityId || e.opportunityId === id));
+    assert.equal(payload.proposedNeed, undefined);
+    return { value: { ...answer, findings: [{ title: 'Бюджет', detail: 'Сверьте сумму с условиями.', severity: 'warning', evidenceId: 'document:budget:2', quote: 'Бюджет проекта 400000 рублей.' }] } };
+  });
+  assert.equal(result.mode, 'llm'); assert.equal(result.usage?.calls, 1);
+  assert.equal(result.findings[0].severity, 'warning'); assert.ok(result.citations.some((e) => e.page === 2));
+  const failed = await runAssistant({ ...input, task: 'review' });
+  assert.deepEqual(failed.citations, []); assert.deepEqual(failed.actions, []); assert.equal(failed.notice, undefined);
+});
+
+test('review accepts strict JSON content and retries prose only once without weakening its schema', async () => {
+  for (const mode of ['json', 'retry', 'broken', 'truncated', 'http', 'abort']) {
+    const controller = new AbortController(); let calls = 0;
+    const model = createAIModel('https://api.giga.chat/v1/chat/completions', 'GigaChat-2-Pro', async () => 'test', (async (_url, init) => {
+      calls++; const wire = JSON.parse(String(init?.body));
+      if (calls === 1) assert.equal(wire.function_call.name, 'review_application');
+      else { assert.equal(wire.functions, undefined); assert.match(wire.messages[0].content, /JSON/); }
+      if (mode === 'http') return new Response('', { status: 503 });
+      if (mode === 'abort') controller.abort();
+      const content = mode === 'json' || mode === 'retry' && calls === 2 ? JSON.stringify(answer) : 'Ответ без структурированных замечаний';
+      return new Response(JSON.stringify({ choices: [{ finish_reason: mode === 'truncated' ? 'length' : 'stop', message: { content } }], usage: { total_tokens: 10 } }));
+    }) as typeof fetch);
+    if (['json', 'retry'].includes(mode)) {
+      const result = await model('answer', { request: { task: 'review' } }, controller.signal);
+      assert.deepEqual(result.value, answer); assert.equal(result.tokens, mode === 'json' ? 10 : 20);
+    } else await assert.rejects(() => model('answer', { request: { task: 'review' } }, controller.signal));
+    assert.equal(calls, ['retry', 'broken'].includes(mode) ? 2 : 1);
+  }
 });
 
 test('chat recovers from an unstructured plan without inventing changes to the business', async () => {

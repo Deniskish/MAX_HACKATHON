@@ -10,7 +10,7 @@ import { workspaceActions, workspacePages, type AIEvidence, type AIRequest, type
 import type { SemanticSearch } from './embeddings';
 import { amountLabel, rateLabel, termLabel } from '../funding-catalog/presentation';
 
-export type AIModel = (stage: 'plan' | 'answer', input: unknown, signal: AbortSignal) => Promise<{ value: unknown; tokens?: number }>;
+export type AIModel = (stage: 'plan' | 'answer', input: unknown, signal: AbortSignal) => Promise<{ value: unknown; tokens?: number; calls?: number }>;
 const strings = (v: unknown, count = 4, length = 400) => Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string' && !!s.trim()).slice(0, count).map((s) => s.slice(0, length)) : [];
 const concise = (v: unknown, max: number) => typeof v === 'string' ? v.trim().slice(0, max) : '';
 export const assistantSystem = `Ты — Опора, помощник по развитию бизнеса и подготовке заявок. Отвечай по-русски.
@@ -55,6 +55,15 @@ export const answerFunction = {
       severity: { type: 'string', enum: ['check', 'warning'] }, evidenceId: { type: 'string' }, quote: { type: 'string' } }, required: ['title', 'detail', 'severity'] } },
   }, required: ['answer', 'evidenceIds', 'followups', 'findings'] },
 };
+export const reviewFunction = {
+  name: 'review_application', description: 'Проверить переданные материалы заявки. Вернуть краткий вывод и до пяти конкретных замечаний. Если материалов нет, попросить их добавить и не утверждать, что документы проверены. Отметка preparedDocuments означает только наличие документа, а не проверку содержания.',
+  parameters: { type: 'object', properties: {
+    answer: { type: 'string', description: 'Краткий вывод: что изучено, что исправить и чего не хватает. Не дублируй замечания целиком.' },
+    evidenceIds: { type: 'array', items: { type: 'string' } },
+    followups: { type: 'array', items: { type: 'string' } },
+    findings: answerFunction.parameters.properties.findings,
+  }, required: ['answer', 'evidenceIds', 'followups', 'findings'] },
+};
 export const workspaceFunction = {
   name: 'adapt_workspace', description: 'Адаптировать все пять экранов приложения по анализу бизнеса. Заполни sections: home, programs, applications, calendar, assistant. Для каждого экрана одна запись. Не меняй профиль и расчёты.',
   parameters: { type: 'object', properties: {
@@ -97,11 +106,12 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
   signal.throwIfAborted();
   const originalNeed = request.context.need ?? { ...emptyFundingNeed }, originalProfile = request.context.profile ?? {};
   let plan: Record<string, any> = {}, calls = 0, tokens = 0, unavailable = !model, providerFailure: string | undefined;
-  if (model) {
+  // Review already has an explicit application and its materials; no search/extraction plan is needed.
+  if (model && request.task !== 'review') {
     try {
       const result = await model('plan', { request, purposes: fundingPurposes,
         catalog: officialFundingCatalog.map((o) => ({ id: o.id, title: o.title, description: o.description, purposes: o.purposes })) }, signal);
-      calls++; tokens += result.tokens ?? 0; plan = object(result.value);
+      calls += result.calls ?? 1; tokens += result.tokens ?? 0; plan = object(result.value);
     } catch (error) {
       if (signal.aborted) throw error;
       providerFailure = failureCode(error);
@@ -129,7 +139,8 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
   if (request.context.programId) preferred.unshift(request.context.programId);
   const query = concise(plan.query, 2000) || request.question;
   let evidence = retrieveEvidence(query, preferred, extraEvidence), semanticUsed = false;
-  if (semantic && !unavailable) {
+  if (request.task === 'review' && request.context.programId) evidence = evidence.filter((e) => e.opportunityId === request.context.programId);
+  if (semantic && !unavailable && request.task !== 'review') {
     try { const found = await semantic(query, [...catalogEvidence(), ...extraEvidence], signal);
       evidence = [...new Map([...catalogEvidence().filter((e) => preferred.includes(e.opportunityId!)), ...found].map((e) => [e.id, e])).values()].slice(0, 14); semanticUsed = true;
     } catch (error) { if (signal.aborted) throw error; /* Смысловой выбор модели и текстовый поиск остаются доступны. */ }
@@ -166,15 +177,15 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
     tools: [semanticUsed ? 'semantic_search' : 'search_catalog', 'evaluate_eligibility', ...(scenarios.length ? ['compare_scenarios'] : []), ...(request.context.documents?.length ? ['read_documents'] : [])],
   };
   if (proposedNeed) base.actions.push({ type: 'open_funding', label: 'Открыть подбор' });
-  if (request.task === 'review' && unavailable) base.answer = 'AI-анализ документов сейчас недоступен. Результат содержательной проверки не сформирован. Локальная проверка текста и ручной перечень остаются доступны.';
   if (request.task === 'draft' && unavailable) base.answer = 'AI-черновик сейчас недоступен. Можно создать локальный шаблон.';
   if (model && !unavailable) {
     try {
       const result = await model('answer', { request, proposedNeed, proposedProfile, evidence,
         assessments: shown, scenarios, strategy: buildFundingStrategy(profile, need, matches), draftKinds }, signal);
-      calls++; tokens += result.tokens ?? 0;
+      calls += result.calls ?? 1; tokens += result.tokens ?? 0;
       const answer = object(result.value);
       if (!concise(answer.answer, 12000)) throw new PrivacyError('INVALID_RESPONSE');
+      if (request.task === 'review' && (!Array.isArray(answer.findings) || !Array.isArray(answer.evidenceIds) || !Array.isArray(answer.followups))) throw new PrivacyError('INVALID_RESPONSE');
       if (request.task === 'workspace') {
         const source = object(answer.personalization), sections = object(source.sections);
         const personalSections = Object.fromEntries(workspacePages.map((page) => {
@@ -214,7 +225,10 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
   }
   if (unavailable) {
     base.notice = 'Не удалось получить ответ AI. Ниже — проверка условий каталога. Можно повторить вопрос позже.';
-    if (request.task === 'review') base.answer = 'AI-анализ документов сейчас недоступен. Результат содержательной проверки не сформирован. Локальная проверка текста и ручной перечень остаются доступны.';
+    if (request.task === 'review') {
+      base.answer = 'Не удалось проверить заявку. Результат проверки не сформирован. Материалы сохранены в этой сессии — попробуйте ещё раз.';
+      base.notice = undefined; base.citations = []; base.actions = []; base.findings = [];
+    }
     if (request.task === 'draft') base.answer = 'AI-черновик сейчас недоступен. Можно создать локальный шаблон.';
   }
   base.usage = { calls, tokens, durationMs: Date.now() - started };
