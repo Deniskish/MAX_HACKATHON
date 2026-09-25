@@ -1,0 +1,240 @@
+/* The OS preference is the single source of truth, including before React loads. */
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --ink: #24262b;
+    --muted: #676b73;
+    --surface: #fffffff2;
+    --canvas: #f7f7f8;
+    --line: #252a351c;
+    --accent: #514091;
+    --brand: #c74413;
+  }
+  body, body:has(.home-dashboard), .opora-theme.opora-theme,
+  .opora-theme:has(.home-dashboard) {
+    color-scheme: light;
+    color: var(--ink);
+    background: var(--canvas);
+  }
+  .opora-theme.opora-theme {
+    --background-accent-themed: #51438c;
+    --background-button-secondary: #f2f3f5;
+    --background-button-secondary-hovered: #eceef1;
+    --background-button-secondary-pressed: #e3e5e9;
+    --background-surface-primary: #ffffff;
+    --background-surface-secondary: #f2f3f5;
+    --background-surface-ground: #f7f7f8;
+    --background-surface-card: #ffffff;
+    --text-primary: #24262b;
+    --text-secondary: #676b73;
+    --text-tertiary: #71757d;
+    --text-themed: #514091;
+    --icon-primary: #41454c;
+    --icon-secondary: #676b73;
+    --icon-themed: #514091;
+    --stroke-themed: #51438c;
+    --stroke-separator-primary: #252a351c;
+  }
+  .opora-theme, .app-shell {
+    --glass-surface: #ffffffed;
+    --glass-control: #ffffffd9;
+    --glass-inset: #f2f3f5;
+    --glass-selected: #eceef1;
+    --glass-edge: #252a351c;
+    --glass-shadow: 0 4px 16px #20263205;
+    --glass-control-shadow: 0 1px 3px #20263204;
+  }
+  .opora-theme .app-shell,
+  .opora-theme .app-shell:not(.page-overview),
+  .opora-theme .access-screen {
+    color: var(--ink);
+    color-scheme: light;
+    background: var(--canvas);
+  }
+  .opora-theme .app-shell.page-overview {
+    background: var(--canvas);
+  }
+  .opora-theme :is(.field, .home-dashboard button, .assistant-page,
+    .app-back, .home-notifications, .assistant-icon-button, .assistant-clear,
+    .home-arrow, .hub-stats button, .hub-services button, .hub-next,
+    .hub-identity-title button, .black-business-card, .black-card-bottom,
+    .checklist-title, .checklist-title b, .assistant-composer textarea,
+    .assistant-latest, .ai-answer, .ai-analysis-answer, .ai-finding,
+    .preparation-options > button, .assistant-heading h1) { color: var(--ink); }
+  .opora-theme .opora-action:is(.secondary, .dark-action, .goal-chip) { color: var(--ink); }
+  .opora-theme :is(.muted, .field small, .widget-footnote, .source-note,
+    .home-opportunities-description, .home-hero-caption, .hub-eyebrow,
+    .hub-identity p, .hub-stats span, .hub-services small, .hub-hint, .hub-welcome p,
+    .hub-benefits small, .hub-next > span:last-of-type, .calendar-context,
+    .catalog-personal-context p, .catalog-guest-context p, .guest-applications p,
+    .catalog-scopes button, .adaptive-insight p, .adaptive-insight details,
+    .funding-key-facts, .assistant-heading span, .assistant-welcome p,
+    .assistant-typing, .assistant-composer > small, .ai-sources, .ai-facts dt,
+    .ai-availability, .black-card-bottom > span, .preparation-options small) { color: var(--muted); }
+  .opora-theme :is(input, textarea)::placeholder { color: #756e80; }
+  .opora-theme :is(.opora-action.text-button, .text-button, .official-link,
+    .funding-card > a, .funding-card summary, .ai-result a, .ai-finding small,
+    .ai-followups button, .ai-entry > summary, .ai-program-reason,
+    .assistant-prompts button, .assistant-program button, .checklist-item summary,
+    .checklist-item .attach, .catalog-personal-context button, .catalog-guest-context button,
+    .hub-personal, .hub-service-icon, .hub-need-link, .hub-browse, .hub-benefits svg,
+    .adaptive-label, .adaptive-insight button, .adaptive-insight a,
+    .home-ai-label, .modal .eyebrow, .date-tile, .detail-emblem, .empty-symbol, .program-icon) {
+    color: var(--accent);
+  }
+
+  /* Dedicated light artwork carries its own material and studio lighting. */
+  .opora-theme .home-wordmark img { filter: none; }
+  .opora-theme :is(.home-hero-shapes, .glass-art, .home-briefcase, .profile-briefcase) {
+    filter: drop-shadow(0 6px 10px #69528012);
+  }
+  .opora-theme :is(.home-orb, .access-symbol, .assistant-orb) {
+    filter: drop-shadow(0 4px 8px #693e7112);
+  }
+  .opora-theme .home-document { opacity: .82; }
+  .opora-theme .profile-briefcase { opacity: 1; }
+  .opora-theme :is(.home-action, .home-opportunities, .widget, .empty-state,
+    .hub-identity, .hub-services, .hub-benefits, .profile-panel, .funding-card,
+    .catalog-guest-context, .catalog-glass-context, .application-row) { border-radius: 22px; }
+  .opora-theme :is(.hub-next, .black-business-card) { background: var(--glass-surface); border-color: var(--line); }
+  .opora-theme .home-hero-caption::before { background: #59477433; }
+  .opora-theme .home-dashboard .home-action-support {
+    color: #fff;
+    background: linear-gradient(135deg, #51438c, #423772);
+    border-color: #423772;
+    box-shadow: none;
+  }
+  .opora-theme .home-action-support .home-arrow {
+    color: #fff;
+    background: #ffffff12;
+    border-color: #ffffff38;
+  }
+  .opora-theme .home-notification-dot { background: #8d43d8; }
+  .opora-theme .home-nav-wrap {
+    background: var(--canvas);
+  }
+  .opora-theme .home-nav {
+    background: #fffffff0;
+    border-color: var(--line);
+    box-shadow: 0 3px 14px #20263208;
+    border-radius: 26px;
+  }
+  .opora-theme .home-nav > button { color: var(--muted); border-radius: 20px; }
+  .opora-theme .home-nav > button[aria-current="page"] {
+    color: #bc3c0d;
+    box-shadow: none;
+  }
+  .opora-theme :is(.segmented-control > button.selected, .catalog-scopes button[aria-pressed="true"]) {
+    color: var(--ink);
+    box-shadow: none;
+  }
+  .opora-theme :is(.filter-chips > button.selected, .preparation-options > button.current,
+    .save-program.is-saved), .opora-theme .opora-action.goal-chip.chosen {
+    color: #5738a1;
+    border-color: #8b6fbb66;
+  }
+  .opora-theme .save-program { color: #71677f; }
+  .opora-theme .save-program.is-saved { color: #5738a1; }
+  .opora-theme .save-program.is-saved svg { fill: #8064ca29; }
+  .opora-theme .opora-action.primary, .opora-theme .assistant-send {
+    background: #51438c;
+    border-color: #51438c;
+    box-shadow: none;
+    color: #fff;
+  }
+  .opora-theme .opora-action.danger-button {
+    background: linear-gradient(145deg, #ffffff1a, transparent), #98344b;
+    border-color: #8c334833;
+    color: #fff;
+  }
+  .opora-theme :is(.opora-input-body, .opora-native-textarea, .search-box, .assistant-input-wrap,
+    .segmented-control, .catalog-scopes),
+  .opora-theme :is(.field, .access-card, .chat-input) .opora-input-body {
+    border-color: var(--line);
+    box-shadow: none;
+  }
+  .opora-theme :is(.opora-input-body, .opora-native-textarea, .field select),
+  .opora-theme :is(.field, .access-card, .chat-input) .opora-input-body {
+    border-radius: 16px;
+  }
+  .opora-theme .field select {
+    color: var(--ink);
+    background-color: #f2f3f5;
+    border-color: var(--line);
+    box-shadow: none;
+  }
+  .opora-theme .field select option { background: #f7f7f8; color: var(--ink); }
+  .opora-theme :is(.opora-input-body, .search-box, .assistant-input-wrap):focus-within,
+  .opora-theme :is(.field, .access-card, .chat-input) .opora-input-body:focus-within,
+  .opora-theme :is(.opora-native-textarea, .field select):focus-visible {
+    border-color: #8064ca;
+    box-shadow: 0 0 0 3px #8064ca1f;
+  }
+  .opora-theme :is(.ai-proposal, .ai-finding, .data-note, .context-info, .company-sources,
+    .document-review, .detail-facts, .funding-card details, .requirements, .plain-list,
+    .document-list, .assistant-program, .chat-program-context) {
+    background: #f2f3f580;
+    border-color: var(--line);
+    box-shadow: none;
+  }
+  .opora-theme .tag:not(.funding-status) { color: #60646c; background: #f2f3f5; border-color: var(--line); }
+  .opora-theme .funding-status { background: #e4f2e8; color: #28613b; border-color: #327d4326; }
+  .opora-theme :is(.funding-status-not_eligible, .funding-status-expired) { background: #f8e7eb; color: #98334b; border-color: #98334b26; }
+  .opora-theme .funding-status-need_more_data { background: #f7edda; color: #795519; border-color: #79551926; }
+  .opora-theme :is(.error, .access-card .error) { background: #f8e7eb; color: #98334b; border-color: #98334b33; }
+  .opora-theme .progress { background: #e6dfef; }
+  .opora-theme .progress i { background: #8064ca; }
+  .opora-theme .hub-services button + button { border-color: var(--line); }
+  .opora-theme .step-radio { border-color: #83728f; }
+  .opora-theme .document-row input[type='checkbox'] { border-color: #91809e; }
+  .opora-theme .checklist-item .attach { background: #ad94ce12; border-color: #80679955; }
+  .opora-theme .ai-mode { color: var(--accent); background: #8064ca12; }
+  .opora-theme .icon-accent { stroke: var(--brand); }
+
+  .opora-theme dialog[open] {
+    color: var(--ink);
+    color-scheme: light;
+    background: #f7f7f8fa;
+    border-color: var(--line);
+  }
+  .opora-theme dialog::backdrop { background: #362b4d66; }
+  .opora-theme :is(.modal-toolbar, .assistant-header, .assistant-composer, .chat-input) {
+    background: #f7f7f8f5;
+    border-color: var(--line);
+  }
+  .opora-theme .assistant-page .message.assistant { color: var(--ink); }
+  .opora-theme .assistant-page .message.user { background: #eeedf3; color: #302b41; border-color: #51438c26; }
+  .opora-theme .toast { color: var(--ink); background: #fffffff5; border-color: var(--line); }
+  .opora-theme :is(button, a, summary):focus-visible { outline-color: #7353b6; }
+
+  @media (hover: hover) {
+    .opora-theme .opora-action:is(.primary, .secondary, .dark-action):hover:not(:disabled),
+    .opora-theme :is(.home-nav > button, .filter-chips > button, .assistant-prompts button,
+      .home-action, .home-opportunities, .hub-next):hover:not(:disabled) {
+      box-shadow: 0 3px 12px #2026320d;
+    }
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .opora-theme :is(.home-nav, .modal-toolbar, .assistant-header, .assistant-composer, .toast) {
+      background-color: #f7f7f8;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .opora-theme, .app-shell {
+      --glass-surface: #fff;
+      --glass-control: #fff;
+      --glass-inset: #f2f3f5;
+      --glass-selected: #eceef1;
+    }
+    .opora-theme :is(.home-nav, .modal-toolbar, .assistant-header, .assistant-composer, .toast) { background: #f7f7f8; }
+    .opora-theme dialog[open] { background: #f7f7f8; }
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  body, .opora-theme, .app-shell,
+  .opora-theme :is(.widget, .home-nav, .home-opportunities, .home-action, .modal-toolbar,
+    .assistant-header, .assistant-composer, .message, .field, .tag, .home-nav > button) {
+    transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
+  }
+}

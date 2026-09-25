@@ -6,6 +6,7 @@ import '@maxhub/max-ui/dist/styles.css';
 import '@fontsource-variable/manrope';
 import App from './App';
 import { installViewportSizing } from './viewport';
+import { useSystemTheme } from './theme';
 import './index.css';
 const bridgeScript = document.createElement('script');
 bridgeScript.src = 'https://st.max.ru/js/max-web-app.js';
@@ -15,8 +16,9 @@ bridgeScript.onload = () => {
 };
 document.head.appendChild(bridgeScript);
 function ThemedApp() {
+  const theme = useSystemTheme();
   useEffect(installViewportSizing, []);
-  return <MaxUI colorScheme="dark" className="opora-theme"><App /></MaxUI>;
+  return <MaxUI colorScheme={theme} className={`opora-theme theme-${theme}`}><App /></MaxUI>;
 }
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

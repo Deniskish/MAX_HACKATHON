@@ -1,10 +1,11 @@
 import { Icon } from './Icon';
+import { ThemedImage } from './ThemedImage';
 
 export type AppPage = 'overview' | 'programs' | 'applications' | 'calendar' | 'profile' | 'assistant' | 'funding-results';
 
 export function BrandWordmark({ className = '' }: { className?: string }) {
   return <span className={`home-wordmark ${className}`}>
-    <img src="/assets/opora-logo.png" width={1254} height={1254} alt="опора." draggable={false} />
+    <ThemedImage src="/assets/opora-logo.png" width={1254} height={1254} alt="опора." draggable={false} />
   </span>;
 }
 

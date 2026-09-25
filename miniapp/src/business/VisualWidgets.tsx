@@ -1,3 +1,4 @@
+import { ThemedImage } from './ThemedImage';
 // Небольшие общие виджеты: категории, карточка бизнеса и этапы подготовки.
 import { useState } from 'react';
 import { Icon } from './Icon';
@@ -77,7 +78,7 @@ export function BusinessCard({ profile, onEdit }: { profile: Profile | null; onE
     <section className="business-card-widget">
       <div className="black-business-card">
         <BrandWordmark className="profile-wordmark" />
-        <img className="profile-briefcase" src="/assets/briefcase.png" width={100} height={100} alt="" />
+        <ThemedImage className="profile-briefcase" src="/assets/briefcase.png" width={100} height={100} alt="" />
         <div className="black-card-meta">
           <span>{profile?.companyType || 'ВАШ БИЗНЕС'}</span>
           <span>{profile && !profile.inn ? 'Профиль проекта' : 'Профиль компании'}</span>

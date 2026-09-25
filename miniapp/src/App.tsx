@@ -1,3 +1,4 @@
+import { ThemedImage } from './business/ThemedImage';
 import { useState, type FormEvent } from 'react';
 import { ActionButton, BusinessInput } from './business/MaxControls';
 import { BrandWordmark } from './business/AppChrome';
@@ -47,7 +48,7 @@ export default function App() {
     <main className="access-screen">
       <BrandWordmark className="access-wordmark" />
       <section className="widget access-card" aria-labelledby="access-title">
-        <img className="access-symbol" src="/assets/orb.png" width={80} height={80} alt="" draggable={false} />
+        <ThemedImage className="access-symbol" src="/assets/orb.png" width={80} height={80} alt="" draggable={false} />
         <span className="eyebrow">ПОДДЕРЖКА ВАШЕГО БИЗНЕСА</span>
         <h1 id="access-title">Добро пожаловать<br />в Опору</h1>
         <p>Введите пароль, чтобы войти в рабочее пространство.</p>

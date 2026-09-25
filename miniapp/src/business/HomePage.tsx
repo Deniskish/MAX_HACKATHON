@@ -1,3 +1,4 @@
+import { ThemedImage } from './ThemedImage';
 import { Icon } from './Icon';
 import { AppNavigation, BrandWordmark } from './AppChrome';
 import type { BusinessAnalysis } from './useBusinessAnalysis';
@@ -33,7 +34,7 @@ export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNoti
     <div className="home-scroll">
       <section className="home-hero" aria-label="Опора — поддержка бизнеса">
         <div className="home-hero-artwork">
-          <img className="home-hero-shapes" src="/assets/hero-shapes.png" width={1254} height={1254} alt="" draggable={false} />
+          <ThemedImage className="home-hero-shapes" src="/assets/hero-shapes.png" width={1254} height={1254} alt="" draggable={false} />
           <BrandWordmark className="home-wordmark-hero" />
           <p className="home-hero-caption" aria-hidden="true">БИЗНЕС<br />РАЗВИВАЕТСЯ<br />С ПОДДЕРЖКОЙ</p>
         </div>
@@ -43,16 +44,16 @@ export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNoti
           <button type="button" className="home-action home-action-support" onClick={onFindSupport}>
             <span className="home-action-title">{personalized ? 'Поддержка' : 'Найти'}<br />{personalized ? 'для вас' : 'поддержку'}</span>
             <Arrow />
-            <img className="home-document" src="/assets/document.png" width={1254} height={1254} alt="" draggable={false} />
+            <ThemedImage className="home-document" src="/assets/document.png" width={1254} height={1254} alt="" draggable={false} />
           </button>
           <button type="button" className="home-action home-action-business" onClick={onAddBusiness}>
             <span className="home-action-title">{personalized ? 'Мой' : 'Добавить'}<br />бизнес</span>
             <Arrow />
-            <img className="home-briefcase" src="/assets/briefcase.png" width={1254} height={1254} alt="" draggable={false} />
+            <ThemedImage className="home-briefcase" src="/assets/briefcase.png" width={1254} height={1254} alt="" draggable={false} />
           </button>
         </div>
         <button type="button" className={`home-opportunities${personalized ? ' home-adaptive' : ''}`} onClick={() => insight ? onAIAction(insight.action) : onOpportunities()}>
-          <img className="home-orb" src="/assets/orb.png" width={1254} height={1254} alt="" draggable={false} />
+          <ThemedImage className="home-orb" src="/assets/orb.png" width={1254} height={1254} alt="" draggable={false} />
           <span className="home-opportunities-copy">
             {personalized && <span className="home-ai-label">{insight ? 'AI · ВАШ СЛЕДУЮЩИЙ ШАГ' : analysis.status === 'loading' ? 'AI · АНАЛИЗ БИЗНЕСА' : 'ПОДБОР ПО ПРАВИЛАМ'}</span>}
             <span className="home-action-title">{insight ? insight.title : personalized ? 'Уточните вашу задачу' : <>Возможности<br />рядом</>}</span>

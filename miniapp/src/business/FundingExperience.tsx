@@ -1,3 +1,4 @@
+import { ThemedImage } from './ThemedImage';
 import React, { useEffect, useState, type FormEvent } from 'react';
 import { ActionButton, BusinessInput } from './MaxControls';
 import { Icon } from './Icon';
@@ -123,7 +124,7 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onResu
     }
   }
   if (loading) return <section ref={panel} className="funding-searching" role="status" aria-live="polite">
-    <div className="funding-search-animation" aria-hidden="true"><img src="/assets/orb.png" width={100} height={100} alt="" /><span /></div>
+    <div className="funding-search-animation" aria-hidden="true"><ThemedImage src="/assets/orb.png" width={100} height={100} alt="" /><span /></div>
     <h2>Подбираем поддержку</h2><p>Сравниваем вашу цель и параметры бизнеса с условиями программ.</p>
     <ActionButton className="secondary" onClick={() => { pending.current?.abort(); pending.current = null; setLoading(false); }}>Отменить подбор</ActionButton>
   </section>;
