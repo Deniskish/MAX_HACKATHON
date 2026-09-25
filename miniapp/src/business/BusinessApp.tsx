@@ -825,7 +825,9 @@ export default function BusinessApp() {
             </section>
           )}
           {page === 'overview' && <footer>
-            <span className="footer-logo">опора.</span>
+            <span className="footer-logo">
+              <img className="footer-logo-image" src="/brand/logo1.png" width={1254} height={1254} alt="опора." />
+            </span>
           </footer>}
         </main>
       </div>
