@@ -1,3 +1,4 @@
+import { AssistantPage } from './AssistantPage';
 // Общее состояние экранов, профиля и заявок. Условия программ считаются в domain.
 import { CompanySources, FieldSource } from './CompanySource';
 import { editCompanyProfile, mergeCompanyProfile, requestCompanyData } from './company-data';
@@ -24,7 +25,6 @@ import { HomePage } from './HomePage';
 import { AppHeader, AppNavigation, type AppPage as Page } from './AppChrome';
 import { AIPanel, AIResultView } from './AIExperience';
 import { requestAI, readAIHistory, saveAIHistory, type AIResult, type AIDocument } from './ai-client';
-import { Spinner } from '@maxhub/max-ui';
 import { ActionButton, BusinessInput, BusinessTextarea } from './MaxControls';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
@@ -205,10 +205,7 @@ export default function BusinessApp() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('Все меры');
   const [toast, setToast] = useState('');
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const history = readAIHistory();
-    return history.length ? history : [{ role: 'assistant', text: 'Расскажите, что хотите сделать для бизнеса. Я помогу уточнить потребность, найти поддержку и подготовить документы.' }];
-  });
+  const [messages, setMessages] = useState<Message[]>(() => readAIHistory());
   const chatRequest = useRef<AbortController | null>(null);
   useEffect(() => { if (!saveAIHistory(messages)) setToast('История чата не сохранилась на устройстве.'); }, [messages]);
   useEffect(() => () => chatRequest.current?.abort(), []);
@@ -223,7 +220,7 @@ export default function BusinessApp() {
   const mainRef = useRef<HTMLElement>(null);
   useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [page]);
   useEffect(() => { dialogRef.current?.querySelector('.modal')?.scrollTo({ top: 0 }); }, [selected?.id, onboard, step]);
-  const chatEnd = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     // Параметр запуска открывает публичную карточку, но не подтверждает личность пользователя.
     const openLaunchProgram = () => {
@@ -251,9 +248,7 @@ export default function BusinessApp() {
     if (selected || onboard) dialogRef.current?.showModal();
     else dialogRef.current?.close();
   }, [selected, onboard]);
-  useEffect(() => {
-    chatEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [messages]);
+
   const ranked = programs
     .map((p) => ({
       p,
@@ -418,7 +413,7 @@ export default function BusinessApp() {
 
   return (
     <div className={`app-shell page-${page}`}>
-      {page !== 'overview' && <AppHeader
+      {page !== 'overview' && page !== 'assistant' && <AppHeader
         title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', assistant: 'AI-помощник' }[page]}
         backLabel={['assistant', 'calendar'].includes(page) ? 'В мой бизнес' : 'На главную'} onBack={() => navigate(['assistant', 'calendar'].includes(page) ? 'profile' : 'overview')} onNotifications={() => setHomePanel('events')} hasNotifications={hasNotifications}
       />}
@@ -715,91 +710,27 @@ export default function BusinessApp() {
                 </div>
               </details>
             ) : null)}
-          {page === 'assistant' && profile && (
-            <section className="chat-panel">
-              <AdaptiveInsight analysis={businessAnalysis} section="assistant" onAction={followInsight} compact />
-              <div className="chat-header">
-                <img className="assistant-orb" src="/assets/orb.png" width={48} height={48} alt="" />
-                <div>
-                  <b>Опора AI</b>
-                  <small>{assistantMode} · официальные источники</small>
-                </div>
-              </div>
-              <details className="context-info">
-                <summary>Как обрабатываются данные</summary>
-                <p><b>{profile.name}</b> · {profile.region}<br />Цель: {need.purpose || 'пока не указана'}. Ответы учитывают этот профиль.</p>
-                <p>
-                  GigaChat получает вопрос, последние сообщения, параметры бизнеса и выбранной заявки.
-                  Известные реквизиты скрываются. Не добавляйте лишние персональные данные.
-                  История сохраняется на этом устройстве.
-                </p>
-                <ActionButton className="text-button" onClick={() => { chatRequest.current?.abort(); chatRequest.current = null; setSending(false); setMessages([]); setChatProgram(null); }}>Очистить историю</ActionButton>
-              </details>
-              {chatProgram && (
-                <div className="chat-program-context">
-                  <Icon name={chatProgram.icon} size={18} />
-                  <button className="text-button" onClick={() => setSelected(chatProgram)}>Открыть: {chatProgram.title}</button>
-                  <button
-                    aria-label="Перейти к общим вопросам"
-                    onClick={() => setChatProgram(null)}
-                  >
-                    <Icon name="close" size={16} />
-                  </button>
-                </div>
-              )}
-              <div className="messages" aria-live="polite">
-                {messages.map((m, i) => (
-                  <div key={i} className={'message ' + m.role}>
-                    {m.text}
-                    {m.result && <AIResultView result={m.result} {...aiHandlers} showAnswer={false} onQuestion={(q) => setQuestion(q)} />}
-                    {!!m.opportunityIds?.length && <div className="message-links">{m.opportunityIds.map((id) => <ActionButton className="secondary" key={id} onClick={() => openFunding(id)}>Открыть: {programs.find((p) => p.id === id)!.title}</ActionButton>)}</div>}
-                  </div>
-                ))}
-                {sending && (
-                  <div className="message assistant message-loading">
-                    <Spinner size={20} appearance="themed" />
-                    Готовлю ответ…
-                  </div>
-                )}
-                <div ref={chatEnd} />
-              </div>
-              <div className="suggestions">
-                {['Что мне подходит?', 'Почему подходит?', 'Почему не подходит?', 'Какой следующий шаг?', 'Какие документы?', 'Какие сроки?', 'Можно подать сейчас?', 'Чем отличаются грант, кредит и поручительство?'].map(
-                  (q) => (
-                    <button key={q} disabled={sending} onClick={() => ask(q)}>
-                      {q}
-                    </button>
-                  ),
-                )}
-              </div>
-              <form
-                className="chat-input"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  ask(question);
-                }}
-              >
-                <BusinessInput
-                  aria-label="Сообщение помощнику"
-                  maxLength={2000}
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Что вы хотите узнать о поддержке бизнеса?"
-                />
-                <ActionButton
-                  type="submit"
-                  className="primary"
-                  disabled={sending || !question.trim()}
-                  aria-label="Отправить сообщение"
-                >
-                  <Icon name="arrow" />
-                </ActionButton>
-                {sending && <button className="ai-stop" type="button" aria-label="Остановить ответ" onClick={() => { chatRequest.current?.abort(); chatRequest.current = null; setSending(false); }}><Icon name="close" /></button>}
-              </form>
-            </section>
-          )}
+          {page === 'assistant' && profile && <AssistantPage
+            businessName={profile.name} status={assistantMode} messages={messages} question={question} onQuestion={setQuestion}
+            sending={sending} onSend={(text) => { void ask(text); }} onBack={() => navigate('profile')}
+            onStop={() => { chatRequest.current?.abort(); chatRequest.current = null; setSending(false); }}
+            onClear={() => { chatRequest.current?.abort(); chatRequest.current = null; setSending(false); setMessages([]); setChatProgram(null); setQuestion(''); }}
+            program={chatProgram ? { title: chatProgram.title, onOpen: () => setSelected(chatProgram), onRemove: () => setChatProgram(null) } : undefined}
+            context={(closeInfo) => <>
+              <p><b>{profile.name}</b> · {profile.region}<br />Цель: {need.purpose || 'пока не указана'}. Ответы учитывают этот профиль.</p>
+              <AdaptiveInsight analysis={businessAnalysis} section="assistant" onAction={(action) => { closeInfo(); followInsight(action); }} compact />
+              <p>GigaChat получает вопрос, последние сообщения, параметры бизнеса и выбранной заявки. Известные реквизиты скрываются. Не добавляйте лишние персональные данные. История сохраняется на этом устройстве.</p>
+            </>}
+            renderMessage={(index) => {
+              const message = messages[index];
+              return <>{message.text}
+                {message.result && <AIResultView result={message.result} {...aiHandlers} showAnswer={false} onQuestion={setQuestion} />}
+                {!!message.opportunityIds?.length && <div className="message-links">{message.opportunityIds.map((id) => <ActionButton className="secondary" key={id} onClick={() => openFunding(id)}>Открыть: {programs.find((program) => program.id === id)?.title ?? 'Программа'}</ActionButton>)}</div>}
+              </>;
+            }}
+          />}
       </main>
-      {page !== 'overview' && <AppNavigation active={page} onNavigate={navigate} />}
+      {page !== 'overview' && page !== 'assistant' && <AppNavigation active={page} onNavigate={navigate} />}
       <dialog
         aria-label={onboard ? 'Профиль бизнеса' : selected?.title || 'Программа'}
         ref={dialogRef}
