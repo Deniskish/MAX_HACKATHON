@@ -25,7 +25,7 @@ body, .opora-theme.opora-theme { background: #191a1f; color: var(--ink); }
 }
 .app-shell {
   width: 100%; max-width: 430px; height: var(--app-height, 100dvh); min-height: 0; margin: 0 auto;
-  display: grid; grid-template-rows: calc(76px + var(--app-safe-top)) minmax(0, 1fr) calc(90px + var(--app-safe-bottom));
+  display: grid; grid-template-rows: calc(76px + var(--app-safe-top)) minmax(0, 1fr) calc(78px + var(--app-safe-bottom));
   overflow: hidden; background: radial-gradient(ellipse at 0% 55%, #7337ff0c, transparent 45%), #191a1f;
 }
 .app-topbar { grid-row: 1; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 12px; padding: calc(14px + var(--app-safe-top)) 16px 8px; }

@@ -42,10 +42,17 @@
 
 /* The dock and its selected item have separate edges and optical depth. */
 .app-shell .home-nav-wrap {
+  grid-column: 1;
+  grid-row: 3;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 3.6% calc(4px + var(--app-safe-bottom, 0px));
+  z-index: 5;
   background: radial-gradient(ellipse at 12% 100%, #ff7a3d0c, transparent 65%),
     radial-gradient(ellipse at 90% 100%, #8064ff14, transparent 65%);
 }
 .app-shell .home-nav {
+  width: 100%;
   background: radial-gradient(ellipse at 12% 0%, #ffffff14, transparent 52%),
     linear-gradient(115deg, #33333e82, #24232da8 50%, #39313e7a);
   border: 1px solid #e4daf03d;

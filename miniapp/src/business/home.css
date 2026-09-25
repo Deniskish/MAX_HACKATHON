@@ -12,7 +12,7 @@ body:has(.home-dashboard), .opora-theme:has(.home-dashboard) { background: #191a
 .home-dashboard {
   --home-available-height: calc(var(--app-height, 100dvh) - var(--app-safe-top, 0px) - var(--app-safe-bottom, 0px));
   --home-hero-height: clamp(150px, calc(var(--home-available-height) - 410px), 300px);
-  height: 100%; display: grid; grid-template-rows: calc(64px + var(--app-safe-top)) minmax(0, 1fr) calc(82px + var(--app-safe-bottom));
+  height: 100%; display: grid; grid-template-rows: calc(64px + var(--app-safe-top)) minmax(0, 1fr) calc(78px + var(--app-safe-bottom));
 }
 .home-dashboard.home-personalized { --home-hero-height: clamp(130px, calc(var(--home-available-height) - 480px), 260px); }
 .home-dashboard > .home-nav-wrap { padding-bottom: calc(10px + var(--app-safe-bottom)); }
