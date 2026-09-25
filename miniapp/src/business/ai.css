@@ -25,3 +25,29 @@
 .message > .ai-result { margin-top: 16px; white-space: normal; }
 .chat-input .ai-stop { flex-shrink: 0; width: 36px; background: #242229; color: #ebebf3; border: 0; border-radius: 50%; }
 .message:has(.ai-result) { overflow-wrap: anywhere; }
+
+/* Only the business-intake sheet: one surface around the composer, not a nested widget. */
+.opora-theme .business-intake-ai { min-width: 0; margin: 0; padding: 20px; }
+.opora-theme .business-intake-ai[open] > summary { margin-bottom: 20px; }
+.opora-theme .business-intake-ai > .ai-panel {
+  min-width: 0; margin: 0; padding: 0; gap: 16px;
+  background: transparent; border: 0; box-shadow: none;
+}
+.business-intake-ai .widget-heading {
+  flex-direction: row-reverse; justify-content: flex-end; align-items: flex-start; gap: 10px; margin: 0;
+}
+.business-intake-ai .widget-heading > svg { flex: none; margin-top: 3px; color: var(--accent); }
+.opora-theme .business-intake-ai .widget-heading h2 {
+  min-width: 0; margin: 0; font-size: 20px; line-height: 1.35; letter-spacing: -.4px;
+}
+.business-intake-ai .ai-panel > .field { margin: 0; gap: 10px; }
+.opora-theme .business-intake-ai .opora-native-textarea {
+  display: block; min-height: 144px; padding: 16px; font-size: 16px; line-height: 1.5;
+}
+.opora-theme .business-intake-ai .ai-panel > .widget-footnote {
+  font-size: 12px; line-height: 1.5; font-weight: 400; color: var(--muted);
+}
+.opora-theme .business-intake-ai .ai-panel > .opora-action.primary { margin-top: 4px; min-height: 48px; }
+@media (max-width: 359px) {
+  .opora-theme .business-intake-ai { padding: 16px; }
+}

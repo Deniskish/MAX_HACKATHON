@@ -132,6 +132,19 @@
   border-color: #b8a2ff99;
   box-shadow: 0 0 0 3px #8064ff1f, inset 0 1px 0 #ffffff12;
 }
+/* The catalogue has one field surface. MAX's body must not get a second focus ring.
+   Scope and specificity also keep the later light-theme focus rules off that body. */
+.opora-theme .page-programs .search-box { min-height: 50px; padding: 0 14px; box-shadow: none; }
+.opora-theme .page-programs .search-box:focus-within { border-color: var(--accent); box-shadow: none; }
+.opora-theme .page-programs .catalog-search-input {
+  width: 100%; height: 48px; padding: 0; background: transparent;
+}
+.opora-theme .page-programs .search-box .opora-input-body {
+  min-height: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none;
+}
+.opora-theme .page-programs .search-box .opora-native-input {
+  min-width: 0; height: 48px; min-height: 48px; padding: 12px 0; line-height: 24px;
+}
 .opora-theme :is(.segmented-control > button.selected, .catalog-scopes button[aria-pressed="true"]) {
   background: var(--glass-selected);
   color: #ebebf3;

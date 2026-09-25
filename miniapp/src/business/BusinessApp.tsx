@@ -461,15 +461,16 @@ export default function BusinessApp() {
                     Сохранённые <span>{saved.length}</span>
                   </button>
                 </div>}
-                <label className="search-box">
-                  <Icon name="search" />
+                <div className="search-box">
                   <BusinessInput
+                    className="catalog-search-input"
+                    iconBefore={<Icon name="search" />}
                     aria-label="Поиск мер поддержки"
                     placeholder="Название или цель"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
-                </label>
+                </div>
               </div>
               <label className="field catalog-state">Статус<select value={availability} onChange={(e) => setAvailability(e.target.value)}><option value="">Все статусы</option><option value="active">Приём открыт</option><option value="closed">Приём завершён</option><option value="upcoming">Ожидается открытие</option><option value="unknown">Требует проверки</option></select></label>
               {profile && <details className="ai-entry"><summary>Найти поддержку по описанию задачи</summary><AIPanel title="Умный поиск" task="search" context={aiContext} initialQuestion={query} {...aiHandlers} /></details>}
@@ -1069,7 +1070,7 @@ export default function BusinessApp() {
       {homePanel && <ModalSheet title={{ business: 'Ваш бизнес', funding: 'Подбор поддержки', events: 'Уведомления' }[homePanel]} onClose={() => setHomePanel(null)}>
         {homePanel === 'business' && <div className="home-panel-actions">
           <h2>Расскажите о бизнесе</h2>
-          <details className="ai-entry"><summary>Заполнить с помощью AI</summary><AIPanel title="Расскажите своими словами" task="intake" context={aiContext} {...aiHandlers} /></details>
+          <details className="ai-entry business-intake-ai"><summary>Заполнить с помощью AI</summary><AIPanel title="Расскажите своими словами" task="intake" context={aiContext} {...aiHandlers} /></details>
           <ActionButton className="primary" onClick={openProfile}>{profile ? 'Редактировать профиль' : 'Добавить компанию по ИНН'}</ActionButton>
           <ActionButton className="secondary" onClick={() => { setHomePanel(null); setProjectOnboard(true); }}>У меня пока нет компании</ActionButton>
         </div>}
