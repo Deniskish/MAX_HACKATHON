@@ -421,7 +421,7 @@ export default function BusinessApp() {
       <main ref={mainRef} className="app-content">
           {page === 'funding-results' && profile && <section className="funding-results-page">
             {fundingResult?.fingerprint === fundingFingerprint(fundingProfile, need) ? <>
-              <div className="funding-result-intro"><div className="funding-result-mark"><span className="hub-eyebrow">ПОД ВАШУ ЗАДАЧУ</span><GlassArt shape="ring" size={80} /></div><h2>{need.purpose}</h2>
+              <div className="funding-result-intro"><div className="funding-result-mark"><GlassArt shape="ring" size={80} /></div><h2>{need.purpose}</h2>
                 <p>{profile.name}{need.amount ? ` · ${need.amount.toLocaleString('ru-RU')} ₽` : ''}{need.preferredTermMonths ? ` · ${need.preferredTermMonths} мес.` : ''}</p>
                 <ActionButton className="secondary" onClick={() => setHomePanel('funding')}>Изменить параметры</ActionButton>
               </div>
@@ -442,7 +442,7 @@ export default function BusinessApp() {
           {page === 'programs' && (
             <>
               {profile ? <><AdaptiveInsight analysis={businessAnalysis} section="programs" onAction={followInsight} /><div className="catalog-glass-context"><details className="catalog-personal-context"><summary>{profile.name}</summary><p>{profile.region} · {need.purpose || 'Укажите цель для более точного подбора'}</p><button onClick={() => setHomePanel('funding')}>Изменить цель и параметры подбора <Icon name="arrow" size={14} /></button></details><GlassArt shape="ring" size={88} /></div></>
-                : <section className="catalog-guest-context"><div><p>Вы смотрите общий каталог. Добавьте бизнес, чтобы проверить, какие программы подходят именно вам.</p><button onClick={() => navigate('profile')}>Настроить поддержку для себя <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={104} /></section>}
+                : <section className="catalog-guest-context"><div><button onClick={() => navigate('profile')}>Подобрать поддержку для моего бизнеса <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={104} /></section>}
               {profile && <div className="catalog-scopes" aria-label="Область подбора">{([['personal', 'Для вас'], ['all', 'Все меры'], ['saved', `Сохранённые · ${saved.length}`]] as const).map(([scope, title]) => <button key={scope} aria-pressed={catalogScope === scope} onClick={() => { setCatalogScope(scope); setOnlySaved(scope === 'saved'); }}>{title}</button>)}</div>}
               <div className="catalog-toolbar">
                 {!profile && <div className="segmented-control" aria-label="Показать программы">
@@ -494,7 +494,6 @@ export default function BusinessApp() {
                   </button>
                 ))}
               </div>
-              {profile && catalogScope === 'personal' && <p className="widget-footnote">Подбор учитывает заполненные сведения. Варианты со статусом «Нужно уточнить» требуют дополнительных данных; закрытые и не соответствующие программы доступны во вкладке «Все меры».</p>}
               <div className="program-grid catalog">
                 {visiblePrograms.map(({ p }) => programCard(p))}
               </div>
@@ -531,7 +530,7 @@ export default function BusinessApp() {
               </p>
             </>
           )}
-          {page === 'applications' && !profile && <section className="empty-state guest-applications"><GlassArt shape="tiles" size={120} /><h2>Заявки вашего бизнеса</h2><p>Добавьте компанию или проект — появятся персональные условия, подготовка документов и черновики заявок.</p><ActionButton className="primary" onClick={() => setHomePanel('business')}>Добавить бизнес</ActionButton><ActionButton className="secondary" onClick={() => browse()}>Посмотреть программы</ActionButton></section>}
+          {page === 'applications' && !profile && <section className="empty-state guest-applications"><GlassArt shape="tiles" size={120} /><h2>Заявки вашего бизнеса</h2><p>Добавьте бизнес, чтобы подготовить заявку.</p><ActionButton className="primary" onClick={() => setHomePanel('business')}>Добавить бизнес</ActionButton><ActionButton className="secondary" onClick={() => browse()}>Посмотреть программы</ActionButton></section>}
           {page === 'applications' && profile &&
             <AdaptiveInsight analysis={businessAnalysis} section="applications" onAction={followInsight} />}
           {page === 'applications' && profile &&
@@ -574,7 +573,7 @@ export default function BusinessApp() {
           {page === 'calendar' && profile && (
             <>
               <AdaptiveInsight analysis={businessAnalysis} section="calendar" onAction={followInsight} />
-              <p className="calendar-context">Сроки для {profile.name}. Здесь — сохранённые программы и программы, по которым вы готовите заявки.</p>
+              <p className="calendar-context">{profile.name}</p>
               <div className="catalog-scopes"><button aria-pressed={!allCalendar} onClick={() => setAllCalendar(false)}>Мои сроки</button><button aria-pressed={allCalendar} onClick={() => setAllCalendar(true)}>Весь каталог</button></div>
               {!calendarPrograms.length && <section className="empty-state"><GlassArt shape="ring" size={104} /><h2>Опубликованных сроков нет</h2><p>{tracked.length ? 'У выбранных программ нет точных дат в каталоге. Сверяйте сроки на сайте оператора.' : 'Сохраните программу или начните подготовку заявки — её опубликованный срок появится здесь.'}</p><ActionButton className="secondary" onClick={() => navigate('programs')}>Найти поддержку</ActionButton></section>}
               <div className="section-title">
@@ -763,9 +762,8 @@ export default function BusinessApp() {
         <div className="modal">
           {onboard && (
             <form onSubmit={saveProfile}>
-              <span className="eyebrow">ПРОФИЛЬ БИЗНЕСА · ШАГ {step + 1} ИЗ 2</span>
               <h2>{step === 0 ? 'ИНН вашего бизнеса' : 'Данные для подбора'}</h2>
-              <p className="muted">{step === 0 ? 'Укажите ИНН для поиска сведений о компании. Также можно заполнить профиль вручную.' : 'Проверьте сведения и дополните то, чего не хватает для подбора поддержки.'}</p>
+              <p className="muted">Шаг {step + 1} из 2</p>
               <CompanySources profile={form} />
               <fieldset className="company-form-fields" disabled={companyLoading}>
                 {step === 0 ? (

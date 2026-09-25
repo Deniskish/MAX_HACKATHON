@@ -13,9 +13,8 @@ export function BusinessHub({ profile, project, confirmed, pending, applications
   if (!profile) return <div className="business-hub guest-hub">
     <section className="hub-welcome">
       <GlassArt shape="tiles" size={150} className="hub-welcome-art" />
-      <span className="hub-eyebrow">МОЙ БИЗНЕС</span>
       <h2>Поддержка под<br />ваши задачи</h2>
-      <p>Сейчас вам доступен весь каталог. Добавьте компанию или проект, чтобы видеть возможности с учётом вашей ситуации.</p>
+      <p>Добавьте бизнес для персонального подбора поддержки.</p>
       <ActionButton className="primary" onClick={onAdd}>Добавить бизнес <Icon name="arrow" /></ActionButton>
       <button className="hub-browse" onClick={onSupport}>Продолжить просмотр каталога</button>
     </section>
@@ -28,10 +27,9 @@ export function BusinessHub({ profile, project, confirmed, pending, applications
   </div>;
   return <div className="business-hub">
     <section className="hub-identity">
-      <div className="hub-identity-mark"><span className="hub-eyebrow">{project ? 'ВАШ ПРОЕКТ' : 'ВАШ БИЗНЕС'}</span><GlassArt shape="tiles" size={76} /></div>
+      <div className="hub-identity-mark"><GlassArt shape="tiles" size={76} /></div>
       <div className="hub-identity-title"><h2>{profile.name}</h2><button aria-label="Редактировать профиль" onClick={onEdit}><Icon name="edit" /></button></div>
       <p>{profile.region}{project ? ' · Без юридического лица' : profile.okved ? ` · ОКВЭД ${profile.okved}` : ''}</p>
-      <span className="hub-personal"><i />Подбор по вашему профилю</span>
     </section>
     <div className="hub-stats">
       <button onClick={onSupport}><b>{confirmed}</b><span>Подходит<br />по правилам</span></button>
@@ -39,13 +37,12 @@ export function BusinessHub({ profile, project, confirmed, pending, applications
       <button onClick={onSaved}><b>{saved}</b><span>Сохранённые<br />программы</span></button>
     </div>
     <section className="hub-services" aria-label="Инструменты бизнеса">
-      <button onClick={onAssistant}><span className="hub-service-icon"><Icon name="spark" /></span><span><b>AI-помощник</b><small>Знает ваш профиль и текущую цель</small></span><Icon name="chevron" size={17} /></button>
-      <button onClick={onCalendar}><span className="hub-service-icon"><Icon name="calendar" /></span><span><b>Календарь</b><small>Сроки сохранённых программ и заявок</small></span><Icon name="chevron" size={17} /></button>
+      <button onClick={onAssistant}><span className="hub-service-icon"><Icon name="spark" /></span><span><b>AI-помощник</b></span><Icon name="chevron" size={17} /></button>
+      <button onClick={onCalendar}><span className="hub-service-icon"><Icon name="calendar" /></span><span><b>Календарь</b></span><Icon name="chevron" size={17} /></button>
     </section>
     <button className="hub-next" onClick={insight ? () => onInsight(insight.action) : !purpose ? onNeed : applications ? onApplications : onSupport}>
-      <span className="hub-eyebrow">{insight ? 'СЛЕДУЮЩИЙ ШАГ · AI' : 'СЛЕДУЮЩИЙ ШАГ · ПО ПРАВИЛАМ'}</span>
       <b>{insight?.title ?? (!purpose ? 'Расскажите, на что нужны средства' : applications ? 'Продолжить подготовку заявки' : 'Посмотреть персональную подборку')}</b>
-      <span>{insight?.text ?? (purpose || 'Цель и сумма помогут точнее сравнить программы.')}</span><Icon name="arrow" />
+      <Icon name="arrow" />
     </button>
     {!confirmed && <p className="hub-hint">{pending ? `Для ${pending} программ нужно уточнить условия или сведения о бизнесе. Это ещё не подтверждение соответствия.` : 'Пока нет программ, соответствующих вашему профилю. Можно посмотреть весь каталог или уточнить сведения.'}</p>}
     <button className="hub-need-link" onClick={onNeed}><Icon name="compass" size={18} />{purpose ? 'Изменить цель и сумму' : 'Настроить подбор'}<Icon name="chevron" size={15} /></button>

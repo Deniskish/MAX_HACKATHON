@@ -17,13 +17,13 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved, personali
     <div className="funding-card-heading">
       <div className="funding-card-tags">
       <span className="tag">{fundingKindLabels[o.kind]}</span>
-      <span className="tag">{o.source.type === 'demo' ? 'Учебные данные' : 'Официальный источник'}</span>
+      {o.source.type === 'demo' && <span className="tag">Учебные данные</span>}
       </div>
       {onSave && <button className={`save-program${saved ? ' is-saved' : ''}`} aria-label={`${saved ? 'Убрать из сохранённых' : 'Сохранить'}: ${o.title}`} aria-pressed={Boolean(saved)} onClick={() => onSave(o.id)}><Icon name="bookmark" size={19} /></button>}
     </div>
     <h3>{o.title}</h3>
     <p className="muted">{o.providerName}</p>
-    {aiReason && <p className="ai-program-reason"><b>Почему AI рекомендует рассмотреть</b><br />{aiReason}</p>}
+    {aiReason && <details className="ai-program-reason"><summary>Почему рекомендовано</summary><p>{aiReason}</p></details>}
     <strong>{amountLabel(o)}</strong>
     <div className="funding-key-facts">{rate && <span>{rate}</span>}{term && <span>Срок: {term}</span>}</div>
     <span className={`funding-status funding-status-${personalized ? match.status : o.status}`}>{personalized ? fundingStatusLabels[match.status] : { active: 'Приём открыт', closed: 'Приём завершён', upcoming: 'Ожидается открытие', unknown: 'Статус уточняется' }[o.status ?? 'unknown']}</span>
@@ -132,7 +132,6 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onResu
     <details className="ai-entry"><summary>Описать потребность своими словами</summary><AIPanel title="Умный подбор" task="intake" context={{ profile, need: need.purpose ? need : undefined, page: 'funding' }} onNeed={setNeed} onOpen={onOpen} /></details>
     <form className="widget" onSubmit={submit}>
       <h2>Что нужно вашему бизнесу?</h2>
-      <p>Укажите цель — система сравнит разные способы финансирования. Остальные поля необязательны.</p>
       <div className="form-grid">
         <label className="field">Цель
           <select required value={need.purpose} onChange={(e) => setNeed({ ...need, purpose: e.target.value })}>

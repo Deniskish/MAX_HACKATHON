@@ -49,7 +49,6 @@ export default function App() {
       <BrandWordmark className="access-wordmark" />
       <section className="widget access-card" aria-labelledby="access-title">
         <ThemedImage className="access-symbol" src="/assets/orb.png" width={80} height={80} alt="" draggable={false} />
-        <span className="eyebrow">ПОДДЕРЖКА ВАШЕГО БИЗНЕСА</span>
         <h1 id="access-title">Добро пожаловать<br />в Опору</h1>
         <p>Введите пароль, чтобы войти в рабочее пространство.</p>
         <form onSubmit={unlock}>

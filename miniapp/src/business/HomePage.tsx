@@ -55,9 +55,7 @@ export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNoti
         <button type="button" className={`home-opportunities${personalized ? ' home-adaptive' : ''}`} onClick={() => insight ? onAIAction(insight.action) : onOpportunities()}>
           <ThemedImage className="home-orb" src="/assets/orb.png" width={1254} height={1254} alt="" draggable={false} />
           <span className="home-opportunities-copy">
-            {personalized && <span className="home-ai-label">{insight ? 'AI · ВАШ СЛЕДУЮЩИЙ ШАГ' : analysis.status === 'loading' ? 'AI · АНАЛИЗ БИЗНЕСА' : 'ПОДБОР ПО ПРАВИЛАМ'}</span>}
-            <span className="home-action-title">{insight ? insight.title : personalized ? 'Уточните вашу задачу' : <>Возможности<br />рядом</>}</span>
-            <span className="home-opportunities-description">{insight ? insight.text : personalized ? analysis.status === 'loading' ? 'Изучаем ваш бизнес, цели и заявки. Скоро здесь появится рекомендация.' : 'AI пока недоступен. Укажите цель для подбора по правилам.' : <>Государственная поддержка<br />для вашего бизнеса</>}</span>
+            <span className="home-action-title">{insight ? insight.title : personalized ? analysis.status === 'loading' ? 'Анализируем ваш бизнес…' : 'Уточните вашу задачу' : <>Возможности<br />рядом</>}</span>
           </span>
           <Arrow />
         </button>

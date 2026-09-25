@@ -47,7 +47,7 @@
   padding: 16px 18px 20px; border: 1px solid var(--glass-edge); border-radius: 26px;
   background: var(--glass-surface); box-shadow: var(--glass-shadow);
 }
-.hub-identity-mark, .funding-result-mark { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.hub-identity-mark, .funding-result-mark { display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
 .hub-identity-mark .glass-art { margin-top: -8px; margin-bottom: -8px; }
 .hub-identity-title { margin-top: 8px; }
 .hub-identity h2 { font-size: 24px; }
