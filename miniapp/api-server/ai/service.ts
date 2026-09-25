@@ -85,7 +85,7 @@ export const workspaceFunction = {
 };
 function failureCode(error: unknown) {
   const code = error instanceof PrivacyError ? error.code : '';
-  return /^(PROVIDER_HTTP_\d{3}|PROVIDER_RATE_LIMITED|PROVIDER_UNAVAILABLE|TRUNCATED_RESPONSE|INVALID_RESPONSE|NO_FUNCTION_CALL|GIGACHAT_AUTH_FAILED)$/.test(code) ? code : 'PROVIDER_UNAVAILABLE';
+  return /^(PROVIDER_HTTP_\d{3}|PROVIDER_RATE_LIMITED|PROVIDER_UNAVAILABLE|PROVIDER_CONTENT_BLOCKED|TRUNCATED_RESPONSE|INVALID_RESPONSE|NO_FUNCTION_CALL|GIGACHAT_AUTH_FAILED)$/.test(code) ? code : 'PROVIDER_UNAVAILABLE';
 }
 function catalogEvidence(): AIEvidence[] {
   return officialFundingCatalog.map((o) => ({ id: `program:${o.id}`, title: o.title, opportunityId: o.id,
@@ -110,6 +110,9 @@ function evaluate(profile: FundingProfile, need: FundingNeed, request: AIRequest
 export async function runAssistant(input: unknown, model?: AIModel, extraEvidence: AIEvidence[] = [], signal = AbortSignal.timeout(65000), semantic?: SemanticSearch): Promise<AIResult> {
   const started = Date.now();
   const { request, redact } = prepareAIContext(input);
+  // Crawled pages are unreviewed change-monitor material, not programme criteria.
+  // Routine advice uses the verified catalogue; user documents are added separately below.
+  const taskEvidence = request.task === 'changes' ? extraEvidence : extraEvidence.filter((e) => !e.id.startsWith('source:'));
   signal.throwIfAborted();
   const originalNeed = request.context.need ?? { ...emptyFundingNeed }, originalProfile = request.context.profile ?? {};
   let plan: Record<string, any> = {}, calls = 0, tokens = 0, unavailable = !model, providerFailure: string | undefined;
@@ -145,10 +148,10 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
   const preferred = strings(plan.opportunityIds, 6).filter((id) => officialFundingCatalog.some((o) => o.id === id));
   if (request.context.programId) preferred.unshift(request.context.programId);
   const query = concise(plan.query, 2000) || request.question;
-  let evidence = retrieveEvidence(query, preferred, extraEvidence), semanticUsed = false;
+  let evidence = retrieveEvidence(query, preferred, taskEvidence), semanticUsed = false;
   if (request.task === 'review' && request.context.programId) evidence = evidence.filter((e) => e.opportunityId === request.context.programId);
   if (semantic && !unavailable && request.task !== 'review') {
-    try { const found = await semantic(query, [...catalogEvidence(), ...extraEvidence], signal);
+    try { const found = await semantic(query, [...catalogEvidence(), ...taskEvidence], signal);
       evidence = [...new Map([...catalogEvidence().filter((e) => preferred.includes(e.opportunityId!)), ...found].map((e) => [e.id, e])).values()].slice(0, 14); semanticUsed = true;
     } catch (error) { if (signal.aborted) throw error; /* Смысловой выбор модели и текстовый поиск остаются доступны. */ }
   }
@@ -233,6 +236,10 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
   }
   if (unavailable) {
     base.notice = 'Не удалось получить ответ AI. Ниже — проверка условий каталога. Можно повторить вопрос позже.';
+    if (providerFailure === 'PROVIDER_CONTENT_BLOCKED') {
+      base.answer = 'GigaChat отклонил этот запрос. AI-анализ не выполнен. Подбор по условиям каталога остаётся доступен.';
+      base.notice = undefined;
+    }
     if (request.task === 'review') {
       base.answer = 'Не удалось проверить заявку. Результат проверки не сформирован. Материалы сохранены в этой сессии — попробуйте ещё раз.';
       base.notice = undefined; base.citations = []; base.actions = []; base.findings = [];

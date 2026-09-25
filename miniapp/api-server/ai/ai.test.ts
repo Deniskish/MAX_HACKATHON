@@ -44,6 +44,39 @@ test('automatic workspace context only carries allowed application facts, with p
   assert.doesNotMatch(JSON.stringify(prepared.request), /ООО Секрет|never-forward|fake-document/);
   assert.throws(() => prepareAIContext({ ...input, context: { workspace: { savedIds: ['invented'], applications: [] } } }));
 });
+
+test('unreviewed crawls only enter change analysis, never routine business advice or semantic retrieval', async () => {
+  const crawled = [{ id: 'source:crawl:0', title: 'Страница сайта', text: 'UNREVIEWED_PAGE_TEXT', opportunityId: id }];
+  for (const task of ['workspace', 'chat', 'search', 'analysis', 'strategy', 'review', 'draft', 'intake', 'changes']) {
+    let seenAnswer = false;
+    await runAssistant({ ...input, task }, async (stage, payload: any) => {
+      if (stage === 'plan') return { value: { query: 'test', opportunityIds: [] } };
+      seenAnswer = true;
+      assert.equal(payload.evidence.some((e: any) => e.id.startsWith('source:')), task === 'changes', task);
+      return { value: answer };
+    }, crawled, AbortSignal.timeout(2000), async (_query, evidence) => {
+      assert.equal(evidence.some((e) => e.id.startsWith('source:')), task === 'changes', task);
+      return evidence;
+    });
+    assert.equal(seenAnswer, true);
+  }
+});
+
+test('provider blacklist is explicit, never retried as JSON or reported as an AI answer', async () => {
+  for (const task of ['workspace', 'chat', 'review']) {
+    let calls = 0;
+    const model = createAIModel('https://api.giga.chat/v1/chat/completions', 'GigaChat-2-Pro', async () => 'test', (async () => {
+      calls++;
+      return new Response(JSON.stringify({ choices: [{ finish_reason: 'blacklist', message: { content: 'Provider refusal' } }] }));
+    }) as typeof fetch);
+    const result = await runAssistant({ ...input, task }, model);
+    assert.equal(result.mode, 'local');
+    assert.equal(result.providerFailure, 'PROVIDER_CONTENT_BLOCKED');
+    assert.equal(calls, 1);
+    assert.equal(result.personalization, undefined);
+    assert.doesNotMatch(result.answer, /Provider refusal/);
+  }
+});
 test('meaningful question, regional profile, project and history reach v2; known identifiers are removed', () => {
   const prepared = prepareAIContext({ ...input, question: `${input.question} ООО Секрет 7707083893 user@example.com`, context: { ...input.context, documents: [{ id: 'doc1', name: 'private-name.txt', pages: [{ page: 2, text: 'ООО Секрет производит приборы.' }] }] } });
   const payload = JSON.stringify(prepared.request);

@@ -56,7 +56,10 @@ export function createAIModel(endpoint: string, model: string, token: () => Prom
           ...(conversational || jsonOnly ? {} : { functions: [fn], function_call: { name: fn.name } }) }),
       });
       if (!response.ok) { await response.body?.cancel(); throw new PrivacyError(response.status === 429 ? 'PROVIDER_RATE_LIMITED' : `PROVIDER_HTTP_${response.status}`); }
-      return await providerJson(response, 120000) as any;
+      const data = await providerJson(response, 120000) as any;
+      // A provider refusal is not an answer or malformed JSON, and must not be retried.
+      if (data.choices?.[0]?.finish_reason === 'blacklist') throw new PrivacyError('PROVIDER_CONTENT_BLOCKED');
+      return data;
     };
     const data = await request();
     const choice = data.choices?.[0], message = choice?.message;
