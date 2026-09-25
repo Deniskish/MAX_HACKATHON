@@ -42,6 +42,7 @@ jobs:
             npm run test:production --prefix miniapp
             # Keep old hashed chunks available for already opened app sessions.
             npm run build --prefix miniapp -- --emptyOutDir false
+            npm run build --prefix miniapp/api-server
 
             # Replace the old Vite command, not just restart its saved PM2 config.
             if pm2 describe opora-frontend >/dev/null 2>&1; then
