@@ -58,7 +58,10 @@ jobs:
               if curl -fsS http://localhost:3000/ >/dev/null && curl -fsS http://localhost:3000/api/health && curl -fsS http://localhost:3002/api/health; then
                 npm run check:production --prefix miniapp
                 node miniapp/api-server/company-data/smoke-check.cjs
-                node miniapp/api-server/ai/smoke-check.cjs
+                node miniapp/api-server/ai/smoke-check.cjs || {
+                  (cd miniapp/api-server && ./node_modules/.bin/tsx ai/check-provider.ts)
+                  exit 1
+                }
                 exit 0
               fi
               echo "Waiting for app... $i/15"
