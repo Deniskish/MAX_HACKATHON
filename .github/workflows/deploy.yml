@@ -5,6 +5,12 @@ on:
     branches:
       - main
 
+# All deployments share /opt/app; keep every queued run and finish the active one.
+concurrency:
+  group: opora-production-deploy
+  cancel-in-progress: false
+  queue: max
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
