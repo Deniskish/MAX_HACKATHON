@@ -1,0 +1,27 @@
+name: Scenario audit
+on:
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run synthetic scenarios on the application server
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY_B64: ${{ secrets.SERVER_SSH_KEY_B64 }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "$SERVER_SSH_KEY_B64" | base64 -d > ~/.ssh/audit_key
+          chmod 600 ~/.ssh/audit_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+          scp -i ~/.ssh/audit_key miniapp/api-server/ai/scenario-audit.cjs "$SERVER_USER@$SERVER_HOST:/tmp/opora-scenario-audit.cjs"
+          ssh -i ~/.ssh/audit_key "$SERVER_USER@$SERVER_HOST" "AUDIT_REVISION=$GITHUB_SHA node /tmp/opora-scenario-audit.cjs /tmp/opora-scenario-audit.json"
+          scp -i ~/.ssh/audit_key "$SERVER_USER@$SERVER_HOST:/tmp/opora-scenario-audit.json" ./scenario-audit.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scenario-audit
+          path: scenario-audit.json
+          retention-days: 7

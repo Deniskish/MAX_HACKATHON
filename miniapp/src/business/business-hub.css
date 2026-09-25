@@ -65,6 +65,3 @@
 .home-adaptive .home-action-title, .home-adaptive .home-opportunities-description { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
 .home-adaptive .home-action-title { -webkit-line-clamp: 2; }
 .home-adaptive .home-opportunities-description { -webkit-line-clamp: 3; }
-.home-analysis-details { padding: 14px 4px 10px; font-size: 11px; color: #9293a0; }
-.home-analysis-details p { line-height: 1.7; }
-.home-analysis-details button { background: none; border: 0; color: #b8a7ff; min-height: 42px; font-size: 12px; }

@@ -60,7 +60,6 @@ export function HomePage({ onFindSupport, onAddBusiness, onOpportunities, onNoti
           </span>
           <Arrow />
         </button>
-        {personalized && <details className="home-analysis-details"><summary>{insight ? 'Почему этот шаг важен' : 'Как подстраивается приложение'}</summary>{insight && <p>{insight.text}</p>}<p>{analysis.data?.personalization?.summary ?? 'AI анализирует профиль, потребность и состояние заявок. Его выводы используются на главной, в поддержке, заявках, календаре и чате. Изменение данных обновляет анализ.'}</p><button onClick={analysis.refresh} disabled={analysis.status === 'loading'}>{analysis.status === 'loading' ? 'Анализируем…' : 'Обновить AI-анализ'}</button></details>}
       </section>
     </div>
     <AppNavigation active="overview" onNavigate={(page) => {
