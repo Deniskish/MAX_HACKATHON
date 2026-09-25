@@ -1,0 +1,176 @@
+[
+  {
+    "id": "LIVE-incomplete-chat",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  },
+  {
+    "id": "LIVE-incomplete-intake",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  },
+  {
+    "id": "LIVE-incomplete-search",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  },
+  {
+    "id": "LIVE-incomplete-analysis",
+    "technicalStatus": "pass",
+    "contentStatus": "fail",
+    "reason": "Шаблонный отказ вместо ответа"
+  },
+  {
+    "id": "LIVE-incomplete-strategy",
+    "technicalStatus": "pass",
+    "contentStatus": "fail",
+    "reason": "Шаблонный отказ вместо ответа"
+  },
+  {
+    "id": "LIVE-incomplete-review",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  },
+  {
+    "id": "LIVE-incomplete-draft",
+    "technicalStatus": "fail",
+    "contentStatus": "fail",
+    "reason": "Некорректный формат ответа"
+  },
+  {
+    "id": "LIVE-incomplete-changes",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  },
+  {
+    "id": "LIVE-incomplete-workspace",
+    "technicalStatus": "fail",
+    "contentStatus": "fail",
+    "reason": "Некорректный формат ответа"
+  },
+  {
+    "id": "LIVE-company-chat",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  },
+  {
+    "id": "LIVE-company-intake",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  },
+  {
+    "id": "LIVE-company-search",
+    "technicalStatus": "pass",
+    "contentStatus": "fail",
+    "reason": "Шаблонный отказ вместо ответа"
+  },
+  {
+    "id": "LIVE-company-analysis",
+    "technicalStatus": "pass",
+    "contentStatus": "fail",
+    "reason": "Шаблонный отказ вместо ответа"
+  },
+  {
+    "id": "LIVE-company-strategy",
+    "technicalStatus": "pass",
+    "contentStatus": "fail",
+    "reason": "Шаблонный отказ вместо ответа"
+  },
+  {
+    "id": "LIVE-company-review",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  },
+  {
+    "id": "LIVE-company-draft",
+    "technicalStatus": "fail",
+    "contentStatus": "fail",
+    "reason": "Некорректный формат ответа"
+  },
+  {
+    "id": "LIVE-company-changes",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  },
+  {
+    "id": "LIVE-company-workspace",
+    "technicalStatus": "fail",
+    "contentStatus": "fail",
+    "reason": "Некорректный формат ответа"
+  },
+  {
+    "id": "LIVE-project-chat",
+    "technicalStatus": "pass",
+    "contentStatus": "partial",
+    "reason": "Излишне уверенная рекомендация мер для компании проекту без компании"
+  },
+  {
+    "id": "LIVE-project-intake",
+    "technicalStatus": "pass",
+    "contentStatus": "partial",
+    "reason": "Излишне уверенная рекомендация мер для компании проекту без компании"
+  },
+  {
+    "id": "LIVE-project-search",
+    "technicalStatus": "pass",
+    "contentStatus": "fail",
+    "reason": "Шаблонный отказ вместо ответа"
+  },
+  {
+    "id": "LIVE-project-analysis",
+    "technicalStatus": "pass",
+    "contentStatus": "fail",
+    "reason": "Шаблонный отказ вместо ответа"
+  },
+  {
+    "id": "LIVE-project-strategy",
+    "technicalStatus": "pass",
+    "contentStatus": "fail",
+    "reason": "Шаблонный отказ вместо ответа"
+  },
+  {
+    "id": "LIVE-project-review",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  },
+  {
+    "id": "LIVE-project-draft",
+    "technicalStatus": "fail",
+    "contentStatus": "fail",
+    "reason": "Некорректный формат ответа"
+  },
+  {
+    "id": "LIVE-project-changes",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  },
+  {
+    "id": "LIVE-project-workspace",
+    "technicalStatus": "fail",
+    "contentStatus": "fail",
+    "reason": "Некорректный формат ответа"
+  },
+  {
+    "id": "LIVE-empty-review",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  },
+  {
+    "id": "LIVE-history",
+    "technicalStatus": "pass",
+    "contentStatus": "not-expert-verified",
+    "reason": "Не является полной экспертизой содержания"
+  }
+]
