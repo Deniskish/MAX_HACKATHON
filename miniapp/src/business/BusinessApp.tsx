@@ -112,6 +112,8 @@ export default function BusinessApp() {
     setPage(next);
   }
   const [sourceUpdates, setSourceUpdates] = useState<{ id: string; url: string; title: string; detectedAt: string; opportunityId?: string; kind: string }[]>([]);
+  const notificationUpdates = sourceUpdates.filter((update) => update.opportunityId && saved.includes(update.opportunityId));
+  const hasNotifications = events.length > 0 || notificationUpdates.length > 0;
   const analysisContext = profile ? { profile: fundingProfile, need: need.purpose ? need : undefined,
     identifiers: { name: profile.name, inn: profile.inn }, page: 'workspace',
     workspace: { savedIds: saved, applications: apps.map((a) => ({ programId: a.programId, project: a.project.slice(0, 2000),
@@ -418,7 +420,7 @@ export default function BusinessApp() {
     <div className={`app-shell page-${page}`}>
       {page !== 'overview' && <AppHeader
         title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', assistant: 'AI-помощник' }[page]}
-        backLabel={['assistant', 'calendar'].includes(page) ? 'В мой бизнес' : 'На главную'} onBack={() => navigate(['assistant', 'calendar'].includes(page) ? 'profile' : 'overview')} onNotifications={() => setHomePanel('events')} hasNotifications={events.length > 0 || sourceUpdates.some((u) => u.opportunityId && saved.includes(u.opportunityId))}
+        backLabel={['assistant', 'calendar'].includes(page) ? 'В мой бизнес' : 'На главную'} onBack={() => navigate(['assistant', 'calendar'].includes(page) ? 'profile' : 'overview')} onNotifications={() => setHomePanel('events')} hasNotifications={hasNotifications}
       />}
       <main ref={mainRef} className="app-content">
           {page === 'overview' && <HomePage
@@ -429,7 +431,7 @@ export default function BusinessApp() {
             onApplications={() => setPage('applications')}
             onBusiness={() => navigate('profile')} personalized={!!profile}
             analysis={businessAnalysis} onAIAction={followInsight}
-            hasNotifications={events.length > 0 || sourceUpdates.some((u) => u.opportunityId && saved.includes(u.opportunityId))}
+            hasNotifications={hasNotifications}
           />}
           {page === 'programs' && (
             <>
@@ -625,6 +627,17 @@ export default function BusinessApp() {
             onNeed={() => setHomePanel('funding')} onAssistant={() => navigate('assistant')} onCalendar={() => navigate('calendar')}
             onApplications={() => navigate('applications')} onSaved={() => { navigate('programs'); setCatalogScope('saved'); setOnlySaved(true); }} />}
           {page === 'profile' && profile && <details className="ai-entry"><summary>Проанализировать бизнес и следующий шаг</summary><AIPanel title="План развития" task="analysis" context={aiContext} initialQuestion="Проанализируй мой бизнес: какие возможности рассмотреть, чего не хватает и какой следующий шаг?" {...aiHandlers} /></details>}
+          {page === 'profile' && profile && <details className="ai-entry source-updates">
+            <summary>Изменения в поддержке · разбор с AI</summary>
+            <p>{sourcesCheckedAt ? `Последняя проверка: ${new Date(sourcesCheckedAt).toLocaleString('ru-RU')}.` : 'Первая проверка источников ещё не завершена.'} Изменение страницы требует сверки условий программы.</p>
+            {sourceUpdates.length ? sourceUpdates.map((update) => <article className="ai-proposal" key={update.id}>
+              <span className="tag">{update.kind === 'discovered' ? 'Найден новый материал' : saved.includes(update.opportunityId ?? '') ? 'По сохранённой программе' : 'Изменилась страница'}</span>
+              <p><a href={update.url} target="_blank" rel="noreferrer">{update.title} ↗</a></p>
+              <ActionButton className="secondary" disabled={sending} onClick={() => {
+                void ask(`Оцени, как актуальные материалы по теме «${update.title}» влияют на мой бизнес. Укажи, что подтверждено и что требует проверки.`, programs.find((program) => program.id === update.opportunityId) ?? null, 'strategy');
+              }}>Объяснить влияние с AI</ActionButton>
+            </article>) : <p>Новых материалов для разбора пока нет.</p>}
+          </details>}
           {page === 'profile' &&
             (profile ? (
               <details className="profile-panel"><summary>Сведения о бизнесе</summary>
@@ -1126,12 +1139,11 @@ export default function BusinessApp() {
           <section className="widget business-summary"><span className="tag">{companyProfile ? 'Ваш бизнес' : 'Проект без юридического лица'}</span><h1>{profile.name}</h1><p>{profile.region} · {companyProfile ? `ОКВЭД ${profile.okved || 'не указан'} · МСП: ${profile.isSme === 'yes' ? 'да' : profile.isSme === 'no' ? 'нет' : 'неизвестно'}` : projectProfile?.industry}</p><ActionButton className="secondary" onClick={openProfile}>Редактировать профиль</ActionButton></section>
           <FundingExperience key={companyProfile?.inn ?? 'project'} profile={fundingProfile} initialNeed={need} onNeed={setNeed} onOpen={openFunding} onSave={toggleSaved} saved={saved} />
         </>}
-        {homePanel === 'events' && <div className="home-panel-actions"><h2>События</h2>{events.length ? events.map((event) => <button className="widget-link-row" key={event.id} onClick={() => openFunding(event.opportunityId)}>{event.text}</button>) : <p>Новых событий нет. Сохраните интересующие программы.</p>}<ActionButton className="secondary" onClick={() => { navigate('calendar'); }}>Открыть календарь</ActionButton></div>}
-        {homePanel === 'events' && <section className="source-updates"><h3>Обновления официальных источников</h3>
-          <p className="widget-footnote">{sourcesCheckedAt ? `Последняя проверка: ${new Date(sourcesCheckedAt).toLocaleString('ru-RU')}.` : 'Первая проверка источников ещё не завершена.'} Изменение страницы требует сверки условий программы.</p>
-          {sourceUpdates.map((u) => <article className="ai-proposal" key={u.id}><span className="tag">{u.kind === 'discovered' ? 'Найден новый материал' : saved.includes(u.opportunityId ?? '') ? 'По сохранённой программе' : 'Изменилась страница'}</span><p><a href={u.url} target="_blank" rel="noreferrer">{u.title} ↗</a></p>
-            <ActionButton className="secondary" onClick={() => { setHomePanel(null); if (!profile) { navigate('profile'); return; } void ask(`Оцени, как актуальные материалы по теме «${u.title}» влияют на мой бизнес. Укажи, что подтверждено и что требует проверки.`, programs.find((p) => p.id === u.opportunityId) ?? null, 'strategy'); }}>Объяснить влияние с AI</ActionButton></article>)}
-        </section>}
+        {homePanel === 'events' && <div className="home-panel-actions events-panel">
+          {!hasNotifications && <p>Новых уведомлений пока нет.</p>}
+          {events.map((event) => <button className="widget-link-row" key={event.id} onClick={() => openFunding(event.opportunityId)}>{event.text}</button>)}
+          {notificationUpdates.map((update) => <a className="widget-link-row" key={update.id} href={update.url} target="_blank" rel="noreferrer">Обновился источник по сохранённой программе: {update.title} ↗</a>)}
+        </div>}
       </ModalSheet>}
       {deleteDraftId && <ModalSheet title="Удалить черновик?" onClose={() => setDeleteDraftId(null)}>
         <h2>Удалить черновик?</h2>
