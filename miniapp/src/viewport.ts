@@ -26,6 +26,9 @@ export function installViewportSizing() {
   };
 
   const refresh = async () => {
+    // Android MAX already places this WebView between its native bars.
+    // Expose the bridge platform even when viewport sizing is unsupported.
+    document.documentElement.dataset.maxPlatform = window.WebApp?.platform ?? '';
     render();
     const current = ++revision;
     const bridge = window.WebApp;

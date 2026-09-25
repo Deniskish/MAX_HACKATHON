@@ -1,5 +1,8 @@
 /* Layout owns the space for navigation and modal controls: no floating controls
    on top of scrollable content. Business logic remains in its existing modules. */
+:root { --app-safe-top: env(safe-area-inset-top, 0px); --app-safe-bottom: env(safe-area-inset-bottom, 0px); }
+/* Android MAX's framed WebView reports system insets already handled by the host. */
+:root[data-max-platform="android"] { --app-safe-top: 0px; --app-safe-bottom: 0px; }
 .sidebar .nav-item > .mobile-nav-label { display: none; }
 .footer-logo { color: var(--ink); }
 .page-overview footer { border-top: 0; }
@@ -19,7 +22,7 @@ dialog .modal { padding-top: 24px; }
   :root { --mobile-gutter: 16px; }
   .app-shell { height: var(--app-height, 100dvh); min-height: 0; width: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; background: radial-gradient(ellipse 100% 400px at 90% 0, #d5d9e2 0, transparent 90%), #f7f8fb; }
   .main-wrap { display: contents; }
-  .topbar { grid-row: 1; position: static; height: calc(98px + env(safe-area-inset-top)); min-height: 98px; padding: calc(22px + env(safe-area-inset-top)) 22px 14px; gap: 12px; background: transparent; border: 0; }
+  .topbar { grid-row: 1; position: static; height: calc(98px + var(--app-safe-top)); min-height: 98px; padding: calc(22px + var(--app-safe-top)) 22px 14px; gap: 12px; background: transparent; border: 0; }
   .breadcrumb, .top-actions .user-avatar { display: none; }
   .mobile-identity { display: flex; flex: 1; min-width: 0; gap: 10px; text-align: left; justify-content: flex-start; background: none; border: 0; padding: 0; }
   .identity-avatar { display: grid; place-items: center; flex: 0 0 43px; width: 43px; height: 43px; border-radius: 50%; background: var(--brand); color: #121416; }
@@ -30,7 +33,7 @@ dialog .modal { padding-top: 24px; }
   .page-overview main { display: block; }
   .page-overview main > footer { margin-top: 27px; padding: 21px 0; }
   .app-shell main > * { min-width: 0; }
-  .sidebar { grid-row: 3; position: static; inset: auto; display: flex; flex-direction: row; align-items: center; gap: 8px; width: 100%; height: auto; padding: 10px var(--mobile-gutter) calc(10px + env(safe-area-inset-bottom)); background: var(--canvas); border: 0; pointer-events: auto; }
+  .sidebar { grid-row: 3; position: static; inset: auto; display: flex; flex-direction: row; align-items: center; gap: 8px; width: 100%; height: auto; padding: 10px var(--mobile-gutter) calc(10px + var(--app-safe-bottom)); background: var(--canvas); border: 0; pointer-events: auto; }
   .sidebar .brand, .sidebar-bottom, .sidebar .nav-calendar, .sidebar .nav-profile, .sidebar .tiny-badge { display: none; }
   .sidebar nav { display: flex; flex: 1; min-width: 0; margin: 0; padding: 4px; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 32px; box-shadow: none; backdrop-filter: none; }
   .sidebar nav .nav-item { display: flex; flex: 1; flex-direction: column; width: auto; min-width: 0; min-height: 54px; padding: 7px 2px; gap: 4px; border-radius: 26px; font-size: 11px; line-height: 1.2; color: var(--muted); }
@@ -132,8 +135,8 @@ dialog .modal { padding-top: 24px; }
   .date-tile { flex: 0 0 54px; }
 
   dialog[open] { width: 100%; max-width: 100%; height: var(--app-height, 100dvh); max-height: var(--app-height, 100dvh); margin: 0; border-radius: 0; }
-  .modal-toolbar { padding: calc(8px + env(safe-area-inset-top)) 16px 8px; min-height: 60px; }
-  dialog .modal, .modal-sheet .project-dialog { padding: 20px 16px calc(24px + env(safe-area-inset-bottom)); min-height: 0; height: auto; border-radius: 0; }
+  .modal-toolbar { padding: calc(8px + var(--app-safe-top)) 16px 8px; min-height: 60px; }
+  dialog .modal, .modal-sheet .project-dialog { padding: 20px 16px calc(24px + var(--app-safe-bottom)); min-height: 0; height: auto; border-radius: 0; }
   .modal > h2, .modal form > h2, .project-dialog h2 { font-size: 26px; margin: 16px 0; line-height: 1.25; }
   .modal > .muted, .modal form > .muted { font-size: 14px; }
   .modal .eyebrow { font-size: 11px; line-height: 1.5; }
@@ -173,7 +176,7 @@ dialog .modal { padding-top: 24px; }
   .opora-theme .chat-input .opora-action.primary { flex: 0 0 48px; padding: 0; min-height: 48px; }
   .chat-program-context { flex-wrap: wrap; }
   .chat-program-context > .text-button { flex: 1; overflow-wrap: anywhere; }
-  .toast { bottom: calc(90px + env(safe-area-inset-bottom)); max-width: calc(100% - 32px); pointer-events: none; }
+  .toast { bottom: calc(90px + var(--app-safe-bottom)); max-width: calc(100% - 32px); pointer-events: none; }
   footer { margin-top: 24px; padding: 18px 0 0; gap: 8px; }
   .access-screen { min-height: 100dvh; padding: 24px 16px; }
   .access-card { padding: 24px 20px; }
