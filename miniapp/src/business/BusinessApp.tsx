@@ -963,7 +963,7 @@ export default function BusinessApp() {
               </div>
               <span className="tag">{selected.type}</span>
               <h2>{selected.title}</h2>
-              <details className="application-conditions" open={!activeApp}>
+              <details key={selected.id} className="application-conditions">
               <summary>Условия программы</summary>
               <p className="muted">{selected.description}</p>
               <OfficialDetails personalized={!!profile} match={matches.find((m) => m.opportunity.id === selected.id)!} onAsk={() => { const program = selected; close(); void ask('Объясни следующий шаг', program, 'strategy'); }} />
