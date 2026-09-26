@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import { PrivacyError } from './privacy';
 import { createGigaChatClient } from './gigachat';
@@ -45,6 +46,8 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
     status: !giga ? invalidConfig ? 'unavailable' : 'not_configured' : lastError ? 'unavailable' : lastSuccess ? 'ready' : 'unavailable',
     checked: Boolean(lastSuccess || lastError), lastSuccess, reason: lastError ?? (giga && !lastSuccess ? 'not_verified' : null) });
   const app = express(); app.disable('x-powered-by');
+  // The HTTPS ingress can route /api directly here, bypassing the frontend proxy.
+  app.use(compression());
   app.use((_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff'); next(); });
   app.use(cors({ origin: (env.APP_ORIGIN || 'http://localhost:3000').split(',').map((s) => s.trim()) }));
   app.use('/api/ai/assist', express.json({ limit: '384kb' }));

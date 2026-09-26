@@ -22,6 +22,13 @@ test('health, provider/catalog/AI status and missing real FNS dataset stay hones
   const response = await fetch(url + '/api/assistant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: 'Что подходит?', context: {} }) });
   assert.equal(response.status, 503); assert.ok((await response.json() as any).code);
 }));
+
+test('direct API catalogue is compressed even when ingress bypasses the frontend', async () => server(null, async (url) => {
+  const response = await fetch(url + '/api/funding/catalog', { headers: { 'Accept-Encoding': 'gzip' } });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-encoding'), 'gzip');
+  assert.ok((await response.json() as any).opportunities.length > 0);
+}));
 test('configured AI becomes ready only after a successful request', async () => server({ async complete() { return { answer: 'Проверьте условия.', mode: 'llm' }; } }, async (url) => {
   const first = await (await fetch(url + '/api/ai/status')).json() as any;
   assert.equal(first.configured, true); assert.equal(first.checked, false); assert.notEqual(first.status, 'ready');
