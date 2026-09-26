@@ -5,7 +5,7 @@ import { GlassArt } from './GlassArt';
 
 type ChatMessage = { role: 'user' | 'assistant'; text: string };
 
-export function AssistantPage({ businessName, guest = false, backLabel = 'В мой бизнес', status, messages, renderMessage, question, onQuestion, sending, onSend, onStop, onBack, onClear, context, program }: {
+export function AssistantPage({ businessName, guest = false, backLabel = 'В мой бизнес', status, messages, renderMessage, question, onQuestion, sending, onSend, onStop, onBack, onClear, context, program, error, onRetry }: {
   guest?: boolean; backLabel?: string;
   businessName: string; status: string; messages: ChatMessage[]; renderMessage: (index: number) => ReactNode;
   question: string; onQuestion: (text: string) => void; sending: boolean; onSend: (text: string) => void;

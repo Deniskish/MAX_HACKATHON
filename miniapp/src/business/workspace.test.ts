@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { loadWorkspace, saveWorkspace, applicationStatus, filterFunding, calendarICS, fundingEvents, projectAsProfile, personalFunding, trackedFunding } from './workspace';
+import { loadWorkspace, saveWorkspace, removeBusiness, type Workspace, applicationStatus, filterFunding, calendarICS, fundingEvents, projectAsProfile, personalFunding, trackedFunding } from './workspace';
 import { officialFundingCatalog } from '../../api-server/funding-catalog/official-catalog';
 import { matchFundingOpportunity } from '../../api-server/funding-catalog/matching';
 import { emptyFundingNeed } from '../../api-server/funding-catalog/types';
 import { OfficialDetails, ProjectOnboarding } from './OfficialExperience';
-import { inspectDocumentText, type Application } from './domain';
+import { inspectDocumentText, emptyProfile, type Application } from './domain';
 const ids = officialFundingCatalog.map((o) => o.id);
 test('personal selection hides ineligible and closed measures and never counts unknown conditions as confirmed', () => {
   const base = matchFundingOpportunity({}, emptyFundingNeed, officialFundingCatalog[0]);
@@ -29,7 +29,7 @@ test('guest programme details show public terms without pretending to assess a m
   const html = renderToStaticMarkup(React.createElement(OfficialDetails, { match, personalized: false, onAsk: () => {} }));
   assert.match(html, /общие условия/); assert.doesNotMatch(html, /Почему подходит|Что не соответствует|Объяснить с помощью AI/);
 });
-const memory = () => { const map = new Map<string, string>(); return { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => { map.set(k, v); } }; };
+const memory = () => { const map = new Map<string, string>(); return { get length() { return map.size; }, key: (index: number) => [...map.keys()][index] ?? null, removeItem: (k: string) => { map.delete(k); }, getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => { map.set(k, v); } }; };
 test('versioned workspace migrates bookmarks and drops synthetic profiles/unknown program drafts', () => {
   const storage = memory(); storage.setItem('opora.saved.v1', JSON.stringify([ids[0], ids[0], 'removed-program']));
   storage.setItem('opora.profile.v1', JSON.stringify({ inn: '9900000031', name: 'Учебная компания', goals: [] }));
@@ -88,4 +88,43 @@ test('official details show source/date, unknown criteria and next actions; proj
   assert.equal(projectAsProfile(project).inn, '');
   const form = renderToStaticMarkup(React.createElement(ProjectOnboarding, { initial: project, onSave() {}, onCancel() {} }));
   assert.ok(form.includes('Сохранить проект')); assert.doesNotMatch(form, /placeholder="10 или 12 цифр"/);
+});
+
+const deletionWorkspace = (): Workspace => ({
+  profile: { ...emptyProfile, inn: '7707083893', name: 'Прежняя компания', region: 'Москва', goals: ['экспорт'] },
+  projectProfile: { name: 'Прежний проект', region: 'Москва', industry: 'Мебель', stage: 'mvp', hasLegalEntity: false, teamSize: 3, fundingNeed: 1000000, fundingPurpose: 'оборудование' },
+  fundingNeed: { ...emptyFundingNeed, purpose: 'экспорт', amount: 1000000, ownFunds: 500000 }, saved: [ids[0]],
+  applications: [{ id: 'preserved', programId: ids[0], project: 'Описание прежней компании', budget: '1000000', createdAt: '2026-09-26', documents: { 'Смета': 'Исходный текст' }, documentFiles: { 'Смета': 'budget.pdf' }, generatedDraft: 'Сохранённый черновик', reviewConfirmed: true }],
+});
+test('business deletion clears profiles and AI context, preserves every draft field and bookmark, and survives reload', () => {
+  const storage = memory(), original = deletionWorkspace(); saveWorkspace(storage, original);
+  for (const key of ['opora.profile.v1', 'opora.funding-need.v1.7707083893', 'opora.funding-need.v1.', 'opora.ai.history.v2', 'opora.ai.workspace.v1']) storage.setItem(key, 'old data');
+  storage.setItem('unrelated.setting', 'keep');
+  const removed = removeBusiness(storage, original);
+  assert.equal(removed.profile, null); assert.equal(removed.projectProfile, null); assert.deepEqual(removed.fundingNeed, emptyFundingNeed);
+  assert.deepEqual(removed.applications, original.applications); assert.deepEqual(removed.saved, original.saved); assert.deepEqual(removed.detachedApplicationIds, ['preserved']);
+  assert.equal(original.profile?.name, 'Прежняя компания');
+  for (const key of ['opora.profile.v1', 'opora.funding-need.v1.7707083893', 'opora.funding-need.v1.', 'opora.ai.history.v2', 'opora.ai.workspace.v1']) assert.equal(storage.getItem(key), null);
+  assert.equal(storage.getItem('unrelated.setting'), 'keep'); assert.deepEqual(loadWorkspace(storage, ids), removed);
+});
+test('project deletion cannot resurrect a legacy company after reload', () => {
+  const storage = memory(), original = { ...deletionWorkspace(), profile: null };
+  storage.setItem('opora.profile.v1', JSON.stringify(deletionWorkspace().profile)); saveWorkspace(storage, original);
+  removeBusiness(storage, original); const reloaded = loadWorkspace(storage, ids);
+  assert.equal(reloaded.profile, null); assert.equal(reloaded.projectProfile, null); assert.deepEqual(reloaded.applications, original.applications);
+});
+test('adding a business after deletion starts clean and keeps prior drafts detached', () => {
+  const storage = memory(); const removed = removeBusiness(storage, deletionWorkspace());
+  saveWorkspace(storage, { ...removed, profile: { ...emptyProfile, inn: '7707083893', name: 'Новый бизнес', goals: [] } });
+  const reloaded = loadWorkspace(storage, ids); assert.equal(reloaded.profile?.name, 'Новый бизнес'); assert.deepEqual(reloaded.profile?.goals, []);
+  assert.deepEqual(reloaded.fundingNeed, emptyFundingNeed); assert.equal(reloaded.projectProfile, null); assert.deepEqual(reloaded.detachedApplicationIds, ['preserved']);
+});
+test('storage failure restores deletion inputs and reports failure', () => {
+  const storage = memory(), original = deletionWorkspace(); saveWorkspace(storage, original); storage.setItem('opora.ai.history.v2', 'original chat');
+  const before = storage.getItem('opora.workspace');
+  assert.throws(() => removeBusiness({ ...storage, setItem(key, value) {
+    if (key === 'opora.workspace' && JSON.parse(value).data.profile === null) throw new Error('quota');
+    storage.setItem(key, value);
+  } }, original), /quota/);
+  assert.equal(storage.getItem('opora.workspace'), before); assert.equal(storage.getItem('opora.ai.history.v2'), 'original chat');
 });

@@ -23,8 +23,9 @@ function Arrow() {
   return <span className="home-arrow" aria-hidden="true"><Icon name="arrow" size={20} /></span>;
 }
 
-export function HomePage({ showNavigation = true, onFindSupport, onAddBusiness, onOpportunities, onNotifications, onApplications, onBusiness, personalized, hasNotifications, analysis, onAIAction }: HomePageProps) {
-  const insight = analysis.data?.personalization?.sections.home;
+export function HomePage({ showNavigation = true, onFindSupport, onAddBusiness, onAssistant, onNotifications, onApplications, onBusiness, personalized, hasNotifications, analysis, onAIAction }: HomePageProps) {
+  const insight = personalized ? analysis.data?.personalization?.sections.home : undefined;
+  const analyzing = personalized && analysis.status === 'loading';
   return <div className={`home-dashboard${personalized ? ' home-personalized' : ''}`}>
     <header className="home-topbar">
       <BrandWordmark className="home-wordmark-small" />

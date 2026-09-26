@@ -49,3 +49,13 @@
 @media (prefers-color-scheme: dark) {
   .opora-theme .page-programs { --canvas: #14151a; --surface: #1e1f26; --muted: #b0adbd; }
 }
+
+.opora-theme .page-programs .catalog-personal-context { min-width: 0; margin: 0; padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+.opora-theme .page-programs .catalog-personal-context p { margin: 0 0 8px; font-size: 15px; line-height: 1.6; color: var(--ink); }
+.opora-theme .page-programs .catalog-results-header { align-items: baseline; gap: 10px 18px; margin: 28px 0 18px; }
+.opora-theme .page-programs .catalog-results-header h2 { margin: 0; min-width: 0; font-size: 23px; }
+.opora-theme .page-programs .catalog-results-header > span { font-size: 14px; color: var(--muted); white-space: nowrap; }
+.opora-theme .page-programs .filter-chips { margin: 0 0 20px; padding: 0 0 8px; gap: 10px; }
+.opora-theme .page-programs .empty-state { padding: 24px 20px; background: transparent; border: 0; box-shadow: none; }
+.opora-theme .page-programs .empty-state p { font-size: 15px; line-height: 1.65; }
+.catalog-empty-actions { display: grid; gap: 12px; margin: 20px 0 12px; }

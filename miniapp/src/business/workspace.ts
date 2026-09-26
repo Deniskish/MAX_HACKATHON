@@ -3,7 +3,7 @@ import type { FundingNeed, FundingOpportunity, FundingMatch, ProjectProfile } fr
 import { emptyFundingNeed } from '../../api-server/funding-catalog/types';
 import { restoreFundingNeed } from './funding';
 import { parseFundingProfile } from '../../api-server/funding-catalog/input';
-export type Workspace = { profile: Profile | null; projectProfile: ProjectProfile | null; fundingNeed: FundingNeed; saved: string[]; applications: Application[] };
+export type Workspace = { profile: Profile | null; projectProfile: ProjectProfile | null; fundingNeed: FundingNeed; saved: string[]; applications: Application[]; detachedApplicationIds?: string[] };
 export const workspaceKey = 'opora.workspace';
 const blank = (): Workspace => ({ profile: null, projectProfile: null, fundingNeed: { ...emptyFundingNeed }, saved: [], applications: [] });
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
@@ -43,9 +43,33 @@ export function loadWorkspace(storage: Pick<Storage, 'getItem'>, ids: string[]):
       ...(typeof a.generatedDraft === 'string' ? { generatedDraft: a.generatedDraft } : {}),
       ...(typeof a.draftOrigin === 'string' ? { draftOrigin: a.draftOrigin } : {}),
     }));
+  if (Array.isArray(raw.detachedApplicationIds)) result.detachedApplicationIds = result.applications
+    .filter((app) => raw.detachedApplicationIds.includes(app.id)).map((app) => app.id);
   return result;
 }
 export function saveWorkspace(storage: Pick<Storage, 'setItem'>, data: Workspace) { storage.setItem(workspaceKey, JSON.stringify({ version: 2, data })); }
+
+/** Preserve drafts, but do not use them as facts about a newly added business. */
+export function removeBusiness(storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'>, workspace: Workspace): Workspace {
+  const next: Workspace = { ...workspace, profile: null, projectProfile: null, fundingNeed: { ...emptyFundingNeed },
+    detachedApplicationIds: workspace.applications.map((app) => app.id) };
+  const keys = new Set(['opora.profile.v1', 'opora.ai.history.v2', 'opora.ai.workspace.v1']);
+  for (let i = 0; i < storage.length; i++) {
+    const key = storage.key(i);
+    if (key?.startsWith('opora.funding-need.v1.')) keys.add(key);
+  }
+  const previous = new Map([...keys, workspaceKey].map((key) => [key, storage.getItem(key)]));
+  try {
+    keys.forEach((key) => storage.removeItem(key));
+    saveWorkspace(storage, next);
+  } catch (error) {
+    previous.forEach((value, key) => {
+      try { if (value === null) storage.removeItem(key); else storage.setItem(key, value); } catch { /* Report unavailable storage to the caller. */ }
+    });
+    throw error;
+  }
+  return next;
+}
 export function projectAsProfile(project: ProjectProfile): Profile {
   return { ...emptyProfile, name: project.name, region: project.region, applicantType: 'project', goals: project.fundingPurpose ? [project.fundingPurpose] : [] };
 }

@@ -200,3 +200,9 @@ dialog .modal, .modal-sheet .project-dialog { min-height: 0; max-height: none; h
   display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px;
   margin: 12px 0 0; padding: 14px 16px; border-radius: 18px; font-size: 14px; line-height: 22px;
 }
+
+/* Preserve a mobile gutter on these content pages, including below 360px. */
+.opora-theme .app-shell:is(.page-profile, .page-programs) > .app-content { padding-inline: clamp(16px, 5vw, 20px); }
+.retained-application { display: grid; gap: 16px; margin-block: 20px; }
+.retained-application p { margin: 0; }
+.retained-application-text { white-space: pre-wrap; overflow-wrap: anywhere; }

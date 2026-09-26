@@ -56,3 +56,18 @@
 .ai-program-reason { border-left: 2px solid #8064ff80; padding: 6px 0 6px 12px; margin: 12px 0; font-size: 12px; line-height: 1.7; color: #b8afcf; }
 .home-adaptive { aspect-ratio: auto; min-height: 96px; align-items: center; }
 .home-adaptive .home-action-title { overflow-wrap: anywhere; }
+
+.opora-theme .page-profile :is(.source-updates, .profile-panel) { margin: 0 0 20px; padding: 12px 20px; min-width: 0; background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+.opora-theme .page-profile :is(.source-updates, .profile-panel) > summary { min-height: 44px; padding: 10px 0; font-size: 16px; line-height: 1.5; color: var(--ink); }
+.opora-theme .page-profile :is(.source-updates, .profile-panel)[open] { padding-block: 20px; }
+.page-profile .source-updates > p { font-size: 14px; line-height: 1.6; color: var(--muted); }
+.opora-theme .page-profile .source-updates .ai-proposal { padding: 16px 0; background: transparent; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+.business-removal { padding: 12px 0 8px; margin-top: 24px; border-top: 1px solid var(--line); }
+.remove-business { min-height: 48px; padding: 12px 4px; border: 0; background: transparent; color: #e69b9e; font: inherit; font-size: 14px; cursor: pointer; }
+.delete-business-confirmation { display: grid; gap: 20px; }
+.delete-business-confirmation h2, .delete-business-confirmation p { margin: 0; }
+.delete-business-confirmation .modal-actions { margin: 0; }
+@media (prefers-color-scheme: light) { .remove-business { color: #a33640; } }
+@media (max-width: 359px) { .opora-theme .page-profile :is(.source-updates, .profile-panel) { padding-inline: 18px; } }
+
+.opora-theme .page-profile .hub-identity { padding: 20px; }
