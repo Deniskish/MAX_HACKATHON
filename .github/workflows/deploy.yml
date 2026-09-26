@@ -87,12 +87,12 @@ jobs:
         continue-on-error: true
         run: ssh opora-production 'cd /opt/app; timeout 60 node miniapp/api-server/company-data/smoke-check.cjs'
 
-      - name: Check AI chat, personalization and documents
+      - name: Check all nine AI tasks and guest chat
         id: ai
         if: steps.release.outputs.deployed == 'true'
         continue-on-error: true
         run: |
-          ssh opora-production 'cd /opt/app; timeout 300 node miniapp/api-server/ai/smoke-check.cjs || { timeout 90 node miniapp/api-server/ai/check-provider.cjs; exit 1; }'
+          ssh opora-production 'cd /opt/app; timeout 850 node miniapp/api-server/ai/smoke-check.cjs'
 
       - name: Check MAX bot authorization without sending messages
         id: max

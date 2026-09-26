@@ -7,7 +7,9 @@ import { createOpportunityAssessor } from './funding-catalog/notification-ai';
 import { runAssistant } from './ai/service';
 import type { AIEvidence } from './ai/types';
 import { createSemanticSearch, EMBEDDINGS_URL } from './ai/embeddings';
-import { serialTransport } from './ai/serial-transport';
+import { serialTransport, withAIPriority } from './ai/serial-transport';
+import { setTimeout as delay } from 'node:timers/promises';
+import { untilAborted } from './funding-catalog/abort';
 
 export const GIGACHAT_OAUTH_URL = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth';
 export const GIGACHAT_CHAT_URL = 'https://api.giga.chat/v1/chat/completions';
@@ -79,20 +81,30 @@ export function createGigaChatClient(
   }
   const authorizedTransport: typeof fetch = async (url, init) => {
     if (![GIGACHAT_CHAT_URL, EMBEDDINGS_URL].includes(String(url))) throw new PrivacyError('INVALID_PROVIDER_URL');
-    const response = await queuedTransport(url, init);
+    let response = await queuedTransport(url, init);
+    // Retry a definite gateway/service failure once, with the identical protected
+    // body and original deadline. Refusals, 4xx and ambiguous timeouts never retry.
+    if ([502, 503, 504].includes(response.status)) {
+      await response.body?.cancel();
+      await delay(350, undefined, { signal: init?.signal ?? undefined });
+      response = await queuedTransport(url, init);
+    }
     if (response.status !== 401) return response;
     await response.body?.cancel();
     // Не сбрасываем новый токен, если другой запрос уже успел его обновить.
     const headers = new Headers(init?.headers);
     if (cached && headers.get('Authorization') === `Bearer ${cached.token}`) cached = undefined;
-    headers.set('Authorization', `Bearer ${await getToken()}`);
+    const renewed = init?.signal ? await untilAborted(getToken(), init.signal) : await getToken();
+    headers.set('Authorization', `Bearer ${renewed}`);
     return queuedTransport(url, { ...init, headers }); // One retry only, with the same protected body.
   };
   const semantic = createSemanticSearch(getToken, authorizedTransport);
+  const assess = createOpportunityAssessor(GIGACHAT_CHAT_URL, config.model, getToken, authorizedTransport);
   return {
-    assessOpportunity: createOpportunityAssessor(GIGACHAT_CHAT_URL, config.model, getToken, authorizedTransport),
+    assessOpportunity: (...args: Parameters<typeof assess>) => withAIPriority('background', () => assess(...args)),
     async assist(input: unknown, evidence: AIEvidence[] = [], signal?: AbortSignal) {
-      return runAssistant(input, createAIModel(GIGACHAT_CHAT_URL, config.model, getToken, authorizedTransport), evidence, signal, semantic);
+      const background = (input as { task?: unknown })?.task === 'workspace';
+      return withAIPriority(background ? 'background' : 'interactive', () => runAssistant(input, createAIModel(GIGACHAT_CHAT_URL, config.model, getToken, authorizedTransport), evidence, signal, semantic));
     },
     async complete(input: unknown) {
       // Проверяем и обезличиваем данные до авторизации у провайдера.

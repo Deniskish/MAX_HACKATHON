@@ -44,9 +44,10 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
   }
   let lastSuccess: string | null = null, lastError: string | null = invalidConfig ? 'configuration' : null;
   let lastFailure: { code: string; task: string; at: string } | null = null;
+  const taskStatus: Record<string, { status: 'ready' | 'limited' | 'unavailable'; at: string; code?: string }> = {};
   const aiStatus = () => ({ configured: Boolean(giga || env.GIGACHAT_AUTH_KEY), provider: 'gigachat', model,
     status: !giga ? invalidConfig ? 'unavailable' : 'not_configured' : lastError ? ['request_rejected', 'invalid_response'].includes(lastError) ? 'limited' : 'unavailable' : lastSuccess ? 'ready' : 'unavailable',
-    checked: Boolean(lastSuccess || lastError), lastSuccess, lastFailure, reason: lastError ?? (giga && !lastSuccess ? 'not_verified' : null) });
+    checked: Boolean(lastSuccess || lastError), lastSuccess, lastFailure, tasks: taskStatus, reason: lastError ?? (giga && !lastSuccess ? 'not_verified' : null) });
   const app = express(); app.disable('x-powered-by');
   // Production ingress is local Nginx (or the local frontend proxy). Trust only
   // loopback hops, so clients behind it do not share the proxy's rate-limit key.
@@ -82,7 +83,15 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
   let activeAI = 0;
   app.post('/api/ai/assist', async (req, res) => {
     try { prepareAIContext(req.body); }
-    catch { res.status(400).json({ error: 'Проверьте вопрос, профиль и объём документов.', code: 'INVALID_INPUT' }); return; }
+    catch (error) {
+      const code = error instanceof PrivacyError ? error.code : 'INVALID_INPUT';
+      const messages: Record<string, string> = {
+        INVALID_PROGRAM: 'Программа изменилась в каталоге. Откройте её заново из раздела поддержки.',
+        INVALID_FUNDING_NEED: 'Проверьте параметры бизнеса и суммы в потребности.',
+        FIELD_TOO_LONG: 'Сократите документы до 60 000 символов суммарно и повторите запрос.',
+      };
+      res.status(400).json({ error: messages[code] ?? 'Проверьте вопрос, профиль и объём документов.', code }); return;
+    }
     if (activeAI >= 4) { res.status(429).json({ error: 'Помощник занят. Повторите запрос через минуту.', code: 'AI_BUSY' }); return; }
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(new DOMException('AI deadline exceeded', 'TimeoutError')), 65000);
@@ -93,13 +102,17 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
         try { await untilAborted(options.catalog.enrich(req.body.context.programId), AbortSignal.any([controller.signal, AbortSignal.timeout(12000)])); } catch { /* Unverified details remain explicitly unknown. */ }
       }
       controller.signal.throwIfAborted();
-      const evidence = await untilAborted(sources.evidence(), controller.signal);
+      // The change-monitor archive is optional and only used by change analysis.
+      // An unreadable snapshot must not take down chat or document processing.
+      const evidence = req.body.task === 'changes'
+        ? await untilAborted(sources.evidence().catch(() => []), controller.signal) : [];
       const result = await untilAborted(giga?.assist ? giga.assist(req.body, evidence, controller.signal) : runAssistant(req.body, undefined, evidence, controller.signal), controller.signal);
-      if (result.mode === 'llm') { lastSuccess = new Date().toISOString(); lastError = null; }
+      if (result.mode === 'llm') { lastSuccess = new Date().toISOString(); lastError = null; taskStatus[req.body.task] = { status: 'ready', at: lastSuccess }; }
       else if (giga) {
         const code = providerFailureCode({ code: result.providerFailure });
         lastError = providerFailureReason(code);
         lastFailure = { code, task: req.body.task, at: new Date().toISOString() };
+        taskStatus[req.body.task] = { status: ['request_rejected', 'invalid_response'].includes(lastError) ? 'limited' : 'unavailable', at: lastFailure.at, code };
       }
       if (!controller.signal.aborted) res.json(result);
     } catch (error) {
@@ -108,6 +121,7 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
         const code = providerFailureCode(controller.signal.aborted ? controller.signal.reason : error);
         lastError = providerFailureReason(code);
         lastFailure = { code, task: req.body.task, at: new Date().toISOString() };
+        taskStatus[req.body.task] = { status: lastError === 'request_rejected' ? 'limited' : 'unavailable', at: lastFailure.at, code };
         res.status(502).json({ error: code, code });
       }
     } finally { clearTimeout(timeout); res.off('close', disconnect); activeAI--; }

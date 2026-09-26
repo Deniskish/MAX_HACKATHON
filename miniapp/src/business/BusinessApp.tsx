@@ -154,7 +154,7 @@ export default function BusinessApp() {
   const hasNotifications = !!businessNotice && !businessNotice.readAt || supportNotifications.items.some((item) => !item.readAt) || events.length > 0 || notificationUpdates.length > 0;
   const analysisContext = profile ? { profile: fundingProfile, need: need.purpose ? need : undefined,
     identifiers: { name: profile.name, inn: profile.inn }, page: 'workspace',
-    workspace: { savedIds: saved.filter((id) => programs.some((p) => p.id === id)), applications: businessApps.filter((a) => programs.some((p) => p.id === a.programId)).map((a) => ({ programId: a.programId, project: a.project.slice(0, 2000),
+    workspace: { savedIds: saved.filter((id) => programs.some((p) => p.id === id)).slice(-50), applications: businessApps.filter((a) => programs.some((p) => p.id === a.programId)).slice(-30).map((a) => ({ programId: a.programId, project: a.project.slice(0, 2000),
       budget: a.budget.trim() && Number.isSafeInteger(Number(a.budget)) && Number(a.budget) >= 0 && Number(a.budget) <= 1e15 ? Number(a.budget) : null,
       preparedDocuments: Object.keys(a.documents).filter((d) => a.documents[d]), hasDraft: !!a.generatedDraft?.trim(), reviewConfirmed: !!a.reviewConfirmed })) } } : null;
   const businessAnalysis = useBusinessAnalysis(analysisContext, officialFundingCatalog.map((o) => `${o.id}:${o.version}:${o.status}`).join('|') + sourceUpdates.map((u) => u.id).join('|'), page === 'assistant');
@@ -473,7 +473,7 @@ export default function BusinessApp() {
     try {
       const data = await requestAI({ task: task === 'strategy' ? 'strategy' : 'chat', question: text,
         history: messages.slice(-8).map(({ role, text }) => ({ role, text })),
-        context: { ...aiContext, programId: program?.id, project: application?.project, draft: application?.generatedDraft,
+        context: { ...aiContext, programId: program?.id, project: application?.project?.slice(0, 10000), draft: application?.generatedDraft?.slice(0, 18000),
           preparedDocuments: application && program ? program.documents.filter((d) => application.documents[d]) : [],
           budget: application?.budget.trim() ? Number(application.budget) : null } },
         controller.signal);

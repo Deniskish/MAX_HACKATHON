@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { providerJson } from '../provider-json';
 import type { AIEvidence } from './types';
+import { untilAborted } from '../funding-catalog/abort';
 export const EMBEDDINGS_URL = 'https://api.giga.chat/v1/embeddings';
 export function cosine(a: number[], b: number[]) {
   if (a.length !== b.length || !a.length) return 0;
@@ -12,9 +13,9 @@ export function createSemanticSearch(token: () => Promise<string>, transport: ty
   // В памяти кэшируется только общедоступный корпус; пользовательские запросы не кэшируются.
   const cache = new Map<string, number[]>();
   async function embed(input: string[], signal: AbortSignal) {
-    const accessToken = await token(); signal.throwIfAborted();
+    const accessToken = await untilAborted(token(), signal); signal.throwIfAborted();
     const response = await transport(EMBEDDINGS_URL, { method: 'POST', redirect: 'error',
-      signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]), headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      signal, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({ model, input }) });
     if (!response.ok) { await response.body?.cancel(); throw new Error('EMBEDDINGS_UNAVAILABLE'); }
     const data = await providerJson(response, 2000000) as any;
@@ -24,6 +25,9 @@ export function createSemanticSearch(token: () => Promise<string>, transport: ty
     return ordered.map((d) => d.embedding as number[]);
   }
   return async (query, evidence, signal) => {
+    // Retrieval is optional: a cold corpus must not consume several consecutive
+    // 8-second windows and leave no time for the actual model answer.
+    signal = AbortSignal.any([signal, AbortSignal.timeout(8000)]);
     const items = evidence.slice(0, 80).map((e) => ({ e, text: `${e.title}\n${e.text}`.slice(0, 2400), key: createHash('sha256').update(`${e.title}\n${e.text}`).digest('hex') }));
     const missing = items.filter((i) => !cache.has(i.key));
     for (let i = 0; i < missing.length; i += 16) {

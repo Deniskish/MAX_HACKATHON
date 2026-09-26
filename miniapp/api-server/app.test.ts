@@ -6,6 +6,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { PrivacyError } from './privacy';
 import type { AIResult } from './ai/types';
+import { SourceStore } from './ai/sources';
 async function server(giga: AIClient | null, run: (url: string) => Promise<void>) {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'opora-api-'));
   const server = createApp({ giga, env: {}, fnsDir: dir }).listen(0, '127.0.0.1');
@@ -47,6 +48,19 @@ test('forwarded headers are trusted only from a loopback peer', () => {
   assert.equal(trust('127.0.0.1', 0), true);
   assert.equal(trust('::1', 0), true);
   assert.equal(trust('198.51.100.10', 0), false);
+});
+
+test('unavailable change-monitor archive cannot disable other AI tasks', async t => {
+  let reads = 0;
+  t.mock.method(SourceStore.prototype, 'evidence', async () => { reads++; throw Error('unreadable source snapshot'); });
+  const reply: AIResult = { mode: 'llm', answer: 'Ответ', followups: [], citations: [], actions: [], findings: [], matches: [], scenarios: [], tools: [] };
+  await server({ async complete() { return reply; }, async assist(_input, evidence) { assert.deepEqual(evidence, []); return reply; } }, async url => {
+    for (const task of ['chat', 'workspace', 'review', 'changes']) {
+      const response = await fetch(url + '/api/ai/assist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ task, question: 'Вопрос', context: {} }) });
+      assert.equal(response.status, 200); assert.equal((await response.json()).mode, 'llm');
+    }
+    assert.equal(reads, 1);
+  });
 });
 test('configured AI becomes ready only after a successful request', async () => server({ async complete() { return { answer: 'Проверьте условия.', mode: 'llm' }; } }, async (url) => {
   const first = await (await fetch(url + '/api/ai/status')).json() as any;

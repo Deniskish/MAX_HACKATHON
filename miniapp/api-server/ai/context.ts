@@ -63,16 +63,20 @@ export function prepareAIContext(input: unknown) {
     const value = object(ctx.workspace);
     if (!Array.isArray(value.savedIds) || value.savedIds.length > 50 || !Array.isArray(value.applications) || value.applications.length > 30) throw new PrivacyError('INVALID_INPUT');
     const program = (id: unknown) => {
+      if (typeof id !== 'string' || !id || id.length > 200) throw new PrivacyError('INVALID_PROGRAM');
       const entry = getAICatalog().find((o) => o.id === id);
-      if (!entry) throw new PrivacyError('INVALID_PROGRAM');
       return entry;
     };
-    workspace = { savedIds: [...new Set<string>(value.savedIds.map((id: unknown) => program(id).id))], applications: value.applications.map((a: unknown) => {
+    // Saved selections may outlive a catalogue refresh. They must not disable
+    // unrelated chat/analysis; an explicitly opened program remains strict above.
+    workspace = { savedIds: [...new Set<string>(value.savedIds.flatMap((id: unknown) => { const entry = program(id); return entry ? [entry.id] : []; }))], applications: value.applications.flatMap((a: unknown) => {
       const item = object(a), entry = program(item.programId);
       if (item.budget != null && (typeof item.budget !== 'number' || !Number.isSafeInteger(item.budget) || item.budget < 0 || item.budget > 1e15)) throw new PrivacyError('INVALID_INPUT');
-      return { programId: entry.id, project: redact(text(item.project, 2000)), budget: item.budget ?? null,
+      const project = redact(text(item.project, 2000));
+      if (!entry) return [];
+      return [{ programId: entry.id, project, budget: item.budget ?? null,
         preparedDocuments: Array.isArray(item.preparedDocuments) ? entry.requiredDocuments.filter((d) => item.preparedDocuments.includes(d)) : [],
-        hasDraft: item.hasDraft === true, reviewConfirmed: item.reviewConfirmed === true };
+        hasDraft: item.hasDraft === true, reviewConfirmed: item.reviewConfirmed === true }];
     }) };
   }
   const request: AIRequest = {

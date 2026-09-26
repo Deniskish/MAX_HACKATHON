@@ -14,12 +14,15 @@ async function main() {
     incomplete: {}, company: { applicantType: 'legal_entity', companyType: 'ООО', region: 'Москва', okved: '28.1', isSme: 'yes', ageMonths: 36, revenue: 200000000, employees: 40 },
     project: { applicantType: 'project', region: 'Москва', industry: 'ПО', stage: 'prototype' },
   };
-  for (const [profileName, profile] of Object.entries(profiles)) for (const task of aiTasks) for (const mode of ['success','unavailable','malformed','truncated','abort']) {
+  for (const [profileName, profile] of Object.entries(profiles)) for (const task of aiTasks) for (const mode of ['success','unavailable','malformed','truncated','abort','refused','rate_limit','timeout']) {
     const id = `MATRIX-${profileName}-${task}-${mode}`, controller = new AbortController(); let calls = 0;
     const model: AIModel = async stage => {
       calls++;
       if (mode === 'unavailable') throw new PrivacyError('PROVIDER_UNAVAILABLE');
       if (mode === 'truncated') throw new PrivacyError('TRUNCATED_RESPONSE');
+      if (mode === 'refused') throw new PrivacyError('PROVIDER_CONTENT_BLOCKED');
+      if (mode === 'rate_limit') throw new PrivacyError('PROVIDER_RATE_LIMITED');
+      if (mode === 'timeout') throw new DOMException('Timeout', 'TimeoutError');
       if (stage === 'plan') return { value: { query: 'оборудование', opportunityIds: [], ...(task === 'intake' ? { need: { purpose: 'покупка оборудования', amount: 400000 } } : {}) } };
       if (mode === 'malformed') return { value: { answer: '' } };
       return { value: { answer: 'Уточните источник средств.', evidenceIds: ['document:doc:2'], followups: ['Есть ли собственные средства?'],

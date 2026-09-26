@@ -4,6 +4,8 @@ import { createAIModel } from './transport';
 import { runAssistant } from './service';
 import { providerFailureCode } from './errors';
 import { officialFundingCatalog } from '../funding-catalog/official-catalog';
+import { prepareAIContext } from './context';
+import { createSemanticSearch } from './embeddings';
 
 test('model shares the request deadline with queued transport and cancels stalled OAuth', async () => {
   const controller = new AbortController();
@@ -59,4 +61,45 @@ test('provider diagnostic codes preserve timeout and refusal but never leak arbi
   assert.equal(providerFailureCode(new DOMException('secret', 'TimeoutError')), 'PROVIDER_TIMEOUT');
   assert.equal(providerFailureCode(new Error('secret provider data')), 'PROVIDER_UNAVAILABLE');
   assert.equal(providerFailureCode({ code: 'PROVIDER_CONTENT_BLOCKED' }), 'PROVIDER_CONTENT_BLOCKED');
+});
+
+test('removed saved programs do not disable AI but explicitly opened missing programs remain invalid', () => {
+  const saved = officialFundingCatalog[0].id;
+  const context = { workspace: { savedIds: [saved, 'removed-program'], applications: [
+    { programId: 'removed-program', project: 'Проект', budget: null },
+    { programId: saved, project: 'Проект', budget: 1000 },
+  ] } };
+  const prepared = prepareAIContext({ task: 'chat', question: 'Что дальше?', context });
+  assert.deepEqual(prepared.request.context.workspace?.savedIds, [saved]);
+  assert.deepEqual(prepared.request.context.workspace?.applications.map(a => a.programId), [saved]);
+  assert.throws(() => prepareAIContext({ task: 'chat', question: 'Что дальше?', context: { ...context, programId: 'removed-program' } }), /INVALID_PROGRAM/);
+  assert.throws(() => prepareAIContext({ task: 'chat', question: 'Что дальше?', context: { workspace: { savedIds: [{}], applications: [] } } }), /INVALID_PROGRAM/);
+});
+
+test('semantic corpus batches and query share one optional retrieval deadline', async () => {
+  const signals: AbortSignal[] = [];
+  const search = createSemanticSearch(async () => 'token', async (_url, init) => {
+    signals.push(init!.signal!);
+    const { input } = JSON.parse(String(init!.body));
+    return Response.json({ data: input.map((_s: string, index: number) => ({ index, embedding: [1, 0] })) });
+  });
+  const evidence = Array.from({ length: 35 }, (_, i) => ({ id: String(i), title: 'Источник', text: `Условия ${i}` }));
+  assert.equal((await search('оборудование', evidence, new AbortController().signal)).length, 12);
+  assert.equal(signals.length, 4);
+  assert.ok(signals.every(s => s === signals[0]), 'deadline must not restart for every batch');
+});
+
+test('deployment checks all nine tasks even after refusals, bad JSON and transport failures', async () => {
+  const { runChecks, cases } = require('./smoke-check.cjs');
+  const tasks: string[] = [];
+  const results = await runChecks('https://test.invalid', async (_url: string, init: RequestInit) => {
+    tasks.push(JSON.parse(String(init.body)).task);
+    if (tasks.length === 1) throw new Error('private transport diagnostics');
+    if (tasks.length === 2) return new Response('bad JSON');
+    return Response.json({ mode: 'local', providerFailure: 'PROVIDER_CONTENT_BLOCKED' });
+  }, () => {}, 0);
+  assert.equal(results.length, cases.length);
+  assert.equal(new Set(tasks).size, 9);
+  assert.ok(results.every((r: { ok: boolean }) => !r.ok));
+  assert.doesNotMatch(JSON.stringify(results), /private transport/);
 });

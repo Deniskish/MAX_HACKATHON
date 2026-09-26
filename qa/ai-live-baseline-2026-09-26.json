@@ -1,0 +1,494 @@
+{
+  "startedAt": "2026-09-26T16:16:50.268Z",
+  "revision": "aecf0be",
+  "kind": "live-gigachat",
+  "cases": [
+    {
+      "id": "LIVE-incomplete-chat",
+      "task": "chat",
+      "profile": "incomplete",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 7577,
+      "usage": {
+        "calls": 2,
+        "tokens": 10531,
+        "durationMs": 7417
+      }
+    },
+    {
+      "id": "LIVE-incomplete-intake",
+      "task": "intake",
+      "profile": "incomplete",
+      "status": "fail",
+      "http": 200,
+      "mode": "local",
+      "failedChecks": [
+        "live-model",
+        "extracted-need"
+      ],
+      "durationMs": 2139,
+      "providerFailure": "PROVIDER_CONTENT_BLOCKED",
+      "usage": {
+        "calls": 0,
+        "tokens": 0,
+        "durationMs": 2058
+      }
+    },
+    {
+      "id": "LIVE-incomplete-search",
+      "task": "search",
+      "profile": "incomplete",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 8710,
+      "usage": {
+        "calls": 2,
+        "tokens": 9177,
+        "durationMs": 8643
+      }
+    },
+    {
+      "id": "LIVE-incomplete-analysis",
+      "task": "analysis",
+      "profile": "incomplete",
+      "status": "fail",
+      "http": 200,
+      "mode": "local",
+      "failedChecks": [
+        "live-model"
+      ],
+      "durationMs": 1813,
+      "providerFailure": "PROVIDER_CONTENT_BLOCKED",
+      "usage": {
+        "calls": 0,
+        "tokens": 0,
+        "durationMs": 1756
+      }
+    },
+    {
+      "id": "LIVE-incomplete-strategy",
+      "task": "strategy",
+      "profile": "incomplete",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 3083,
+      "usage": {
+        "calls": 1,
+        "tokens": 5153,
+        "durationMs": 2937
+      }
+    },
+    {
+      "id": "LIVE-incomplete-review",
+      "task": "review",
+      "profile": "incomplete",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 5806,
+      "usage": {
+        "calls": 1,
+        "tokens": 2481,
+        "durationMs": 5729
+      }
+    },
+    {
+      "id": "LIVE-incomplete-draft",
+      "task": "draft",
+      "profile": "incomplete",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 3902,
+      "usage": {
+        "calls": 1,
+        "tokens": 5574,
+        "durationMs": 3815
+      }
+    },
+    {
+      "id": "LIVE-incomplete-changes",
+      "task": "changes",
+      "profile": "incomplete",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 2856,
+      "usage": {
+        "calls": 1,
+        "tokens": 8082,
+        "durationMs": 2783
+      }
+    },
+    {
+      "id": "LIVE-incomplete-workspace",
+      "task": "workspace",
+      "profile": "incomplete",
+      "status": "fail",
+      "http": 200,
+      "mode": "local",
+      "failedChecks": [
+        "live-model",
+        "all-pages"
+      ],
+      "durationMs": 11074,
+      "providerFailure": "PROVIDER_CONTENT_BLOCKED",
+      "usage": {
+        "calls": 0,
+        "tokens": 0,
+        "durationMs": 11024
+      }
+    },
+    {
+      "id": "LIVE-company-chat",
+      "task": "chat",
+      "profile": "company",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 14458,
+      "usage": {
+        "calls": 2,
+        "tokens": 10477,
+        "durationMs": 14407
+      }
+    },
+    {
+      "id": "LIVE-company-intake",
+      "task": "intake",
+      "profile": "company",
+      "status": "fail",
+      "http": 200,
+      "mode": "local",
+      "failedChecks": [
+        "live-model",
+        "extracted-need"
+      ],
+      "durationMs": 2398,
+      "providerFailure": "PROVIDER_CONTENT_BLOCKED",
+      "usage": {
+        "calls": 0,
+        "tokens": 0,
+        "durationMs": 2323
+      }
+    },
+    {
+      "id": "LIVE-company-search",
+      "task": "search",
+      "profile": "company",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 7636,
+      "usage": {
+        "calls": 2,
+        "tokens": 6796,
+        "durationMs": 7579
+      }
+    },
+    {
+      "id": "LIVE-company-analysis",
+      "task": "analysis",
+      "profile": "company",
+      "status": "fail",
+      "http": 200,
+      "mode": "local",
+      "failedChecks": [
+        "live-model"
+      ],
+      "durationMs": 1888,
+      "providerFailure": "PROVIDER_CONTENT_BLOCKED",
+      "usage": {
+        "calls": 0,
+        "tokens": 0,
+        "durationMs": 1828
+      }
+    },
+    {
+      "id": "LIVE-company-strategy",
+      "task": "strategy",
+      "profile": "company",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 3671,
+      "usage": {
+        "calls": 1,
+        "tokens": 5222,
+        "durationMs": 3565
+      }
+    },
+    {
+      "id": "LIVE-company-review",
+      "task": "review",
+      "profile": "company",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 6591,
+      "usage": {
+        "calls": 1,
+        "tokens": 2552,
+        "durationMs": 6498
+      }
+    },
+    {
+      "id": "LIVE-company-draft",
+      "task": "draft",
+      "profile": "company",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 3993,
+      "usage": {
+        "calls": 1,
+        "tokens": 5496,
+        "durationMs": 3900
+      }
+    },
+    {
+      "id": "LIVE-company-changes",
+      "task": "changes",
+      "profile": "company",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 5969,
+      "usage": {
+        "calls": 1,
+        "tokens": 8144,
+        "durationMs": 5907
+      }
+    },
+    {
+      "id": "LIVE-company-workspace",
+      "task": "workspace",
+      "profile": "company",
+      "status": "fail",
+      "http": 200,
+      "mode": "local",
+      "failedChecks": [
+        "live-model",
+        "all-pages"
+      ],
+      "durationMs": 11336,
+      "providerFailure": "PROVIDER_CONTENT_BLOCKED",
+      "usage": {
+        "calls": 0,
+        "tokens": 0,
+        "durationMs": 11306
+      }
+    },
+    {
+      "id": "LIVE-project-chat",
+      "task": "chat",
+      "profile": "project",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 5723,
+      "usage": {
+        "calls": 2,
+        "tokens": 6323,
+        "durationMs": 5669
+      }
+    },
+    {
+      "id": "LIVE-project-intake",
+      "task": "intake",
+      "profile": "project",
+      "status": "fail",
+      "http": 200,
+      "mode": "local",
+      "failedChecks": [
+        "live-model",
+        "extracted-need"
+      ],
+      "durationMs": 2290,
+      "providerFailure": "PROVIDER_CONTENT_BLOCKED",
+      "usage": {
+        "calls": 0,
+        "tokens": 0,
+        "durationMs": 2214
+      }
+    },
+    {
+      "id": "LIVE-project-search",
+      "task": "search",
+      "profile": "project",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 6052,
+      "usage": {
+        "calls": 2,
+        "tokens": 7647,
+        "durationMs": 5993
+      }
+    },
+    {
+      "id": "LIVE-project-analysis",
+      "task": "analysis",
+      "profile": "project",
+      "status": "fail",
+      "http": 200,
+      "mode": "local",
+      "failedChecks": [
+        "live-model"
+      ],
+      "durationMs": 1908,
+      "providerFailure": "PROVIDER_CONTENT_BLOCKED",
+      "usage": {
+        "calls": 0,
+        "tokens": 0,
+        "durationMs": 1850
+      }
+    },
+    {
+      "id": "LIVE-project-strategy",
+      "task": "strategy",
+      "profile": "project",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 3268,
+      "usage": {
+        "calls": 1,
+        "tokens": 5018,
+        "durationMs": 3139
+      }
+    },
+    {
+      "id": "LIVE-project-review",
+      "task": "review",
+      "profile": "project",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 6125,
+      "usage": {
+        "calls": 1,
+        "tokens": 2312,
+        "durationMs": 6035
+      }
+    },
+    {
+      "id": "LIVE-project-draft",
+      "task": "draft",
+      "profile": "project",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 6423,
+      "usage": {
+        "calls": 1,
+        "tokens": 5517,
+        "durationMs": 6334
+      }
+    },
+    {
+      "id": "LIVE-project-changes",
+      "task": "changes",
+      "profile": "project",
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 2669,
+      "usage": {
+        "calls": 1,
+        "tokens": 8096,
+        "durationMs": 2590
+      }
+    },
+    {
+      "id": "LIVE-project-workspace",
+      "task": "workspace",
+      "profile": "project",
+      "status": "fail",
+      "http": 200,
+      "mode": "local",
+      "failedChecks": [
+        "live-model",
+        "all-pages"
+      ],
+      "durationMs": 11178,
+      "providerFailure": "PROVIDER_CONTENT_BLOCKED",
+      "usage": {
+        "calls": 0,
+        "tokens": 0,
+        "durationMs": 11118
+      }
+    },
+    {
+      "id": "LIVE-empty-review",
+      "task": "review",
+      "profile": null,
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 5598,
+      "usage": {
+        "calls": 1,
+        "tokens": 1824,
+        "durationMs": 5539
+      }
+    },
+    {
+      "id": "LIVE-history",
+      "task": "chat",
+      "profile": null,
+      "status": "pass",
+      "http": 200,
+      "mode": "llm",
+      "failedChecks": [],
+      "durationMs": 13747,
+      "usage": {
+        "calls": 2,
+        "tokens": 10553,
+        "durationMs": 13682
+      }
+    },
+    {
+      "id": "LIVE-invalid-program",
+      "task": "chat",
+      "profile": null,
+      "status": "pass",
+      "http": 400,
+      "failedChecks": [],
+      "durationMs": 26
+    },
+    {
+      "id": "LIVE-invalid-budget",
+      "task": "review",
+      "profile": null,
+      "status": "pass",
+      "http": 400,
+      "failedChecks": [],
+      "durationMs": 54
+    }
+  ],
+  "updatedAt": "2026-09-26T16:20:29.474Z"
+}

@@ -5,7 +5,7 @@ import { Icon } from './Icon';
 import { AIPanel } from './AIExperience';
 import { AIDataHelp, ContextHelp } from './ContextHelp';
 import { readDocument } from './document-reader';
-import { requestAI, type AIDocument } from './ai-client';
+import { aiErrorMessage, requestAI, type AIDocument } from './ai-client';
 import { toFundingProfile } from '../../api-server/funding-catalog/input';
 import { type Profile, type Program, type Application, type DraftKind,
   documentGuide, inspectDocumentText, generateDraft, draftKinds } from './domain';
@@ -189,7 +189,7 @@ export function DraftComposer({
   const [notice, setNotice] = useState('');
   const pending = useRef<AbortController | null>(null);
   const documentFingerprint = JSON.stringify(documents);
-  useEffect(() => { pending.current?.abort(); pending.current = null; setBusy(false); return () => pending.current?.abort(); }, [kind, app.project, app.budget, documentFingerprint]);
+  useEffect(() => { pending.current?.abort(); pending.current = null; setBusy(false); setNotice(''); return () => pending.current?.abort(); }, [kind, app.id, program.id, app.project, app.budget, documentFingerprint, JSON.stringify(profile)]);
   async function create() {
     const controller = new AbortController(); pending.current = controller;
     setBusy(true);
@@ -203,14 +203,15 @@ export function DraftComposer({
           preparedDocuments: program.documents.filter((d) => app.documents[d]), budget: app.budget.trim() ? Number(app.budget) : null } },
         controller.signal);
       if (data.mode !== 'llm' || !data.draft?.trim())
-        throw new Error('invalid');
+        throw new Error(data.providerFailure ?? 'INVALID_RESPONSE');
       text =
         'АВТОМАТИЧЕСКИЙ ЧЕРНОВИК GIGACHAT — ПРОВЕРЬТЕ И ОТРЕДАКТИРУЙТЕ\n\n' +
         data.draft +
         '\n\nПроверьте факты, заполните пропуски и сверяйте текст с формой оператора. Заявка не отправлена.';
       origin = 'GigaChat · по описанию проекта';
-    } catch {
-      setNotice('GigaChat недоступен. Подготовлен локальный шаблон с вашими данными.');
+    } catch (error) {
+      if (controller.signal.aborted || pending.current !== controller) return;
+      setNotice(`${aiErrorMessage(error)} Подготовлен локальный шаблон с вашими данными.`);
     }
     if (controller.signal.aborted) return;
     onUpdate({ generatedDraft: text, draftOrigin: origin });

@@ -77,7 +77,7 @@ test('automatic workspace context only carries allowed application facts, with p
   assert.deepEqual(prepared.request.context.workspace?.savedIds, [id]);
   assert.equal(prepared.request.context.workspace?.applications[0].hasDraft, false);
   assert.doesNotMatch(JSON.stringify(prepared.request), /ООО Секрет|never-forward|fake-document/);
-  assert.throws(() => prepareAIContext({ ...input, context: { workspace: { savedIds: ['invented'], applications: [] } } }));
+  assert.deepEqual(prepareAIContext({ ...input, context: { workspace: { savedIds: ['removed'], applications: [] } } }).request.context.workspace?.savedIds, []);
 });
 
 test('unreviewed crawls only enter change analysis, never routine business advice or semantic retrieval', async () => {

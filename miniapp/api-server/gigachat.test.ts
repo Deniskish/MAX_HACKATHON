@@ -14,6 +14,24 @@ const input = {
 };
 const answer = () =>
   new Response(JSON.stringify({ choices: [{ message: { content: 'Учебная программа.' } }] }));
+
+test('temporary gateway failures retry once with identical input; refusals and rate limits never retry', async () => {
+  for (const status of [502, 503, 504, 429, 403, 200]) {
+    const bodies: string[] = [];
+    const client = createGigaChatClient(config, async (url, init) => {
+      if (String(url) === GIGACHAT_OAUTH_URL) return Response.json({ access_token: 't', expires_at: Date.now() + 1800000 });
+      if (String(url).endsWith('/embeddings')) return new Response('', { status: 400 });
+      bodies.push(String(init?.body));
+      if (bodies.length > 1) return answer();
+      return status === 200 ? Response.json({ choices: [{ finish_reason: 'blacklist', message: { content: 'Отказ' } }] }) : new Response('', { status });
+    });
+    const result = await client.assist({ task: 'analysis', question: 'Следующий шаг', context: {} });
+    assert.equal(bodies.length, [502, 503, 504].includes(status) ? 2 : 1);
+    if (bodies.length === 2) { assert.equal(bodies[0], bodies[1]); assert.equal(result.mode, 'llm'); }
+    else assert.equal(result.mode, 'local');
+    if (status === 200) assert.equal(result.providerFailure, 'PROVIDER_CONTENT_BLOCKED');
+  }
+});
 test('native OAuth headers + form, bearer generation, protected body and shared concurrent token refresh', async () => {
   let oauth = 0,
     chat = 0;

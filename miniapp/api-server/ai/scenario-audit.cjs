@@ -62,5 +62,7 @@ function makeContext(profile, task) {
     // Stay below the application's 15 AI requests per minute, even with fast validation responses.
     await new Promise(resolve => setTimeout(resolve, Math.max(0, Number(process.env.AUDIT_PACE_MS || 20000)-(Date.now()-start))));
   }
-  console.log('AUDIT_TOTAL', JSON.stringify({ total:report.cases.length, passed:report.cases.filter(c=>c.status==='pass').length }));
+  const passed = report.cases.filter(c=>c.status==='pass').length;
+  console.log('AUDIT_TOTAL', JSON.stringify({ total:report.cases.length, passed }));
+  if (passed !== report.cases.length) process.exitCode = 1;
 })().catch(error=>{console.error(error.name);process.exitCode=1;});

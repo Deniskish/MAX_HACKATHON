@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { getAIActivity, subscribeAIActivity } from './ai-activity';
 import { aiErrorMessage, requestAI, type AIRequest, type AIResult } from './ai-client';
 import { workspaceActions, workspacePages, type AIPersonalization } from '../../api-server/ai/types';
 
@@ -15,11 +16,19 @@ export function useBusinessAnalysis(context: AIRequest['context'] | null, source
   const fingerprint = JSON.stringify({ version: 1, context, sourceVersion });
   const [state, setState] = useState<{ fingerprint: string; status: 'loading' | 'ready' | 'unavailable'; data?: AIResult; at?: number; error?: string }>({ fingerprint: '', status: 'loading' });
   const [retry, setRetry] = useState(0);
+  const completedRetry = useRef(0);
+  const declinedAttempt = useRef('');
+  const interactive = useSyncExternalStore(subscribeAIActivity, getAIActivity, () => 0);
   useEffect(() => {
     // An interactive conversation must not wait behind this tab's background job.
     // Effect cleanup cancels the HTTP request and the provider generation upstream.
-    if (!context || paused) return;
+    if (!context || paused || interactive > 0) return;
+    const attempt = `${fingerprint}:${retry}`;
+    // Navigating away and back must not automatically repeat a provider refusal.
+    // Changed business facts or an explicit retry start a new attempt.
+    if (declinedAttempt.current === attempt) return;
     const controller = new AbortController();
+    const unsubscribe = subscribeAIActivity(() => { if (getAIActivity() > 0) controller.abort(); });
     const timer = setTimeout(() => {
       void (async () => {
         setState({ fingerprint, status: 'loading' });
@@ -27,7 +36,7 @@ export function useBusinessAnalysis(context: AIRequest['context'] | null, source
           const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(fingerprint)))].map((n) => n.toString(16).padStart(2, '0')).join('');
           try {
             const saved = JSON.parse(localStorage.getItem(cacheKey) ?? 'null');
-            if (!retry && saved?.digest === digest && Date.now() - saved.at < 4 * 60 * 60 * 1000 && saved.data?.mode === 'llm' && validPersonalization(saved.data.personalization)) {
+            if (retry === completedRetry.current && saved?.digest === digest && Date.now() - saved.at < 4 * 60 * 60 * 1000 && saved.data?.mode === 'llm' && validPersonalization(saved.data.personalization)) {
               if (!controller.signal.aborted) setState({ fingerprint, status: 'ready', data: saved.data, at: saved.at });
               return;
             }
@@ -35,14 +44,18 @@ export function useBusinessAnalysis(context: AIRequest['context'] | null, source
           controller.signal.throwIfAborted();
           const data = await requestAI({ task: 'workspace', question: 'Проанализируй бизнес и адаптируй все разделы приложения под его ситуацию: главную, каталог поддержки, заявки, календарь и помощника. Учитывай текущие цели и подготовку заявок.', context }, controller.signal);
           if (controller.signal.aborted) return;
-          if (data.mode !== 'llm' || !validPersonalization(data.personalization)) { setState({ fingerprint, status: 'unavailable', error: aiErrorMessage(data.providerFailure ?? 'INVALID_RESPONSE') }); return; }
+          if (data.mode !== 'llm' || !validPersonalization(data.personalization)) {
+            if (data.providerFailure === 'PROVIDER_CONTENT_BLOCKED') declinedAttempt.current = attempt;
+            setState({ fingerprint, status: 'unavailable', error: aiErrorMessage(data.providerFailure ?? 'INVALID_RESPONSE') }); return;
+          }
+          completedRetry.current = retry;
           const at = Date.now(); setState({ fingerprint, status: 'ready', data, at });
           try { localStorage.setItem(cacheKey, JSON.stringify({ digest, data, at })); } catch { /* Keep the analysis in memory. */ }
         } catch (error) { if (!controller.signal.aborted) setState({ fingerprint, status: 'unavailable', error: aiErrorMessage(error) }); }
       })();
     }, 1800);
-    return () => { clearTimeout(timer); controller.abort(); };
-  }, [fingerprint, retry, paused]);
+    return () => { clearTimeout(timer); unsubscribe(); controller.abort(); };
+  }, [fingerprint, retry, paused, interactive]);
   return { status: context ? state.fingerprint === fingerprint ? state.status : 'loading' : 'guest' as const,
     data: state.fingerprint === fingerprint ? state.data : undefined,
     at: state.fingerprint === fingerprint ? state.at : undefined,

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { serialTransport } from './serial-transport';
+import { serialTransport, withAIPriority } from './serial-transport';
 
 test('provider slot stays locked until the response body finishes', async () => {
   let calls = 0, close!: () => void;
@@ -48,4 +48,32 @@ test('failure and oversized responses release the queue; HTTP error remains read
   await assert.rejects(transport('https://example.test'), /RESPONSE_TOO_LARGE/);
   const response = await transport('https://example.test');
   assert.equal(response.status, 429); assert.deepEqual(await response.json(), { code: 8 });
+});
+
+test('interactive work precedes queued background work without starving background jobs', async () => {
+  const order: string[] = []; let unblock!: () => void;
+  const transport = serialTransport(async (url) => {
+    order.push(String(url));
+    if (order.length === 1) await new Promise<void>(resolve => { unblock = resolve; });
+    return Response.json({ ok: true });
+  });
+  const first = withAIPriority('background', () => transport('active'));
+  await new Promise(resolve => setImmediate(resolve));
+  const background = withAIPriority('background', () => transport('background'));
+  const chats = [1, 2, 3, 4].map(i => withAIPriority('interactive', () => transport(`chat-${i}`)));
+  unblock(); await Promise.all([first, background, ...chats]);
+  assert.deepEqual(order, ['active', 'chat-1', 'chat-2', 'chat-3', 'background', 'chat-4']);
+});
+
+test('aborted active body releases the slot and does not poison subsequent requests', async () => {
+  let calls = 0;
+  const transport = serialTransport(async () => ++calls === 1
+    ? new Response(new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode('{')); } }))
+    : Response.json({ ok: true }));
+  const controller = new AbortController();
+  const first = transport('active', { signal: controller.signal });
+  const rejected = assert.rejects(first, { name: 'AbortError' });
+  await new Promise(resolve => setImmediate(resolve));
+  const second = transport('next'); controller.abort(); await rejected;
+  assert.deepEqual(await (await second).json(), { ok: true });
 });

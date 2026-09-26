@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { useSystemTheme } from '../theme';
 import { ThemedImage } from './ThemedImage';
 import { aiErrorMessage, requestAI, type AIRequest } from './ai-client';
+import { getAIActivity, subscribeAIActivity } from './ai-activity';
 
 const request: AIRequest = { task: 'intake', question: 'Мастерская мебели', context: {} };
 const answer = { mode: 'llm', answer: 'Ответ', actions: [], citations: [], matches: [], findings: [], scenarios: [], followups: [], tools: [] };
@@ -59,4 +60,18 @@ test('AI deadline ends a stalled request and caller cancellation remains disting
   const stopped = requestAI(request, controller.signal);
   controller.abort();
   await assert.rejects(stopped, { name: 'AbortError' });
+});
+
+test('every interactive task pauses background work and releases activity after success, failure and cancellation', async (t) => {
+  let observed = 0;
+  const unsubscribe = subscribeAIActivity(() => { observed = getAIActivity(); });
+  t.mock.method(globalThis, 'fetch', async () => {
+    assert.equal(observed, 1);
+    return Response.json(answer);
+  });
+  for (const task of ['chat', 'intake', 'search', 'analysis', 'strategy', 'review', 'draft', 'changes'] as const) {
+    await requestAI({ ...request, task }, new AbortController().signal);
+    assert.equal(getAIActivity(), 0);
+  }
+  unsubscribe();
 });

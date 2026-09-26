@@ -1,4 +1,5 @@
 import type { AIRequest, AIResult, AIMessage } from '../../api-server/ai/types';
+import { beginAIActivity } from './ai-activity';
 export type { AIRequest, AIResult, AIMessage, AIDocument } from '../../api-server/ai/types';
 
 const invalidResponse = 'Помощник вернул некорректный ответ. Попробуйте ещё раз.';
@@ -37,6 +38,8 @@ function renderableResult(data: unknown): data is AIResult {
 }
 
 export async function requestAI(request: AIRequest, signal: AbortSignal): Promise<AIResult> {
+  signal.throwIfAborted();
+  const endActivity = request.task === 'workspace' ? () => {} : beginAIActivity();
   const controller = new AbortController();
   const cancel = () => controller.abort(signal.reason);
   signal.addEventListener('abort', cancel, { once: true });
@@ -66,6 +69,7 @@ export async function requestAI(request: AIRequest, signal: AbortSignal): Promis
   } finally {
     clearTimeout(timer);
     signal.removeEventListener('abort', cancel);
+    endActivity();
   }
 }
 const historyKey = 'opora.ai.history.v2';
