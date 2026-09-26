@@ -59,3 +59,54 @@
 .opora-theme .page-programs .empty-state { padding: 24px 20px; background: transparent; border: 0; box-shadow: none; }
 .opora-theme .page-programs .empty-state p { font-size: 15px; line-height: 1.65; }
 .catalog-empty-actions { display: grid; gap: 12px; margin: 20px 0 12px; }
+
+/* The three catalogue scopes share one moving selection surface. */
+.opora-theme .page-programs .catalog-scope-tabs { position: relative; isolation: isolate; }
+.catalog-scope-indicator {
+  position: absolute; z-index: 0; left: 5px; top: 5px; bottom: 5px; width: calc((100% - 22px) / 3);
+  border-radius: 14px; background: var(--glass-selected); pointer-events: none;
+  transition: transform 220ms cubic-bezier(.22,.8,.25,1);
+}
+.catalog-scope-tabs[data-scope="all"] > .catalog-scope-indicator { transform: translateX(calc(100% + 6px)); }
+.catalog-scope-tabs[data-scope="saved"] > .catalog-scope-indicator { transform: translateX(calc(200% + 12px)); }
+.opora-theme .page-programs .catalog-scope-tabs > button { position: relative; z-index: 1; min-height: 44px; background: transparent; box-shadow: none; }
+
+.opora-theme .page-programs .catalog-status-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 50px;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--glass-inset);
+  color: var(--ink); font: inherit; font-size: 16px; line-height: 24px; text-align: left; cursor: pointer;
+}
+.catalog-status-trigger > svg { flex: none; transform: rotate(90deg); }
+.opora-theme dialog.catalog-status-sheet {
+  position: fixed; inset: auto 0 0; margin: 0 auto; width: 100%; max-width: 430px; height: auto;
+  max-height: calc(var(--app-height, 100dvh) - var(--app-safe-top, 0px) - 16px);
+  padding: 0; border: 1px solid var(--line); border-bottom: 0; border-radius: 24px 24px 0 0;
+  background: var(--canvas); color: var(--ink); box-shadow: none;
+}
+.opora-theme dialog.catalog-status-sheet[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.catalog-status-heading { display: flex; align-items: center; gap: 16px; padding: 16px 20px 8px; }
+.catalog-status-heading h2 { flex: 1; margin: 0; font-size: 20px; line-height: 1.4; }
+.catalog-status-close { display: grid; place-items: center; flex: none; width: 44px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--glass-control); color: var(--ink); cursor: pointer; }
+.catalog-status-options { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 16px calc(20px + var(--app-safe-bottom, 0px)); }
+.catalog-status-options > button {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 54px;
+  padding: 14px 16px; border: 0; border-radius: 14px; background: transparent; color: var(--ink);
+  font: inherit; font-size: 16px; line-height: 24px; text-align: left; cursor: pointer;
+}
+.catalog-status-options > button > svg { flex: none; color: var(--accent); }
+.catalog-status-options > button[aria-selected="true"] { background: var(--glass-selected); }
+.catalog-status-options > button:active, .catalog-status-trigger:active, .catalog-status-close:active { opacity: .75; }
+@media (hover: hover) { .catalog-status-options > button:hover { background: var(--glass-control); } }
+.catalog-status-sheet[open]::backdrop { animation: catalog-backdrop 220ms ease-out both; }
+.catalog-status-sheet.is-closing::backdrop { animation: catalog-backdrop-out 180ms ease-in both; }
+@keyframes catalog-backdrop { from { opacity: 0; } to { opacity: 1; } }
+@keyframes catalog-backdrop-out { from { opacity: 1; } to { opacity: 0; } }
+.catalog-notification-badge {
+  position: absolute; top: -1px; right: -1px; display: grid; place-items: center; width: 20px; height: 20px;
+  border: 2px solid var(--canvas); border-radius: 50%; background: #c73545; color: #fff;
+  font-size: 10px; font-weight: 700; line-height: 1; pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .catalog-scope-indicator { transition: none; }
+  .catalog-status-sheet[open]::backdrop, .catalog-status-sheet.is-closing::backdrop { animation: none; }
+}

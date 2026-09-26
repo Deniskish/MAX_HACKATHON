@@ -26,6 +26,7 @@ import { AdaptiveInsight } from './AdaptiveInsight';
 import type { WorkspaceInsight } from '../../api-server/ai/types';
 import { Icon } from './Icon';
 import { ModalSheet } from './ModalSheet';
+import { CatalogStatusFilter } from './CatalogStatusFilter';
 import { HomePage } from './HomePage';
 import { useTabTransition } from './useTabTransition';
 import { AppHeader, AppNavigation, type AppPage as Page } from './AppChrome';
@@ -468,7 +469,7 @@ export default function BusinessApp() {
     <div ref={shell} className={`app-shell shared-navigation page-${page}`}>
       {page !== 'overview' && page !== 'assistant' && <AppHeader
         title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', 'funding-results': 'Варианты поддержки' }[page]}
-        backLabel={page === 'funding-results' ? 'К параметрам подбора' : page === 'calendar' ? 'В мой бизнес' : 'На главную'} onBack={() => page === 'funding-results' ? setHomePanel('funding') : navigate(page === 'calendar' ? 'profile' : 'overview')} onNotifications={() => setHomePanel('events')} hasNotifications={hasNotifications}
+        backLabel={page === 'funding-results' ? 'К параметрам подбора' : page === 'calendar' ? 'В мой бизнес' : 'На главную'} onBack={() => page === 'funding-results' ? setHomePanel('funding') : navigate(page === 'calendar' ? 'profile' : 'overview')} onNotifications={() => setHomePanel('events')} hasNotifications={hasNotifications} notificationCount={page === 'programs' ? events.length + notificationUpdates.length : undefined}
       />}
       <main ref={mainRef} className="app-content">
           {page === 'funding-results' && profile && <section className="funding-results-page">
@@ -496,7 +497,7 @@ export default function BusinessApp() {
             <>
               {profile ? <><AdaptiveInsight analysis={businessAnalysis} section="programs" onAction={followInsight} /><div className="catalog-glass-context"><div className="catalog-personal-context"><p>{profile.region} · {need.purpose || 'Укажите цель для более точного подбора'}</p><button onClick={() => setHomePanel('funding')}>Изменить цель и параметры подбора <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={88} /></div></>
                 : <section className="catalog-guest-context"><div><button onClick={() => navigate('profile')}>Подобрать поддержку для моего бизнеса <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={104} /></section>}
-              {profile && <div className="catalog-scopes" aria-label="Область подбора">{([['personal', 'Для вас'], ['all', 'Все меры'], ['saved', `Сохранённые · ${saved.length}`]] as const).map(([scope, title]) => <button key={scope} aria-pressed={catalogScope === scope} onClick={() => { setCatalogScope(scope); setOnlySaved(scope === 'saved'); }}>{title}</button>)}</div>}
+              {profile && <div className="catalog-scopes catalog-scope-tabs" role="group" aria-label="Область подбора" data-scope={catalogScope}><span className="catalog-scope-indicator" aria-hidden="true" />{([['personal', 'Для вас'], ['all', 'Все меры'], ['saved', `Сохранённые · ${saved.length}`]] as const).map(([scope, title]) => <button key={scope} aria-pressed={catalogScope === scope} onClick={() => { setCatalogScope(scope); setOnlySaved(scope === 'saved'); }}>{title}</button>)}</div>}
               <div className="catalog-toolbar">
                 {!profile && <div className="segmented-control" aria-label="Показать программы">
                   <button
@@ -525,7 +526,7 @@ export default function BusinessApp() {
                   />
                 </div>
               </div>
-              <label className="field catalog-state">Статус<select value={availability} onChange={(e) => setAvailability(e.target.value)}><option value="">Все статусы</option><option value="active">Приём открыт</option><option value="closed">Приём завершён</option><option value="upcoming">Ожидается открытие</option><option value="unknown">Требует проверки</option></select></label>
+              <CatalogStatusFilter value={availability} onChange={setAvailability} />
               {profile && <details className="ai-entry page-ai-composer"><summary>Найти поддержку по описанию задачи</summary><AIPanel title="Умный поиск" task="search" context={aiContext} initialQuestion={query} {...aiHandlers} /></details>}
               <div className="catalog-results-header">
                 <h2>{filter === 'Все меры' ? profile && catalogScope === 'personal' ? 'Для вашего бизнеса' : 'Все возможности' : filter}</h2>

@@ -28,14 +28,16 @@ export function AppNavigation({ active, onNavigate }: {
   </div>;
 }
 
-export function AppHeader({ title, onBack, onNotifications, hasNotifications, backLabel = 'На главную' }: {
-  title: string; onBack: () => void; onNotifications: () => void; hasNotifications: boolean; backLabel?: string;
+export function AppHeader({ title, onBack, onNotifications, hasNotifications, notificationCount, backLabel = 'На главную' }: {
+  title: string; onBack: () => void; onNotifications: () => void; hasNotifications: boolean; notificationCount?: number; backLabel?: string;
 }) {
   return <header className="app-topbar">
     <button type="button" className="app-back icon-button" aria-label={backLabel} onClick={onBack}><Icon name="chevron" /></button>
     <h1>{title}</h1>
-    <button type="button" className="home-notifications" aria-label="Уведомления" onClick={onNotifications}>
-      <Icon name="bell" size={22} />{hasNotifications && <span className="home-notification-dot" aria-hidden="true" />}
+    <button type="button" className="home-notifications" aria-label={notificationCount ? `Уведомления, ${notificationCount}` : 'Уведомления'} onClick={onNotifications}>
+      <Icon name="bell" size={22} />{notificationCount !== undefined
+        ? notificationCount > 0 && <span className="catalog-notification-badge" aria-hidden="true">{notificationCount > 9 ? '9+' : notificationCount}</span>
+        : hasNotifications && <span className="home-notification-dot" aria-hidden="true" />}
     </button>
   </header>;
 }
