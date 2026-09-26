@@ -198,6 +198,12 @@ async function runScopedAssistant(input: unknown, model: AIModel | undefined, ex
   }
   const shown = request.task === 'workspace' ? matches.slice(0, 30) : matches.filter((m) => request.context.programId ? m.opportunity.id === request.context.programId
     : !preferred.length || preferred.includes(m.opportunity.id)).slice(0, 30);
+  // Planning already chose the programmes for this reply. Do not pad its sources
+  // with unrelated sectors merely because retrieval has room for 12 results.
+  if (preferred.length && ['chat', 'search', 'intake'].includes(request.task)) {
+    const selectedIds = new Set(shown.map(m => m.opportunity.id));
+    evidence = evidence.filter(e => !e.opportunityId || selectedIds.has(e.opportunityId));
+  }
   const usable = shown.filter((m) => !['not_eligible', 'expired', 'upcoming'].includes(m.status));
   const base: AIResult = {
     mode: 'local', answer: usable.length ? 'По условиям каталога можно рассмотреть:\n\n' + usable.slice(0, 2).map((m) => {
@@ -219,7 +225,7 @@ async function runScopedAssistant(input: unknown, model: AIModel | undefined, ex
   if (model && !unavailable) {
     try {
       const result = await model('answer', { request, proposedNeed, proposedProfile, evidence,
-        assessments: shown, scenarios, strategy: buildFundingStrategy(profile, need, matches), draftKinds }, signal);
+        assessments: shown, scenarios, strategy: buildFundingStrategy(profile, need, shown), draftKinds }, signal);
       calls += result.calls ?? 1; tokens += result.tokens ?? 0;
       const answer = object(result.value);
       if (!concise(answer.answer, 12000)) throw new PrivacyError('INVALID_RESPONSE');

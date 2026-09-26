@@ -19,6 +19,20 @@ const input = { task: 'chat', question: 'Хочу купить оборудов�
   history: [{ role: 'user', text: 'Срок три года' }], context: { profile: { region: 'Самарская область', applicantType: 'legal_entity' }, project: 'Производство приборов', identifiers: { name: 'ООО Секрет', inn: '7707083893' } } };
 const answer = { answer: 'Уточните условия обеспечения.', evidenceIds: [`program:${id}`], followups: ['Сколько собственных средств?'], findings: [] };
 
+test('chat answer only receives programme sources and strategy selected by its plan', async () => {
+  let checked = false;
+  await runAssistant(input, async (stage, payload: any) => {
+    if (stage === 'plan') return { value: { query: 'производство', opportunityIds: [id] } };
+    checked = true;
+    assert.ok(payload.evidence.some((e: any) => e.opportunityId === id));
+    assert.ok(payload.evidence.every((e: any) => !e.opportunityId || e.opportunityId === id));
+    assert.ok(payload.assessments.every((m: any) => m.opportunity.id === id));
+    assert.ok(payload.strategy.options.every((o: any) => o.opportunityId === id));
+    return { value: answer };
+  });
+  assert.equal(checked, true);
+});
+
 test('guest chat accepts questions and history without inventing a company or unrelated programme actions', async () => {
   const stages: string[] = [];
   const result = await runAssistant({ task: 'chat', question: 'Чем грант отличается от кредита?',
