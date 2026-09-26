@@ -16,7 +16,7 @@ export function BusinessHub({ profile, project, confirmed, pending, applications
       <h2>Поддержка под<br />ваши задачи</h2>
       <p>Добавьте бизнес для персонального подбора поддержки.</p>
       <ActionButton className="primary" onClick={onAdd}>Добавить бизнес <Icon name="arrow" /></ActionButton>
-      <button className="hub-browse" onClick={onSupport}>Смотреть каталог</button>
+      <ActionButton className="secondary" onClick={onSupport}>Смотреть каталог</ActionButton>
     </section>
     <section className="hub-benefits" aria-label="После добавления бизнеса">
       <h3>После добавления бизнеса</h3>

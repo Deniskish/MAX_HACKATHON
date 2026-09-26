@@ -25,6 +25,7 @@
 .hub-welcome h2 { font-size: 30px; line-height: 1.2; letter-spacing: -.9px; margin: 12px 0; }
 .hub-welcome p { font-size: 13px; line-height: 1.8; color: #9293a0; margin: 0 0 22px; }
 .hub-welcome .opora-action, .hub-welcome .hub-browse { width: 100%; }
+.hub-welcome > .opora-action.secondary { margin-top: 12px; }
 .hub-benefits { display: grid; gap: 20px; padding: 20px; border: 1px solid #ffffff0f; border-radius: 26px; }
 .hub-benefits h3 { margin: 0; font-size: 14px; }
 .hub-benefits > div { display: flex; gap: 14px; }
