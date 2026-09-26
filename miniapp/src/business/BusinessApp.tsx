@@ -264,7 +264,7 @@ export default function BusinessApp() {
   useEffect(() => { setChatFailure(null); }, [companyProfile, projectProfile, need]);
   const [assistantMode, setAssistantMode] = useState('Проверяем доступность GigaChat');
   const [assistantBack, setAssistantBack] = useState<'overview' | 'profile'>('overview');
-  useEffect(() => { const controller = new AbortController(); fetch('/api/ai/status', { signal: controller.signal }).then((r) => r.json()).then((data) => setAssistantMode(data.status === 'ready' ? 'GigaChat подключён' : data.configured ? 'GigaChat настроен · соединение ещё не подтверждено' : 'GigaChat не настроен')).catch(() => { if (!controller.signal.aborted) setAssistantMode('Статус AI недоступен'); }); return () => controller.abort(); }, []);
+  useEffect(() => { const controller = new AbortController(); fetch('/api/ai/status', { signal: controller.signal }).then((r) => r.json()).then((data) => setAssistantMode(data.status === 'ready' ? 'GigaChat подключён' : data.status === 'limited' ? 'GigaChat · предыдущий запрос не завершён' : data.configured ? 'GigaChat · готов к запросу' : 'GigaChat не настроен')).catch(() => { if (!controller.signal.aborted) setAssistantMode('Статус AI недоступен'); }); return () => controller.abort(); }, []);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [page]);
@@ -484,7 +484,7 @@ export default function BusinessApp() {
     } catch (error) {
       if (controller.signal.aborted || chatRequest.current !== controller) return;
       setChatFailure({ message: aiErrorMessage(error), text, program, task });
-      setAssistantMode('GigaChat временно недоступен');
+      setAssistantMode('Запрос не завершён');
     } finally {
       if (chatRequest.current === controller) { chatRequest.current = null; setSending(false); }
     }

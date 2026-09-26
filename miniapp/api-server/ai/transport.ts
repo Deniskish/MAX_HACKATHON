@@ -1,5 +1,6 @@
 import { providerJson } from '../provider-json';
 import { PrivacyError } from '../privacy';
+import { untilAborted } from '../funding-catalog/abort';
 import { answerFunction, draftFunction, reviewFunction, workspaceFunction, assistantSystem, planFunction, type AIModel } from './service';
 
 function validateShape(value: any, schema: any): any {
@@ -41,12 +42,14 @@ export function createAIModel(endpoint: string, model: string, token: () => Prom
     const conversational = stage === 'answer' && ['chat', 'intake', 'search', 'analysis', 'strategy', 'changes'].includes(task);
     const review = stage === 'answer' && task === 'review', draft = stage === 'answer' && task === 'draft';
     const fn = stage === 'plan' ? planFunction : workspace ? workspaceFunction : review ? reviewFunction : draft ? draftFunction : answerFunction;
-    const accessToken = await token();
+    const accessToken = await untilAborted(token(), signal);
     const system = workspace ? assistantSystem : assistantSystem.split('Для task=workspace')[0];
     const request = async (jsonOnly = false) => {
       signal.throwIfAborted();
-      const response = await transport(endpoint, {
-        method: 'POST', redirect: 'error', signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]),
+      // The request owns one end-to-end deadline, including time in the provider
+      // queue. A second 30s timer used to cut off valid business analyses early.
+      const response = await untilAborted(transport(endpoint, {
+        method: 'POST', redirect: 'error', signal,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ model, stream: false, temperature: 0.1, max_tokens: stage === 'plan' ? 1600 : 4000,
           messages: [{ role: 'system', content: system + (conversational
@@ -54,9 +57,9 @@ export function createAIModel(endpoint: string, model: string, token: () => Prom
             : '\n' + fn.description + (jsonOnly ? '\nВерни только JSON по схеме: ' + JSON.stringify(fn.parameters) : '')) },
             { role: 'user', content: JSON.stringify(input) }],
           ...(conversational || jsonOnly ? {} : { functions: [fn], function_call: { name: fn.name } }) }),
-      });
+      }), signal);
       if (!response.ok) { await response.body?.cancel(); throw new PrivacyError(response.status === 429 ? 'PROVIDER_RATE_LIMITED' : `PROVIDER_HTTP_${response.status}`); }
-      const data = await providerJson(response, 120000) as any;
+      const data = await untilAborted(providerJson(response, 120000), signal) as any;
       // A provider refusal is not an answer or malformed JSON, and must not be retried.
       if (data.choices?.[0]?.finish_reason === 'blacklist') throw new PrivacyError('PROVIDER_CONTENT_BLOCKED');
       return data;

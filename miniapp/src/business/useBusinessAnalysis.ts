@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { requestAI, type AIRequest, type AIResult } from './ai-client';
+import { aiErrorMessage, requestAI, type AIRequest, type AIResult } from './ai-client';
 import { workspaceActions, workspacePages, type AIPersonalization } from '../../api-server/ai/types';
 
 const cacheKey = 'opora.ai.workspace.v1';
@@ -13,7 +13,7 @@ export function validPersonalization(value: unknown): value is AIPersonalization
 }
 export function useBusinessAnalysis(context: AIRequest['context'] | null, sourceVersion: string) {
   const fingerprint = JSON.stringify({ version: 1, context, sourceVersion });
-  const [state, setState] = useState<{ fingerprint: string; status: 'loading' | 'ready' | 'unavailable'; data?: AIResult; at?: number }>({ fingerprint: '', status: 'loading' });
+  const [state, setState] = useState<{ fingerprint: string; status: 'loading' | 'ready' | 'unavailable'; data?: AIResult; at?: number; error?: string }>({ fingerprint: '', status: 'loading' });
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     if (!context) return;
@@ -33,10 +33,10 @@ export function useBusinessAnalysis(context: AIRequest['context'] | null, source
           controller.signal.throwIfAborted();
           const data = await requestAI({ task: 'workspace', question: 'Проанализируй бизнес и адаптируй все разделы приложения под его ситуацию: главную, каталог поддержки, заявки, календарь и помощника. Учитывай текущие цели и подготовку заявок.', context }, controller.signal);
           if (controller.signal.aborted) return;
-          if (data.mode !== 'llm' || !validPersonalization(data.personalization)) { setState({ fingerprint, status: 'unavailable' }); return; }
+          if (data.mode !== 'llm' || !validPersonalization(data.personalization)) { setState({ fingerprint, status: 'unavailable', error: aiErrorMessage(data.providerFailure ?? 'INVALID_RESPONSE') }); return; }
           const at = Date.now(); setState({ fingerprint, status: 'ready', data, at });
           try { localStorage.setItem(cacheKey, JSON.stringify({ digest, data, at })); } catch { /* Keep the analysis in memory. */ }
-        } catch { if (!controller.signal.aborted) setState({ fingerprint, status: 'unavailable' }); }
+        } catch (error) { if (!controller.signal.aborted) setState({ fingerprint, status: 'unavailable', error: aiErrorMessage(error) }); }
       })();
     }, 1800);
     return () => { clearTimeout(timer); controller.abort(); };
@@ -44,6 +44,7 @@ export function useBusinessAnalysis(context: AIRequest['context'] | null, source
   return { status: context ? state.fingerprint === fingerprint ? state.status : 'loading' : 'guest' as const,
     data: state.fingerprint === fingerprint ? state.data : undefined,
     at: state.fingerprint === fingerprint ? state.at : undefined,
+    error: state.fingerprint === fingerprint ? state.error : undefined,
     refresh: () => setRetry((n) => n + 1) };
 }
 export type BusinessAnalysis = ReturnType<typeof useBusinessAnalysis>;

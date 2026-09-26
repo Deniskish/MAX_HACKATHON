@@ -11,6 +11,7 @@ import { DaDataCompanyProvider } from './company-data/dadata';
 import { CompanyDataService } from './company-data/service';
 import { providerStatus } from './company-data/fns-index';
 import { runAssistant } from './ai/service';
+import { providerFailureCode, providerFailureReason } from './ai/errors';
 import { prepareAIContext } from './ai/context';
 import type { AIEvidence, AIResult } from './ai/types';
 import { SourceStore } from './ai/sources';
@@ -42,9 +43,10 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
     catch { giga = null; invalidConfig = true; }
   }
   let lastSuccess: string | null = null, lastError: string | null = invalidConfig ? 'configuration' : null;
+  let lastFailure: { code: string; task: string; at: string } | null = null;
   const aiStatus = () => ({ configured: Boolean(giga || env.GIGACHAT_AUTH_KEY), provider: 'gigachat', model,
-    status: !giga ? invalidConfig ? 'unavailable' : 'not_configured' : lastError ? 'unavailable' : lastSuccess ? 'ready' : 'unavailable',
-    checked: Boolean(lastSuccess || lastError), lastSuccess, reason: lastError ?? (giga && !lastSuccess ? 'not_verified' : null) });
+    status: !giga ? invalidConfig ? 'unavailable' : 'not_configured' : lastError ? ['request_rejected', 'invalid_response'].includes(lastError) ? 'limited' : 'unavailable' : lastSuccess ? 'ready' : 'unavailable',
+    checked: Boolean(lastSuccess || lastError), lastSuccess, lastFailure, reason: lastError ?? (giga && !lastSuccess ? 'not_verified' : null) });
   const app = express(); app.disable('x-powered-by');
   // The HTTPS ingress can route /api directly here, bypassing the frontend proxy.
   app.use(compression());
@@ -79,7 +81,7 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
     catch { res.status(400).json({ error: 'Проверьте вопрос, профиль и объём документов.', code: 'INVALID_INPUT' }); return; }
     if (activeAI >= 4) { res.status(429).json({ error: 'Помощник занят. Повторите запрос через минуту.', code: 'AI_BUSY' }); return; }
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 65000);
+    const timeout = setTimeout(() => controller.abort(new DOMException('AI deadline exceeded', 'TimeoutError')), 65000);
     const disconnect = () => { if (!res.writableEnded) controller.abort(); };
     res.on('close', disconnect); activeAI++;
     try {
@@ -90,11 +92,20 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
       const evidence = await untilAborted(sources.evidence(), controller.signal);
       const result = await untilAborted(giga?.assist ? giga.assist(req.body, evidence, controller.signal) : runAssistant(req.body, undefined, evidence, controller.signal), controller.signal);
       if (result.mode === 'llm') { lastSuccess = new Date().toISOString(); lastError = null; }
-      else if (giga) lastError = 'provider';
+      else if (giga) {
+        const code = providerFailureCode({ code: result.providerFailure });
+        lastError = providerFailureReason(code);
+        lastFailure = { code, task: req.body.task, at: new Date().toISOString() };
+      }
       if (!controller.signal.aborted) res.json(result);
-    } catch {
-      lastError = controller.signal.aborted ? 'timeout' : 'provider';
-      if (!res.destroyed) res.status(502).json({ error: 'Не удалось завершить AI-анализ. Повторите запрос.', code: 'AI_UNAVAILABLE' });
+    } catch (error) {
+      // Closing the screen is not an outage of the shared AI service.
+      if (!res.destroyed) {
+        const code = providerFailureCode(controller.signal.aborted ? controller.signal.reason : error);
+        lastError = providerFailureReason(code);
+        lastFailure = { code, task: req.body.task, at: new Date().toISOString() };
+        res.status(502).json({ error: code, code });
+      }
     } finally { clearTimeout(timeout); res.off('close', disconnect); activeAI--; }
   });
   app.post('/api/assistant', async (req, res) => {

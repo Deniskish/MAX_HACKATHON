@@ -9,6 +9,7 @@ import { object, prepareAIContext } from './context';
 import { workspaceActions, workspacePages, type AIEvidence, type AIRequest, type AIResult, type AIPersonalization } from './types';
 import type { SemanticSearch } from './embeddings';
 import { amountLabel, rateLabel, termLabel } from '../funding-catalog/presentation';
+import { providerFailureCode as failureCode } from './errors';
 
 export type AIModel = (stage: 'plan' | 'answer', input: unknown, signal: AbortSignal) => Promise<{ value: unknown; tokens?: number; calls?: number }>;
 const strings = (v: unknown, count = 4, length = 400) => Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string' && !!s.trim()).slice(0, count).map((s) => s.slice(0, length)) : [];
@@ -84,10 +85,6 @@ export const workspaceFunction = {
     priorities: { type: 'array', items: { type: 'object', properties: { programId: { type: 'string' }, reason: { type: 'string' } }, required: ['programId', 'reason'] } },
   }, required: ['summary', 'evidenceIds', 'sections', 'priorities'] },
 };
-function failureCode(error: unknown) {
-  const code = error instanceof PrivacyError ? error.code : '';
-  return /^(PROVIDER_HTTP_\d{3}|PROVIDER_RATE_LIMITED|PROVIDER_UNAVAILABLE|PROVIDER_CONTENT_BLOCKED|TRUNCATED_RESPONSE|INVALID_RESPONSE|NO_FUNCTION_CALL|GIGACHAT_AUTH_FAILED)$/.test(code) ? code : 'PROVIDER_UNAVAILABLE';
-}
 function shortlist(query: string, selected?: string) {
   const words = query.toLowerCase().match(/[\p{L}]{4,}/gu) ?? [];
   return getAICatalog().map((o) => ({ o, score: Number(o.id === selected) * 1000 + Number(o.status === 'active') * 10 + words.reduce((n, w) => n + Number(o.title.toLowerCase().includes(w)), 0) })).sort((a, b) => b.score - a.score).slice(0, 60).map(({ o }) => o);
@@ -178,7 +175,9 @@ async function runScopedAssistant(input: unknown, model: AIModel | undefined, ex
   const query = concise(plan.query, 2000) || request.question;
   let evidence = retrieveEvidence(query, preferred, taskEvidence), semanticUsed = false;
   if (request.task === 'review' && request.context.programId) evidence = evidence.filter((e) => e.opportunityId === request.context.programId);
-  if (semantic && !unavailable && request.task !== 'review') {
+  // Workspace programmes already come from the business context and rule ranking.
+  // Re-embedding the generic adaptation instruction wastes the same provider queue.
+  if (semantic && !unavailable && !['review', 'workspace'].includes(request.task)) {
     try { const found = await semantic(query, [...retrieveEvidence(query, preferred), ...taskEvidence], signal);
       evidence = [...new Map([...catalogEvidence().filter((e) => preferred.includes(e.opportunityId!)), ...found].map((e) => [e.id, e])).values()].slice(0, 14); semanticUsed = true;
     } catch (error) { if (signal.aborted) throw error; /* Смысловой выбор модели и текстовый поиск остаются доступны. */ }
@@ -224,8 +223,18 @@ async function runScopedAssistant(input: unknown, model: AIModel | undefined, ex
   if (request.task === 'draft' && unavailable) base.answer = 'AI-черновик сейчас недоступен. Можно создать локальный шаблон.';
   if (model && !unavailable) {
     try {
+      // Do not repeat imported document bodies and raw rule definitions for every
+      // assessment. Evidence carries source text; evaluated checks retain constraints.
+      const assessments = shown.map(({ opportunity: o, ...assessment }) => ({ ...assessment, opportunity: {
+        id: o.id, title: o.title, kind: o.kind, providerName: o.providerName, status: o.status,
+        regions: o.regions, purposes: o.purposes, applicantTypes: o.applicantTypes,
+        amountMin: o.amountMin, amountMax: o.amountMax, rateMin: o.rateMin, rateMax: o.rateMax,
+        termMonthsMin: o.termMonthsMin, termMonthsMax: o.termMonthsMax, deadline: o.deadline,
+        manualConditions: o.manualConditions,
+      } }));
       const result = await model('answer', { request, proposedNeed, proposedProfile, evidence,
-        assessments: shown, scenarios, strategy: buildFundingStrategy(profile, need, shown), draftKinds }, signal);
+        assessments, scenarios, strategy: buildFundingStrategy(profile, need, shown),
+        ...(request.task === 'draft' ? { draftKinds } : {}) }, signal);
       calls += result.calls ?? 1; tokens += result.tokens ?? 0;
       const answer = object(result.value);
       if (!concise(answer.answer, 12000)) throw new PrivacyError('INVALID_RESPONSE');

@@ -4,6 +4,8 @@ import { createApp, type AIClient } from './app';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import { PrivacyError } from './privacy';
+import type { AIResult } from './ai/types';
 async function server(giga: AIClient | null, run: (url: string) => Promise<void>) {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'opora-api-'));
   const server = createApp({ giga, env: {}, fnsDir: dir }).listen(0, '127.0.0.1');
@@ -35,6 +37,29 @@ test('configured AI becomes ready only after a successful request', async () => 
   assert.equal((await fetch(url + '/api/assistant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: 'Сроки', context: {} }) })).status, 200);
   assert.equal((await (await fetch(url + '/api/ai/status')).json() as any).status, 'ready');
 }));
+
+test('v2 reports a refused request separately from an outage and recovers on success', async () => {
+  let attempt = 0;
+  const reply: AIResult = { mode: 'llm', answer: 'Ответ', followups: [], citations: [], actions: [], findings: [], matches: [], scenarios: [], tools: [] };
+  await server({ async complete() { return reply; }, async assist() {
+    attempt++;
+    if (attempt === 1) return { ...reply, mode: 'local', providerFailure: 'PROVIDER_CONTENT_BLOCKED' };
+    if (attempt === 2) throw new DOMException('PRIVATE_DATA', 'TimeoutError');
+    if (attempt === 3) throw new PrivacyError('PROVIDER_RATE_LIMITED');
+    return reply;
+  } }, async url => {
+    for (const [code, reason, status] of [['PROVIDER_CONTENT_BLOCKED', 'request_rejected', 'limited'], ['PROVIDER_TIMEOUT', 'timeout', 'unavailable'], ['PROVIDER_RATE_LIMITED', 'rate_limit', 'unavailable'], [null, null, 'ready']]) {
+      const response = await fetch(url + '/api/ai/assist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ task: 'chat', question: 'Вопрос', context: {} }) });
+      const body = await response.json();
+      assert.doesNotMatch(JSON.stringify(body), /PRIVATE_DATA/);
+      if (response.status === 502) assert.equal(body.code, code);
+      const health = await (await fetch(url + '/api/ai/status')).json() as any;
+      assert.equal(health.reason, reason); assert.equal(health.status, status);
+      if (code) { assert.equal(health.lastFailure.code, code); assert.equal(health.lastFailure.task, 'chat'); }
+      else assert.ok(health.lastSuccess);
+    }
+  });
+});
 test('AI timeout and unexpected errors never leak details; invalid JSON and size limit use unified errors', async () => server({ async complete() { throw new DOMException('PRIVATE_PROVIDER_MESSAGE', 'TimeoutError'); } }, async (url) => {
   const response = await fetch(url + '/api/assistant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: 'Сроки', context: {} }) });
   assert.equal(response.status, 502); assert.doesNotMatch(await response.text(), /PRIVATE_PROVIDER_MESSAGE/);

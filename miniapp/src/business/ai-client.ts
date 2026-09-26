@@ -6,6 +6,7 @@ const unavailable = 'GigaChat временно недоступен. Попро�
 const errorLabels: Record<string, string> = {
   INVALID_RESPONSE: invalidResponse, TRUNCATED_RESPONSE: invalidResponse, NO_FUNCTION_CALL: invalidResponse,
   PROVIDER_UNAVAILABLE: unavailable, AI_UNAVAILABLE: unavailable, GIGACHAT_AUTH_FAILED: unavailable,
+  PROVIDER_TIMEOUT: 'Анализ занял слишком много времени. Повторите запрос — ваши данные сохранены.',
   PROVIDER_RATE_LIMITED: 'Слишком много запросов. Повторите через минуту.',
   RATE_LIMITED: 'Слишком много запросов. Повторите через минуту.',
   PROVIDER_CONTENT_BLOCKED: 'GigaChat не смог обработать этот вопрос. Попробуйте изменить формулировку.',

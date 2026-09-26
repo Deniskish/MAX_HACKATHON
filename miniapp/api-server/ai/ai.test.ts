@@ -98,7 +98,7 @@ test('unreviewed crawls only enter change analysis, never routine business advic
 });
 
 test('provider blacklist is explicit, never retried as JSON or reported as an AI answer', async () => {
-  for (const task of ['workspace', 'chat', 'review']) {
+  for (const task of ['workspace', 'chat', 'search', 'review', 'draft']) {
     let calls = 0;
     const model = createAIModel('https://api.giga.chat/v1/chat/completions', 'GigaChat-2-Pro', async () => 'test', (async () => {
       calls++;

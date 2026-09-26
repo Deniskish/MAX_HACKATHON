@@ -100,7 +100,7 @@ export function AIPanel({ title, task, context, initialQuestion = '', button = '
     try {
       const answer = await requestAI({ task, question: text, context }, controller.signal);
       if (pending.current === controller && !controller.signal.aborted) {
-        if (task === 'review' && answer.mode === 'local') setError('Не удалось проверить заявку. Попробуйте ещё раз — ваши данные остались в форме.');
+        if (task === 'review' && answer.mode === 'local') setError(aiErrorMessage(answer.providerFailure ?? 'PROVIDER_UNAVAILABLE'));
         else { setResult(answer); if (answer.providerFailure) setError(aiErrorMessage(answer.providerFailure)); onResult?.(answer); }
       }
     } catch (e) { if (pending.current === controller && !controller.signal.aborted) setError(aiErrorMessage(e)); }

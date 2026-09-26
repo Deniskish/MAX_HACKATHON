@@ -4,7 +4,11 @@
   const status = await (await fetch(base + '/api/ai/status')).json();
   console.log('AI configuration:', JSON.stringify({ configured: status.configured, status: status.status, model: status.model }));
   const response = await fetch(base + '/api/ai/assist', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ task: 'workspace', question: 'Проанализируй имеющиеся сведения и адаптируй все пять разделов. Не придумывай параметры бизнеса: если данных мало, предложи уточнения.', context: { profile: {}, workspace: { savedIds: [], applications: [] } } }), signal: AbortSignal.timeout(70000) });
+    body: JSON.stringify({ task: 'workspace', question: 'Проанализируй имеющиеся сведения и адаптируй все пять разделов. Не придумывай параметры бизнеса: если данных мало, предложи уточнения.', context: {
+      profile: { companyType: 'АО', applicantType: 'legal_entity', region: 'Чувашская Республика', okved: '10.82.2', industry: 'Производство кондитерских изделий', isSme: 'unknown' },
+      need: { purpose: 'запуск производства', amount: 400000, preferredTermMonths: 3, ownFunds: null, needsCollateralSupport: null },
+      workspace: { savedIds: [], applications: [] },
+    } }), signal: AbortSignal.timeout(70000) });
   if (!response.ok) throw new Error('AI_ENDPOINT_FAILED');
   const result = await response.json();
   if (!['llm', 'local'].includes(result.mode) || typeof result.answer !== 'string' || !Array.isArray(result.actions)) throw new Error('AI_CONTRACT_FAILED');
