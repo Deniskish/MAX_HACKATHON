@@ -1,4 +1,4 @@
-import { officialFundingCatalog } from '../funding-catalog/official-catalog';
+import { getAICatalog } from '../funding-catalog/ai-runtime';
 import { emptyFundingNeed, fundingPurposes, type FundingNeed, type FundingProfile } from '../funding-catalog/types';
 import { parseFundingNeed, parseFundingProfile } from '../funding-catalog/input';
 import { matchFundingOpportunity, rankFundingMatches } from '../funding-catalog/matching';
@@ -88,14 +88,19 @@ function failureCode(error: unknown) {
   const code = error instanceof PrivacyError ? error.code : '';
   return /^(PROVIDER_HTTP_\d{3}|PROVIDER_RATE_LIMITED|PROVIDER_UNAVAILABLE|PROVIDER_CONTENT_BLOCKED|TRUNCATED_RESPONSE|INVALID_RESPONSE|NO_FUNCTION_CALL|GIGACHAT_AUTH_FAILED)$/.test(code) ? code : 'PROVIDER_UNAVAILABLE';
 }
+function shortlist(query: string, selected?: string) {
+  const words = query.toLowerCase().match(/[\p{L}]{4,}/gu) ?? [];
+  return getAICatalog().map((o) => ({ o, score: Number(o.id === selected) * 1000 + Number(o.status === 'active') * 10 + words.reduce((n, w) => n + Number(o.title.toLowerCase().includes(w)), 0) })).sort((a, b) => b.score - a.score).slice(0, 60).map(({ o }) => o);
+}
 function catalogEvidence(): AIEvidence[] {
-  return officialFundingCatalog.map((o) => ({ id: `program:${o.id}`, title: o.title, opportunityId: o.id,
+  return getAICatalog().map((o) => ({ id: `program:${o.id}`, title: o.title, opportunityId: o.id,
     url: o.source.url!, checkedAt: o.source.verifiedAt,
     text: [o.description, `Финансирование: ${amountLabel(o)}`, rateLabel(o), termLabel(o),
       `Состояние приёма: ${{ active: 'открыт', closed: 'завершён', upcoming: 'ожидается', unknown: 'требует проверки' }[o.status ?? 'unknown']}`,
       `Срок приёма: ${o.deadline ?? 'не опубликован'}`, `Регионы: ${o.regions === 'all' ? 'вся Россия' : o.regions.join(', ')}`,
       `Назначение: ${o.purposes.join('; ')}`, ...o.requirements.map((r) => r.label), ...(o.manualConditions ?? []),
-      `Документы: ${o.requiredDocuments.join('; ') || 'перечень требует уточнения'}`].filter(Boolean).join('\n') }));
+      `Документы: ${o.requiredDocuments.join('; ') || 'перечень требует уточнения'}`,
+      o.imported?.detail?.text.slice(0, 20000)].filter(Boolean).join('\n') }));
 }
 export function retrieveEvidence(query: string, preferred: string[], extra: AIEvidence[] = []): AIEvidence[] {
   const terms = query.toLocaleLowerCase('ru').match(/[а-яёa-z0-9]{3,}/g) ?? [];
@@ -104,7 +109,7 @@ export function retrieveEvidence(query: string, preferred: string[], extra: AIEv
     .sort((a, b) => b.score - a.score).slice(0, 12).map(({ e }) => e);
 }
 function evaluate(profile: FundingProfile, need: FundingNeed, request: AIRequest) {
-  return rankFundingMatches(officialFundingCatalog.map((o) => matchFundingOpportunity(profile, need, o, {
+  return rankFundingMatches(getAICatalog().map((o) => matchFundingOpportunity(profile, need, o, {
     preparedDocuments: request.context.programId === o.id ? request.context.preparedDocuments : request.context.workspace?.applications.find((a) => a.programId === o.id)?.preparedDocuments ?? [],
   })));
 }
@@ -122,7 +127,7 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
   if (model && ['chat', 'intake', 'search'].includes(request.task)) {
     try {
       const result = await model('plan', { request, purposes: fundingPurposes,
-        catalog: officialFundingCatalog.map((o) => ({ id: o.id, title: o.title, description: o.description, purposes: o.purposes })) }, signal);
+        catalog: shortlist(request.question, request.context.programId).map((o) => ({ id: o.id, title: o.title, description: o.description, purposes: o.purposes })) }, signal);
       calls += result.calls ?? 1; tokens += result.tokens ?? 0; plan = object(result.value);
     } catch (error) {
       if (signal.aborted) throw error;
@@ -147,13 +152,13 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
   if (request.task === 'workspace') { proposedNeed = undefined; proposedProfile = undefined; }
   const profile = { ...originalProfile, ...proposedProfile }, need = proposedNeed ?? originalNeed;
   const matches = evaluate(profile, need, request);
-  const preferred = strings(plan.opportunityIds, 6).filter((id) => officialFundingCatalog.some((o) => o.id === id));
+  const preferred = strings(plan.opportunityIds, 6).filter((id) => getAICatalog().some((o) => o.id === id));
   if (request.context.programId) preferred.unshift(request.context.programId);
   const query = concise(plan.query, 2000) || request.question;
   let evidence = retrieveEvidence(query, preferred, taskEvidence), semanticUsed = false;
   if (request.task === 'review' && request.context.programId) evidence = evidence.filter((e) => e.opportunityId === request.context.programId);
   if (semantic && !unavailable && request.task !== 'review') {
-    try { const found = await semantic(query, [...catalogEvidence(), ...taskEvidence], signal);
+    try { const found = await semantic(query, [...retrieveEvidence(query, preferred), ...taskEvidence], signal);
       evidence = [...new Map([...catalogEvidence().filter((e) => preferred.includes(e.opportunityId!)), ...found].map((e) => [e.id, e])).values()].slice(0, 14); semanticUsed = true;
     } catch (error) { if (signal.aborted) throw error; /* Смысловой выбор модели и текстовый поиск остаются доступны. */ }
   }
@@ -170,8 +175,8 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
         matches: evaluate(profile, scenarioNeed, request).map((m) => ({ id: m.opportunity.id, title: m.opportunity.title, status: m.status, score: m.score })) });
     } catch { /* Invalid scenario is not shown as a computed result. */ }
   }
-  const shown = request.task === 'workspace' ? matches : matches.filter((m) => request.context.programId ? m.opportunity.id === request.context.programId
-    : !preferred.length || preferred.includes(m.opportunity.id));
+  const shown = request.task === 'workspace' ? matches.slice(0, 30) : matches.filter((m) => request.context.programId ? m.opportunity.id === request.context.programId
+    : !preferred.length || preferred.includes(m.opportunity.id)).slice(0, 30);
   const usable = shown.filter((m) => !['not_eligible', 'expired', 'upcoming'].includes(m.status));
   const base: AIResult = {
     mode: 'local', answer: usable.length ? 'По условиям каталога можно рассмотреть:\n\n' + usable.slice(0, 2).map((m) => {

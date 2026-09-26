@@ -7,12 +7,14 @@ import { editCompanyProfile, mergeCompanyProfile, requestCompanyData } from './c
 import { FundingExperience, FundingOpportunityCard, FundingResults } from './FundingExperience';
 import { fundingFingerprint } from './funding';
 import { OfficialDetails, ProjectOnboarding } from './OfficialExperience';
-import { officialFundingCatalog } from '../../api-server/funding-catalog/official-catalog';
+import { useLiveCatalog } from './live-catalog';
+import { toLegacyPrograms } from '../../api-server/funding-catalog/legacy-adapter';
+import { useSupportNotifications, SupportNotificationSettings, SupportNotificationList } from './SupportNotifications';
 import { matchFundingOpportunity, rankFundingMatches } from '../../api-server/funding-catalog/matching';
 import { toFundingProfile } from '../../api-server/funding-catalog/input';
 import { fundingKindLabels } from '../../api-server/funding-catalog/presentation';
 import type { FundingProfile, ProjectProfile, FundingResponse } from '../../api-server/funding-catalog/types';
-import { loadWorkspace, saveWorkspace, removeBusiness, projectAsProfile, applicationStatus, applicationLabels, calendarICS, fundingEvents, personalFunding, trackedFunding } from './workspace';
+import { loadWorkspace, saveWorkspace, removeBusiness, businessAddedNotice, projectAsProfile, applicationStatus, applicationLabels, calendarICS, fundingEvents, personalFunding, trackedFunding } from './workspace';
 import {
   DocumentChecklist,
   DraftComposer,
@@ -30,7 +32,7 @@ import { AppHeader, AppNavigation, type AppPage as Page } from './AppChrome';
 import { AIPanel, AIResultView, AIIntakeDisclosure } from './AIExperience';
 import { aiErrorMessage, requestAI, readAIHistory, saveAIHistory, type AIResult, type AIDocument } from './ai-client';
 import { ActionButton, BusinessInput, BusinessTextarea } from './MaxControls';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   type Profile,
   type ProfileValues,
@@ -38,7 +40,6 @@ import {
   type Application,
   emptyProfile,
   goals,
-  programs,
   analyzeOpportunity,
   validInn,
   draftText,
@@ -68,6 +69,9 @@ function browserDownload(text: string, name: string, type = 'text/plain;charset=
 }
 
 export default function BusinessApp() {
+  const { catalog: officialFundingCatalog, status: liveStatus } = useLiveCatalog();
+  const programs = useMemo(() => toLegacyPrograms(officialFundingCatalog), [officialFundingCatalog]);
+  const [catalogLimit, setCatalogLimit] = useState(30);
   const [exportText, setExportText] = useState('');
   function download(text: string, name: string, type = 'text/plain;charset=utf-8') {
     if (window.WebApp?.initData) {
@@ -86,6 +90,8 @@ export default function BusinessApp() {
   const setPage = (next: Page) => { prepare(next); setPageState(next); };
   const [initial] = useState(() => loadWorkspace(localStorage, programs.map((p) => p.id)));
   const [companyProfile, setProfile] = useState<Profile | null>(initial.profile);
+  const [businessNotice, setBusinessNotice] = useState(initial.businessNotice ?? null);
+  const [deletingBusiness, setDeletingBusiness] = useState(false);
   const [projectProfile, setProjectProfile] = useState<ProjectProfile | null>(initial.projectProfile);
   const [projectOnboard, setProjectOnboard] = useState(false);
   const [aiProjectSeed, setAIProjectSeed] = useState<ProjectProfile | null>(null);
@@ -95,6 +101,7 @@ export default function BusinessApp() {
   const fundingProfile: FundingProfile = projectProfile && !companyProfile
     ? { region: projectProfile.region, applicantType: 'project', stage: projectProfile.stage, industry: projectProfile.industry }
     : toFundingProfile(profile ?? emptyProfile);
+  const supportNotifications = useSupportNotifications(profile ? fundingProfile : null, need);
   const [apps, setApps] = useState<Application[]>(initial.applications);
   const [deleteBusinessOpen, setDeleteBusinessOpen] = useState(false);
   const [deleteBusinessError, setDeleteBusinessError] = useState('');
@@ -106,11 +113,10 @@ export default function BusinessApp() {
   const [homePanel, setHomePanel] = useState<'business' | 'funding' | 'events' | null>(null);
   const [catalogScope, setCatalogScope] = useState<'personal' | 'all' | 'saved'>('personal');
   const [previousSnapshot] = useState<Record<string, string>>(() => readSaved('opora.snapshot.v2', {}));
-  const matches = rankFundingMatches(officialFundingCatalog.map((o) => matchFundingOpportunity(fundingProfile, need, o, {
+  const matches = useMemo(() => rankFundingMatches(officialFundingCatalog.map((o) => matchFundingOpportunity(fundingProfile, need, o, {
     preparedDocuments: Object.keys(businessApps.find((a) => a.programId === o.id)?.documents ?? {}).filter((d) => businessApps.find((a) => a.programId === o.id)?.documents[d]),
-  })));
+  }))), [officialFundingCatalog, JSON.stringify(fundingProfile), need, apps, detachedApplicationIds]);
   const events = fundingEvents(officialFundingCatalog, saved, previousSnapshot, matches);
-  const personal = personalFunding(matches, !!profile);
   const tracked = trackedFunding(officialFundingCatalog, saved, apps);
   const [allCalendar, setAllCalendar] = useState(false);
   const calendarCatalog = allCalendar ? officialFundingCatalog : tracked;
@@ -121,18 +127,19 @@ export default function BusinessApp() {
     if (next === 'assistant') setAssistantBack(page === 'overview' ? 'overview' : 'profile');
     if (next === 'programs') { setCatalogScope(profile ? 'personal' : 'all'); setOnlySaved(false); setFilter('Все меры'); setQuery(''); setAvailability(''); }
     if (next === 'calendar') setAllCalendar(false);
-    setPage(next);
+    setPage(next); setCatalogLimit(30);
   }
   const [sourceUpdates, setSourceUpdates] = useState<{ id: string; url: string; title: string; detectedAt: string; opportunityId?: string; kind: string }[]>([]);
   const notificationUpdates = sourceUpdates.filter((update) => update.opportunityId && saved.includes(update.opportunityId));
-  const hasNotifications = events.length > 0 || notificationUpdates.length > 0;
+  const hasNotifications = !!businessNotice && !businessNotice.readAt || supportNotifications.items.some((item) => !item.readAt) || events.length > 0 || notificationUpdates.length > 0;
   const analysisContext = profile ? { profile: fundingProfile, need: need.purpose ? need : undefined,
     identifiers: { name: profile.name, inn: profile.inn }, page: 'workspace',
-    workspace: { savedIds: saved, applications: businessApps.map((a) => ({ programId: a.programId, project: a.project.slice(0, 2000),
+    workspace: { savedIds: saved.filter((id) => programs.some((p) => p.id === id)), applications: businessApps.filter((a) => programs.some((p) => p.id === a.programId)).map((a) => ({ programId: a.programId, project: a.project.slice(0, 2000),
       budget: a.budget.trim() && Number.isSafeInteger(Number(a.budget)) && Number(a.budget) >= 0 && Number(a.budget) <= 1e15 ? Number(a.budget) : null,
       preparedDocuments: Object.keys(a.documents).filter((d) => a.documents[d]), hasDraft: !!a.generatedDraft?.trim(), reviewConfirmed: !!a.reviewConfirmed })) } } : null;
-  const businessAnalysis = useBusinessAnalysis(analysisContext, officialFundingCatalog.map((o) => `${o.id}:${o.version}`).join('|') + sourceUpdates.map((u) => u.id).join('|'));
+  const businessAnalysis = useBusinessAnalysis(analysisContext, officialFundingCatalog.map((o) => `${o.id}:${o.version}:${o.status}`).join('|') + sourceUpdates.map((u) => u.id).join('|'));
   const aiPriorities = businessAnalysis.data?.personalization?.priorities ?? [];
+  const personal = personalFunding(matches.filter((m) => !m.opportunity.imported || aiPriorities.some((p) => p.programId === m.opportunity.id) || supportNotifications.items.some((n) => n.programId === m.opportunity.id)), !!profile);
   const priorityRank = (id: string) => { const index = aiPriorities.findIndex((p) => p.programId === id); return index < 0 ? 100 : index; };
   function followInsight(action: WorkspaceInsight['action']) {
     if (action === 'funding') setHomePanel(profile ? 'funding' : 'business');
@@ -159,6 +166,11 @@ export default function BusinessApp() {
       programs.find((p) => p.id === (new URLSearchParams(window.location.search).get('program') || new URLSearchParams(window.location.search).get('WebAppStartParam'))) ||
       null,
   );
+  const openedProgramLink = useRef(false);
+  useEffect(() => {
+    const id = new URLSearchParams(location.search).get('program') || new URLSearchParams(location.search).get('WebAppStartParam') || window.WebApp?.initDataUnsafe?.start_param;
+    if (id && !openedProgramLink.current) { const found = programs.find((p) => p.id === id); if (found) { openedProgramLink.current = true; setSelected((current) => current ?? found); } }
+  }, [programs]);
   const [chatProgram, setChatProgram] = useState<Program | null>(null);
   const [applicationDocuments, setApplicationDocuments] = useState<Record<string, AIDocument>>({});
   useEffect(() => setApplicationDocuments({}), [selected?.id]);
@@ -240,19 +252,19 @@ export default function BusinessApp() {
     // Параметр запуска открывает публичную карточку, но не подтверждает личность пользователя.
     const openLaunchProgram = () => {
       const p = programs.find((p) => p.id === window.WebApp?.initDataUnsafe?.start_param);
-      if (p) setSelected(p);
+      if (p && !openedProgramLink.current) { openedProgramLink.current = true; setSelected(p); }
     };
     openLaunchProgram();
     window.addEventListener('opora:max-ready', openLaunchProgram);
     return () => window.removeEventListener('opora:max-ready', openLaunchProgram);
-  }, []);
+  }, [programs]);
   useEffect(() => {
     try {
-      saveWorkspace(localStorage, { profile: companyProfile, projectProfile, fundingNeed: need, saved, applications: apps, detachedApplicationIds });
+      saveWorkspace(localStorage, { profile: companyProfile, projectProfile, fundingNeed: need, saved, applications: apps, detachedApplicationIds, businessNotice });
     } catch {
       setToast('Не удалось сохранить данные в браузере. Скачайте важные черновики.');
     }
-  }, [companyProfile, projectProfile, need, apps, saved, detachedApplicationIds]);
+  }, [companyProfile, projectProfile, need, apps, saved, detachedApplicationIds, businessNotice]);
   useEffect(() => {
     if (toast) {
       const t = setTimeout(() => setToast(''), 5000);
@@ -284,12 +296,13 @@ export default function BusinessApp() {
     setCatalogScope('all');
     setPage('programs');
   };
-  const visiblePrograms = (profile ? matches.map((m) => ranked.find(({ p }) => p.id === m.opportunity.id)!) : ranked)
+  const rankedById = new Map(ranked.map((entry) => [entry.p.id, entry]));
+  const visiblePrograms = (profile ? matches.map((m) => rankedById.get(m.opportunity.id)!) : ranked)
     .sort((a, b) => profile && catalogScope === 'personal' ? priorityRank(a.p.id) - priorityRank(b.p.id) : 0).filter(
     ({ p }) =>
       (filter === 'Все меры' || p.type === filter) &&
       (!onlySaved || saved.includes(p.id)) &&
-      (!profile || catalogScope !== 'personal' || personal.candidates.some((m) => m.opportunity.id === p.id)) &&
+      (!profile || catalogScope !== 'personal' || personal.candidates.some((m) => m.opportunity.id === p.id) && (!p.id.startsWith('budget-') || aiPriorities.some((a) => a.programId === p.id) || supportNotifications.items.some((n) => n.programId === p.id))) &&
       (!availability || officialFundingCatalog.find((o) => o.id === p.id)?.status === availability) &&
       `${p.title} ${p.description} ${p.type}`.toLowerCase().includes(query.toLowerCase()),
   );
@@ -357,6 +370,9 @@ export default function BusinessApp() {
       return;
     }
     setProjectProfile(null);
+    if (companyProfile?.inn !== form.inn) {
+      const notice = businessAddedNotice(); setBusinessNotice(notice); setToast(notice.title);
+    }
     setProfile({
       ...form,
       name: form.name.trim(),
@@ -367,11 +383,17 @@ export default function BusinessApp() {
     setPage('overview');
     setCatalogScope('personal');
   }
-  function confirmBusinessRemoval() {
+  async function confirmBusinessRemoval() {
+    if (deletingBusiness) return;
+    setDeletingBusiness(true); setDeleteBusinessError('');
     try {
-      const cleared = removeBusiness(localStorage, { profile: companyProfile, projectProfile, fundingNeed: need, saved, applications: apps, detachedApplicationIds });
+      if (supportNotifications.available && !await supportNotifications.subscribe(false, false)) {
+        setDeleteBusinessError('Не удалось отключить уведомления на сервере. Проверьте соединение или откройте приложение заново через MAX и повторите удаление.'); return;
+      }
+      const cleared = removeBusiness(localStorage, { profile: companyProfile, projectProfile, fundingNeed: need, saved, applications: apps, detachedApplicationIds, businessNotice });
       cancelCompanyRequest(); chatRequest.current?.abort(); chatRequest.current = null;
       setProfile(null); setProjectProfile(null); setNeed(cleared.fundingNeed);
+      setBusinessNotice(null);
       setDetachedApplicationIds(cleared.detachedApplicationIds ?? []);
       setForm({ ...emptyProfile, goals: [] }); setStep(0); setError(''); setOnboard(false);
       setProjectOnboard(false); setAIProjectSeed(null); setFundingResult(null);
@@ -381,7 +403,7 @@ export default function BusinessApp() {
       setDeleteBusinessOpen(false); setToast('Бизнес удалён. Черновики и сохранённые программы остались на устройстве.');
     } catch {
       setDeleteBusinessError('Не удалось сохранить удаление на устройстве. Бизнес не удалён. Попробуйте ещё раз.');
-    }
+    } finally { setDeletingBusiness(false); }
   }
   const aiContext = { profile: profile ? fundingProfile : undefined, need: need.purpose ? need : undefined, page, workspace: analysisContext?.workspace,
     identifiers: profile ? { name: profile.name, inn: profile.inn } : undefined };
@@ -527,8 +549,10 @@ export default function BusinessApp() {
                 ))}
               </div>
               <div className="program-grid catalog">
-                {visiblePrograms.map(({ p }) => programCard(p))}
+                {visiblePrograms.slice(0, catalogLimit).map(({ p }) => programCard(p))}
               </div>
+              {visiblePrograms.length > catalogLimit && <ActionButton className="secondary" onClick={() => setCatalogLimit((n) => n + 30)}>Показать ещё</ActionButton>}
+              <ContextHelp title="Обновление каталога"><p>{liveStatus?.checkedAt ? `Проверен ${new Date(liveStatus.checkedAt).toLocaleString('ru-RU')}.` : 'Загружаем актуальные меры.'} {liveStatus?.error ? 'Источник временно недоступен, показываем последнюю сохранённую версию.' : 'Автоматическая проверка каждые 15 минут.'}</p><p>Источник новых отборов: <a href="https://promote.budget.gov.ru/public/minfin/activity" target="_blank" rel="noreferrer">портал Минфина России</a>. Условия и сроки сверяйте в объявлении. В разделе «Для бизнеса» новые меры появляются после AI-анализа.</p></ContextHelp>
               {!visiblePrograms.length && (
                 <div className="empty-state">
                   <span className="empty-symbol">
@@ -575,7 +599,8 @@ export default function BusinessApp() {
             (apps.length ? (
               <div className="application-list">
                 {[...apps].sort((a, b) => priorityRank(a.programId) - priorityRank(b.programId)).map((a) => {
-                  const p = programs.find((p) => p.id === a.programId)!;
+                  const p = programs.find((p) => p.id === a.programId);
+                  if (!p) return <article className="widget" key={a.id}><p>{a.project || 'Черновик заявки'}</p><p>Ожидаем загрузку программы. Черновик сохранён.</p></article>;
                   const count = p.documents.filter((d) => a.documents[d]).length;
                   return (
                     <article className="application-row" key={a.id}>
@@ -656,8 +681,7 @@ export default function BusinessApp() {
                   ))}
               </div>
               <div className="data-note">
-                Экспорт .ics добавляет сроки в ваш календарь. Автоматические уведомления в MAX в
-                этой версии ещё не подключены.
+                Экспорт .ics добавляет сроки в ваш календарь. Уведомления о новых мерах можно включить в «Мой бизнес».
               </div>
             </>
           )}
@@ -667,6 +691,7 @@ export default function BusinessApp() {
             onAdd={() => setHomePanel('business')} onEdit={openProfile} onSupport={() => navigate('programs')}
             onNeed={() => setHomePanel('funding')} onAssistant={() => navigate('assistant')} onCalendar={() => navigate('calendar')}
             onApplications={() => navigate('applications')} onSaved={() => { navigate('programs'); setCatalogScope('saved'); setOnlySaved(true); }} />}
+          {page === 'profile' && profile && <SupportNotificationSettings notifications={supportNotifications} />}
           {page === 'profile' && profile && <details className="ai-entry page-ai-composer"><summary>Проанализировать бизнес и следующий шаг</summary><AIPanel title="План развития" task="analysis" context={aiContext} initialQuestion="Проанализируй мой бизнес: какие возможности рассмотреть, чего не хватает и какой следующий шаг?" {...aiHandlers} /></details>}
           {page === 'profile' && profile && <details className="ai-entry source-updates">
             <summary>Изменения в поддержке · разбор с AI</summary>
@@ -1113,6 +1138,7 @@ export default function BusinessApp() {
               ) : (
                 <>
                   <h3>Что нужно подготовить</h3>
+                  {!selected.documents.length && <p>Перечень документов уточните в <a href={selected.source} target="_blank" rel="noreferrer">объявлении отбора</a>.</p>}
                   <ul className="plain-list">
                     {selected.documents.map((d) => (
                       <li key={d}>{d}</li>
@@ -1159,20 +1185,27 @@ export default function BusinessApp() {
           }} />
         </>}
         {homePanel === 'events' && <div className="home-panel-actions events-panel">
-          {!hasNotifications && <p>Новых уведомлений пока нет.</p>}
+          {businessNotice && <article className="ai-proposal">
+            <h3>{businessNotice.title}</h3>
+            <p>Теперь можно подбирать поддержку под задачи вашего бизнеса.</p>
+            <ActionButton className="secondary" onClick={() => { setBusinessNotice({ ...businessNotice, readAt: Date.now() }); navigate('profile'); }}>К профилю бизнеса</ActionButton>
+          </article>}
+          <SupportNotificationList notifications={supportNotifications} onOpen={openFunding} />
+          {!hasNotifications && !businessNotice && !supportNotifications.items.length && <p>Новых уведомлений пока нет.</p>}
           {events.map((event) => <button className="widget-link-row" key={event.id} onClick={() => openFunding(event.opportunityId)}>{event.text}</button>)}
           {notificationUpdates.map((update) => <a className="widget-link-row" key={update.id} href={update.url} target="_blank" rel="noreferrer">Обновился источник по сохранённой программе: {update.title} ↗</a>)}
         </div>}
       </ModalSheet>}
-      {deleteBusinessOpen && <ModalSheet title="Удалить бизнес?" onClose={() => setDeleteBusinessOpen(false)}>
+      {deleteBusinessOpen && <ModalSheet title="Удалить бизнес?" onClose={() => { if (!deletingBusiness) setDeleteBusinessOpen(false); }}>
         <div className="delete-business-confirmation">
           <h2>Удалить бизнес?</h2>
           <p>С этого устройства будут удалены профиль компании или проекта, цель и параметры финансирования, история AI-чата и сохранённый AI-анализ.</p>
+          {supportNotifications.available && <p>Подписка на новые меры и ожидающие сообщения MAX также будут удалены.</p>}
           <p>Заявки, черновики, тексты и отметки документов, а также сохранённые программы останутся. Черновики не будут автоматически привязаны к новому бизнесу.</p>
           {deleteBusinessError && <p className="error" role="alert">{deleteBusinessError}</p>}
           <div className="modal-actions">
-            <ActionButton className="secondary" onClick={() => setDeleteBusinessOpen(false)}>Отмена</ActionButton>
-            <ActionButton className="secondary danger-button" onClick={confirmBusinessRemoval}>Удалить</ActionButton>
+            <ActionButton className="secondary" disabled={deletingBusiness} onClick={() => setDeleteBusinessOpen(false)}>Отмена</ActionButton>
+            <ActionButton className="secondary danger-button" disabled={deletingBusiness} onClick={() => void confirmBusinessRemoval()}>{deletingBusiness ? 'Удаляем…' : 'Удалить'}</ActionButton>
           </div>
         </div>
       </ModalSheet>}
@@ -1187,7 +1220,7 @@ export default function BusinessApp() {
           }}>Удалить</ActionButton>
         </div>
       </ModalSheet>}
-      {projectOnboard && <ProjectOnboarding initial={aiProjectSeed ?? projectProfile} onCancel={() => { setProjectOnboard(false); setAIProjectSeed(null); }} onSave={(project) => { setProjectProfile(project); setProfile(null); setNeed({ ...need, purpose: project.fundingPurpose, amount: project.fundingNeed }); setProjectOnboard(false); setAIProjectSeed(null); setPage('overview'); setCatalogScope('personal'); }} />}
+      {projectOnboard && <ProjectOnboarding initial={aiProjectSeed ?? projectProfile} onCancel={() => { setProjectOnboard(false); setAIProjectSeed(null); }} onSave={(project) => { if (!projectProfile || companyProfile) { const notice = businessAddedNotice(true); setBusinessNotice(notice); setToast(notice.title); } setProjectProfile(project); setProfile(null); setNeed({ ...need, purpose: project.fundingPurpose, amount: project.fundingNeed }); setProjectOnboard(false); setAIProjectSeed(null); setPage('overview'); setCatalogScope('personal'); }} />}
       {toast && (
         <div className="toast" role="status">
           <Icon name="check" size={18} />

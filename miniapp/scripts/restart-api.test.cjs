@@ -25,3 +25,14 @@ test('missing build never stops the running API', () => {
   assert.throws(() => restartApi((_file, args) => { calls.push(args[0]); return '[{"name":"opora-api","pm2_env":{}}]'; }, () => { throw new Error('missing build'); }), /missing build/);
   assert.deepEqual(calls, ['jlist']);
 });
+
+test('API inherits MAX credentials from the existing bot without putting them in command arguments', () => {
+  restartApi((_file, args, options) => {
+    if (args[0] === 'jlist') return JSON.stringify([{ name: 'opora-bot', pm2_env: { BOT_TOKEN: 'test-bot-secret', MAX_BOT_USERNAME: 'opora_bot' } }]);
+    if (args[0] === 'start') {
+      assert.equal(options.env.BOT_TOKEN, 'test-bot-secret');
+      assert.equal(options.env.MAX_BOT_USERNAME, 'opora_bot');
+      assert.ok(!args.join(' ').includes('test-bot-secret'));
+    }
+  }, () => {});
+});

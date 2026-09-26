@@ -13,6 +13,11 @@ import { runAssistant } from './ai/service';
 import { prepareAIContext } from './ai/context';
 import type { AIEvidence, AIResult } from './ai/types';
 import { SourceStore } from './ai/sources';
+import { FundingCatalogService } from './funding-catalog/service';
+import { LiveCatalog } from './funding-catalog/live';
+import { withAICatalog } from './funding-catalog/ai-runtime';
+import { NotificationStore, notificationRouter } from './funding-catalog/notifications';
+import { untilAborted } from './funding-catalog/abort';
 
 export type AIClient = { complete(input: unknown): Promise<{ answer: string; mode: string }>; assist?(input: unknown, evidence?: AIEvidence[], signal?: AbortSignal): Promise<AIResult> };
 function isCertificateError(error: unknown): boolean {
@@ -23,7 +28,7 @@ function isCertificateError(error: unknown): boolean {
   }
   return false;
 }
-export function createApp(options: { giga?: AIClient | null; fnsDir?: string; env?: NodeJS.ProcessEnv; sources?: SourceStore } = {}) {
+export function createApp(options: { giga?: AIClient | null; fnsDir?: string; env?: NodeJS.ProcessEnv; sources?: SourceStore; catalog?: LiveCatalog; notifications?: NotificationStore; notificationStatus?: () => { lastRun: string | null; lastError: string | null } } = {}) {
   const env = options.env ?? process.env;
   const dadata = env.DADATA_API_KEY?.trim() ? new DaDataCompanyProvider(env.DADATA_API_KEY.trim()) : null;
   const sources = options.sources ?? new SourceStore(env.OPORA_SOURCE_DIR);
@@ -58,7 +63,10 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
   app.get('/api/providers/status', (_req, res) => res.json({ company: { ...providerStatus(options.fnsDir), activeProvider: dadata ? 'dadata' : 'fns', dadata: dadata?.status() ?? { configured: false, state: 'not_configured', lastSuccess: null } },
     funding: { officialSnapshot: 'ready', opportunities: fundingCatalogStatus().total, verifiedAt: fundingCatalogStatus().verifiedAt }, ai: { gigachat: aiStatus().status } }));
   app.use('/api/company', companyDataRouter(dadata ? new CompanyDataService(dadata) : new OfficialCompanyDataService(options.fnsDir)));
-  app.use('/api/funding', fundingCatalogRouter());
+  if (options.catalog) app.get('/api/funding/live-status', (_req, res) => res.json(options.catalog!.status()));
+  if (options.notifications) app.use('/api/notifications', notificationRouter(options.notifications, env.BOT_TOKEN ?? '', !!giga, options.notificationStatus));
+  app.use('/api/funding', fundingCatalogRouter(new FundingCatalogService(undefined, options.catalog)));
+  if (options.catalog) app.use('/api/ai', (_req, _res, next) => withAICatalog(options.catalog!.getCatalog(), next));
   app.get('/api/funding/updates', async (_req, res, next) => { try { res.json(await sources.status()); } catch (e) { next(e); } });
   let activeAI = 0;
   app.post('/api/ai/assist', async (req, res) => {
@@ -70,8 +78,12 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
     const disconnect = () => { if (!res.writableEnded) controller.abort(); };
     res.on('close', disconnect); activeAI++;
     try {
-      const evidence = await sources.evidence();
-      const result = giga?.assist ? await giga.assist(req.body, evidence, controller.signal) : await runAssistant(req.body, undefined, evidence, controller.signal);
+      if (options.catalog && typeof req.body?.context?.programId === 'string' && req.body.context.programId.startsWith('budget-')) {
+        try { await untilAborted(options.catalog.enrich(req.body.context.programId), AbortSignal.any([controller.signal, AbortSignal.timeout(12000)])); } catch { /* Unverified details remain explicitly unknown. */ }
+      }
+      controller.signal.throwIfAborted();
+      const evidence = await untilAborted(sources.evidence(), controller.signal);
+      const result = await untilAborted(giga?.assist ? giga.assist(req.body, evidence, controller.signal) : runAssistant(req.body, undefined, evidence, controller.signal), controller.signal);
       if (result.mode === 'llm') { lastSuccess = new Date().toISOString(); lastError = null; }
       else if (giga) lastError = 'provider';
       if (!controller.signal.aborted) res.json(result);

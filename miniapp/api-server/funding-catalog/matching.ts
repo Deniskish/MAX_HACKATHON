@@ -67,7 +67,7 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
   opportunity: FundingOpportunity, options: MatchOptions = {}): FundingMatch {
   const applicantType = profile.applicantType ?? (profile.companyType === 'ИП' ? 'individual_entrepreneur' : profile.companyType && profile.companyType !== 'КФХ' ? 'legal_entity' : undefined);
   const checks = restrictions(opportunity).map((r) => evaluateFundingRequirement(profile, r));
-  if (opportunity.applicantTypes) checks.push(evaluateFundingRequirement({ ...profile, applicantType }, {
+  if (opportunity.applicantTypes?.length) checks.push(evaluateFundingRequirement({ ...profile, applicantType }, {
     field: 'applicantType', operator: 'includes', value: opportunity.applicantTypes, required: true, label: 'Допустимая категория заявителя',
   }));
   if (profile.companyStatus && profile.companyStatus !== 'active') checks.push({ field: 'companyStatus', operator: 'eq', value: 'active', required: true, label: 'Действующий статус регистрации', status: 'missing' });
@@ -91,11 +91,11 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
   const amountFit = fundingAmountFit(need, opportunity);
   const termFit = fundingTermFit(need, opportunity);
   const missingDocuments = opportunity.requiredDocuments.filter((d) => !options.preparedDocuments?.includes(d));
-  const expired = opportunity.status === 'closed' || opportunity.deadline !== null
+  const expired = opportunity.status === 'closed' || !!opportunity.imported?.endsAt && Date.parse(opportunity.imported.endsAt) < (options.now ?? new Date()).getTime() || opportunity.deadline !== null
     && new Date(`${opportunity.deadline}T23:59:59+03:00`).getTime() < (options.now ?? new Date()).getTime();
   const status: FundingStatus = expired ? 'expired'
     : opportunity.status === 'upcoming' ? 'upcoming'
-    : missingRequirements.some((r) => r.required) || (!!need.purpose && !purposeFit) || amountFit === 'no' || termFit === 'no'
+    : missingRequirements.some((r) => r.required) || (!!need.purpose && !purposeFit && !opportunity.imported) || amountFit === 'no' || termFit === 'no'
       ? 'not_eligible'
       : opportunity.status === 'unknown' || unknownRequirements.some((r) => r.required) || !need.purpose
         || (need.amount !== null && !isSupporting(opportunity.kind) && amountFit === 'unknown')

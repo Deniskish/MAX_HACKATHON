@@ -3,13 +3,18 @@ import type { FundingNeed, FundingOpportunity, FundingMatch, ProjectProfile } fr
 import { emptyFundingNeed } from '../../api-server/funding-catalog/types';
 import { restoreFundingNeed } from './funding';
 import { parseFundingProfile } from '../../api-server/funding-catalog/input';
-export type Workspace = { profile: Profile | null; projectProfile: ProjectProfile | null; fundingNeed: FundingNeed; saved: string[]; applications: Application[]; detachedApplicationIds?: string[] };
+export type BusinessNotice = { id: string; title: string; createdAt: number; readAt: number | null };
+export type Workspace = { profile: Profile | null; projectProfile: ProjectProfile | null; fundingNeed: FundingNeed; saved: string[]; applications: Application[]; detachedApplicationIds?: string[]; businessNotice?: BusinessNotice | null };
+export function businessAddedNotice(project = false): BusinessNotice {
+  return { id: crypto.randomUUID(), title: project ? 'Поздравляем, вы добавили проект!' : 'Поздравляем, вы добавили компанию!', createdAt: Date.now(), readAt: null };
+}
 export const workspaceKey = 'opora.workspace';
 const blank = (): Workspace => ({ profile: null, projectProfile: null, fundingNeed: { ...emptyFundingNeed }, saved: [], applications: [] });
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const stringMap = (value: unknown) => record(value) ? Object.fromEntries(Object.entries(value).filter(([, v]) => typeof v === 'string')) as Record<string, string> : {};
 const nullableNumber = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
 export function loadWorkspace(storage: Pick<Storage, 'getItem'>, ids: string[]): Workspace {
+  const known = (id: unknown): id is string => typeof id === 'string' && (ids.includes(id) || /^budget-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id));
   const read = (key: string) => { try { return JSON.parse(storage.getItem(key) ?? 'null'); } catch { return null; } };
   const current = read(workspaceKey);
   const oldProfile = read('opora.profile.v1');
@@ -17,6 +22,10 @@ export function loadWorkspace(storage: Pick<Storage, 'getItem'>, ids: string[]):
     fundingNeed: read(`opora.funding-need.v1.${oldProfile?.inn ?? ''}`) };
   const result = blank();
   if (!raw || typeof raw !== 'object') return result;
+  const notice = raw.businessNotice;
+  if (notice === null) result.businessNotice = null;
+  else if (notice && typeof notice.id === 'string' && typeof notice.title === 'string' && notice.title.length <= 150
+    && Number.isFinite(notice.createdAt) && (notice.readAt === null || Number.isFinite(notice.readAt))) result.businessNotice = notice;
   const p = raw.profile;
   if (p && typeof p.inn === 'string' && typeof p.name === 'string' && Array.isArray(p.goals)
     && !/учебн|демо/i.test(p.name) && !Object.values(p.provenance ?? {}).some((x) => (x as { mode?: string })?.mode === 'demo')) {
@@ -35,8 +44,8 @@ export function loadWorkspace(storage: Pick<Storage, 'getItem'>, ids: string[]):
       teamSize: nullableNumber(project.teamSize), fundingNeed: nullableNumber(project.fundingNeed), fundingPurpose: typeof project.fundingPurpose === 'string' ? project.fundingPurpose : '',
     };
   result.fundingNeed = restoreFundingNeed(JSON.stringify(raw.fundingNeed));
-  if (Array.isArray(raw.saved)) result.saved = [...new Set(raw.saved.filter((id: unknown): id is string => typeof id === 'string' && ids.includes(id)))] as string[];
-  if (Array.isArray(raw.applications)) result.applications = raw.applications.filter((a: Application) => a && ids.includes(a.programId) && typeof a.id === 'string'
+  if (Array.isArray(raw.saved)) result.saved = [...new Set(raw.saved.filter(known))] as string[];
+  if (Array.isArray(raw.applications)) result.applications = raw.applications.filter((a: Application) => a && known(a.programId) && typeof a.id === 'string'
     && typeof a.project === 'string' && typeof a.budget === 'string' && record(a.documents)).map((a: Application) => ({
       id: a.id, programId: a.programId, project: a.project, budget: a.budget, createdAt: typeof a.createdAt === 'string' ? a.createdAt : '',
       documents: stringMap(a.documents), documentFiles: stringMap(a.documentFiles), reviewConfirmed: a.reviewConfirmed === true,
@@ -53,6 +62,7 @@ export function saveWorkspace(storage: Pick<Storage, 'setItem'>, data: Workspace
 export function removeBusiness(storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'>, workspace: Workspace): Workspace {
   const next: Workspace = { ...workspace, profile: null, projectProfile: null, fundingNeed: { ...emptyFundingNeed },
     detachedApplicationIds: workspace.applications.map((app) => app.id) };
+  if (workspace.businessNotice !== undefined) next.businessNotice = null;
   const keys = new Set(['opora.profile.v1', 'opora.ai.history.v2', 'opora.ai.workspace.v1']);
   for (let i = 0; i < storage.length; i++) {
     const key = storage.key(i);
@@ -74,7 +84,7 @@ export function projectAsProfile(project: ProjectProfile): Profile {
   return { ...emptyProfile, name: project.name, region: project.region, applicantType: 'project', goals: project.fundingPurpose ? [project.fundingPurpose] : [] };
 }
 export function applicationStatus(app: Application, opportunity: FundingOpportunity) {
-  if (app.reviewConfirmed && app.project.trim() && opportunity.requiredDocuments.every((d) => app.documents[d])) return 'ready_for_review';
+  if (app.reviewConfirmed && app.project.trim() && (!opportunity.imported || opportunity.requiredDocuments.length > 0) && opportunity.requiredDocuments.every((d) => app.documents[d])) return 'ready_for_review';
   return app.project.trim() || Object.values(app.documents).some(Boolean) ? 'collecting_documents' : 'draft';
 }
 export const applicationLabels = { draft: 'Черновик', collecting_documents: 'Сбор документов', ready_for_review: 'Комплект готов к проверке перед подачей' };

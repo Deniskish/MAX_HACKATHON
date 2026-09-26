@@ -69,6 +69,7 @@ jobs:
                   node miniapp/api-server/ai/check-provider.cjs
                   exit 1
                 }
+                node miniapp/api-server/funding-catalog/smoke-check.cjs
                 exit 0
               fi
               echo "Waiting for app... $i/15"

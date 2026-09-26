@@ -2,7 +2,7 @@
 import type { Program } from '../support-model';
 import { officialFundingCatalog } from './official-catalog';
 import { amountLabel, fundingKindLabels } from './presentation';
-export const legacyPrograms: Program[] = officialFundingCatalog.map((o) => ({
+export const toLegacyPrograms = (catalog: import('./types').FundingOpportunity[]): Program[] => catalog.map((o) => ({
   id: o.id, title: o.title, provider: o.providerName, type: fundingKindLabels[o.kind], amount: amountLabel(o),
   description: o.description, deadline: o.deadline ?? '', region: o.regions === 'all' ? 'Вся Россия' : o.regions.join(', '),
   icon: o.kind === 'guarantee' ? 'shield' : 'file', rules: [], documents: o.requiredDocuments,
@@ -11,3 +11,5 @@ export const legacyPrograms: Program[] = officialFundingCatalog.map((o) => ({
     max: o.amountMax, explanation: o.description }, difficulty: 'Высокая', preparationDays: 0,
   sectors: o.sectors, version: o.version, updatedAt: o.source.verifiedAt!,
 }));
+
+export const legacyPrograms = toLegacyPrograms(officialFundingCatalog);

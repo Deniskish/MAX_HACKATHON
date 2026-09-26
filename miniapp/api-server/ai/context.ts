@@ -1,7 +1,7 @@
 import { detectSensitiveText, PrivacyError } from '../privacy';
 import { parseFundingNeed, parseFundingProfile } from '../funding-catalog/input';
 import { aiTasks, type AIRequest, type AITask } from './types';
-import { officialFundingCatalog } from '../funding-catalog/official-catalog';
+import { getAICatalog } from '../funding-catalog/ai-runtime';
 
 export function object(value: unknown): Record<string, any> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new PrivacyError('INVALID_INPUT');
@@ -33,7 +33,7 @@ export function prepareAIContext(input: unknown) {
     need = ctx.need?.purpose ? parseFundingNeed(ctx.need) : undefined;
   } catch { throw new PrivacyError('INVALID_FUNDING_NEED'); }
   const programId = ctx.programId;
-  if (programId !== undefined && !officialFundingCatalog.some((p) => p.id === programId)) throw new PrivacyError('INVALID_PROGRAM');
+  if (programId !== undefined && !getAICatalog().some((p) => p.id === programId)) throw new PrivacyError('INVALID_PROGRAM');
   if (raw.history !== undefined && (!Array.isArray(raw.history) || raw.history.length > 20)) throw new PrivacyError('INVALID_INPUT');
   const history = (raw.history ?? []).slice(-8).map((m: unknown) => {
     const item = object(m);
@@ -63,7 +63,7 @@ export function prepareAIContext(input: unknown) {
     const value = object(ctx.workspace);
     if (!Array.isArray(value.savedIds) || value.savedIds.length > 50 || !Array.isArray(value.applications) || value.applications.length > 30) throw new PrivacyError('INVALID_INPUT');
     const program = (id: unknown) => {
-      const entry = officialFundingCatalog.find((o) => o.id === id);
+      const entry = getAICatalog().find((o) => o.id === id);
       if (!entry) throw new PrivacyError('INVALID_PROGRAM');
       return entry;
     };

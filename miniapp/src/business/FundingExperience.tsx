@@ -32,7 +32,7 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved, personali
     <details>
       <summary>{personalized ? 'Условия и соответствие' : 'Условия программы'}</summary>
       <p>{o.description}</p>
-      <p>Регион: {o.regions === "all" ? "Вся Россия" : o.regions.join(", ")}</p>
+      <p>Регион: {o.regions === "all" ? "Вся Россия" : o.regions.join(", ") || 'Смотрите территорию в объявлении'}</p>
       {personalized && <><p>Соответствие: {match.score}% · {scoreNotice}</p>
       <p>{match.explanation}</p>
       {match.missingRequirements.length > 0 && <p>Не выполнено: {match.missingRequirements.map((r) => r.label).join('; ')}.</p>}
@@ -51,6 +51,8 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved, personali
 }
 
 export function FundingResults({ result, onOpen, onSave, saved = [] }: { result: FundingResponse; onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: string[] }) {
+  const [limit, setLimit] = useState(12);
+  useEffect(() => setLimit(12), [result]);
   const groups: { title: string; matches: FundingMatch[] }[] = [
     { title: 'Подходит сейчас', matches: result.matches.filter((m) => m.status === 'eligible').slice(0, 3) },
     { title: 'Почти подходит', matches: result.matches.filter((m) => m.status === 'almost_eligible') },
@@ -66,9 +68,10 @@ export function FundingResults({ result, onOpen, onSave, saved = [] }: { result:
     </section>
     {!result.matches.length && <p className="muted">Вариантов пока нет. Попробуйте изменить параметры подбора.</p>}
     {groups.filter((group) => group.matches.length).map((group) => <section key={group.title}><h2>{group.title}</h2>
-      <div className="funding-grid">{group.matches.map((match) => <FundingOpportunityCard key={match.opportunity.id} match={match} onOpen={onOpen} onSave={onSave} saved={saved.includes(match.opportunity.id)} />)}</div>
+      <div className="funding-grid">{group.matches.slice(0, limit).map((match) => <FundingOpportunityCard key={match.opportunity.id} match={match} onOpen={onOpen} onSave={onSave} saved={saved.includes(match.opportunity.id)} />)}</div>
+      {group.matches.length > limit && <ActionButton className="secondary" onClick={() => setLimit((n) => n + 12)}>Показать ещё</ActionButton>}
     </section>)}
-    {result.matches.some((m) => m.status === 'not_eligible') && <details className="widget"><summary>Не подходят по условиям</summary><div className="funding-grid">{result.matches.filter((m) => m.status === 'not_eligible').map((match) => <FundingOpportunityCard key={match.opportunity.id} match={match} onOpen={onOpen} />)}</div></details>}
+    {result.matches.some((m) => m.status === 'not_eligible') && <details className="widget"><summary>Не подходят по условиям</summary><div className="funding-grid">{result.matches.filter((m) => m.status === 'not_eligible').slice(0, limit).map((match) => <FundingOpportunityCard key={match.opportunity.id} match={match} onOpen={onOpen} />)}</div>{result.matches.filter((m) => m.status === 'not_eligible').length > limit && <ActionButton className="secondary" onClick={() => setLimit((n) => n + 12)}>Показать ещё</ActionButton>}</details>}
   </div>;
 }
 

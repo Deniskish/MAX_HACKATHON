@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { privateCompletion, PrivacyError } from './privacy';
 import { providerJson } from './provider-json';
 import { createAIModel } from './ai/transport';
+import { createOpportunityAssessor } from './funding-catalog/notification-ai';
 import { runAssistant } from './ai/service';
 import type { AIEvidence } from './ai/types';
 import { createSemanticSearch, EMBEDDINGS_URL } from './ai/embeddings';
@@ -87,6 +88,7 @@ export function createGigaChatClient(
   };
   const semantic = createSemanticSearch(getToken, authorizedTransport);
   return {
+    assessOpportunity: createOpportunityAssessor(GIGACHAT_CHAT_URL, config.model, getToken, authorizedTransport),
     async assist(input: unknown, evidence: AIEvidence[] = [], signal?: AbortSignal) {
       return runAssistant(input, createAIModel(GIGACHAT_CHAT_URL, config.model, getToken, authorizedTransport), evidence, signal, semantic);
     },
