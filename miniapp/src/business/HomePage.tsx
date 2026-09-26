@@ -4,6 +4,7 @@ import { AppNavigation, BrandWordmark } from './AppChrome';
 import { useSystemTheme } from '../theme';
 import darkMark from './brand-mark-dark.webp';
 import lightMark from './brand-mark-light.webp';
+import { SupportIntroduction } from './SupportIntroduction';
 import { ContextHelp } from './ContextHelp';
 import type { BusinessAnalysis } from './useBusinessAnalysis';
 import type { WorkspaceInsight } from '../../api-server/ai/types';
@@ -12,6 +13,9 @@ type HomePageProps = {
   showNavigation?: boolean;
   onFindSupport: () => void;
   onAddBusiness: () => void;
+  onStartBusiness: () => void;
+  onAddProject: () => void;
+  supportReady: boolean;
   onAssistant: () => void;
   onSettings: () => void;
   onApplications: () => void;
@@ -26,7 +30,7 @@ function Arrow() {
   return <span className="home-arrow" aria-hidden="true"><Icon name="arrow" size={20} /></span>;
 }
 
-export function HomePage({ showNavigation = true, onFindSupport, onAddBusiness, onAssistant, onSettings, onApplications, onBusiness, personalized, hasNotifications, analysis, onAIAction }: HomePageProps) {
+export function HomePage({ showNavigation = true, onFindSupport, onAddBusiness, onStartBusiness, onAddProject, supportReady, onAssistant, onSettings, onApplications, onBusiness, personalized, hasNotifications, analysis, onAIAction }: HomePageProps) {
   const theme = useSystemTheme();
   const insight = personalized ? analysis.data?.personalization?.sections.home : undefined;
   const analyzing = personalized && analysis.status === 'loading';
@@ -72,6 +76,12 @@ export function HomePage({ showNavigation = true, onFindSupport, onAddBusiness, 
           {insight && <p>{insight.text}</p>}
         </ContextHelp>}
       </section>
+      <div className="home-information">
+        {!supportReady && <SupportIntroduction onBusiness={onStartBusiness} onProject={onAddProject} />}
+        <section className="home-about" aria-label="О нас"><h2>О нас</h2>
+          <p>Опора помогает находить господдержку, понимать условия и готовиться к подаче заявки.</p>
+        </section>
+      </div>
     </div>
     {showNavigation && <AppNavigation active="overview" onNavigate={(page) => {
       if (page === 'programs') onFindSupport();

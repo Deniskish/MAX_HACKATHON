@@ -7,14 +7,15 @@ const statuses = [
 ] as const;
 
 /** Local presentation of the existing catalogue filter; native dialog owns focus trapping. */
-export function CatalogStatusFilter({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+export function CatalogStatusFilter({ value, onChange, includeClosedByDefault = false }: { value: string; onChange: (value: string) => void; includeClosedByDefault?: boolean }) {
+  const options = statuses.map(([key, label]) => [key, key === '' && !includeClosedByDefault ? 'Без завершённых' : label] as const);
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const animation = useRef<Animation | null>(null);
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
-  const selected = statuses.find((status) => status[0] === value) ?? statuses[0];
+  const selected = options.find((status) => status[0] === value) ?? options[0];
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -65,7 +66,7 @@ export function CatalogStatusFilter({ value, onChange }: { value: string; onChan
         options.forEach((option, index) => { option.tabIndex = index === next ? 0 : -1; });
         options[next].focus();
       }}>
-        {statuses.map(([key, label]) => <button key={key} type="button" role="option" aria-selected={key === selected[0]}
+        {options.map(([key, label]) => <button key={key} type="button" role="option" aria-selected={key === selected[0]}
           tabIndex={key === selected[0] ? 0 : -1} onClick={() => { if (!closing) { onChange(key); close(); } }}>
           <span>{label}</span>{key === selected[0] && <Icon name="check" size={20} />}
         </button>)}

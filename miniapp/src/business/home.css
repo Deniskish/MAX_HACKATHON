@@ -58,6 +58,9 @@ body:has(.home-dashboard), .opora-theme:has(.home-dashboard) { background: #191a
 .home-nav > button > svg { width: 21px; height: 21px; }
 .home-nav > button[aria-current="page"] { color: #ff5a1f; }
 .home-panel-actions { display: grid; gap: 12px; }
+.home-information { display: grid; gap: 24px; margin: 28px 4.5% 24px; }
+.home-about { padding: 0 4px; color: var(--ink); }
+.home-about p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
 @media (max-width: 359px) {
   .home-action-pair { gap: 8px; }
   .home-arrow { width: 30px; height: 30px; flex-basis: 30px; }
