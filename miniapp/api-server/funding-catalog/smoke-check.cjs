@@ -15,6 +15,7 @@ if (!process.env.OPORA_FUNDING_CHECK_CHILD) {
   process.exitCode = run.status ?? 1;
 } else {
   require('dotenv').config({ path: path.resolve(__dirname, '../../../.env'), quiet: true });
+  require('dotenv').config({ path: path.resolve(__dirname, '../../../.env.bot'), override: true, quiet: true });
   const botSettings = {};
   require('dotenv').config({ path: path.resolve(__dirname, '../../../chatbot/.env'), processEnv: botSettings, quiet: true });
   for (const key of ['BOT_TOKEN', 'MAX_BOT_USERNAME']) if (!process.env[key]?.trim() && botSettings[key]) process.env[key] = botSettings[key].trim();

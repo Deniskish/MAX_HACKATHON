@@ -69,3 +69,14 @@ test('vague AI question uses business purpose and never pads the shortlist with 
     assert.ok(contextualCatalog({ ...request, context: { programId: unrelated.id, profile: {} } }).some(o => o.id === unrelated.id));
   });
 });
+
+test('automatic workspace instructions never select measures from coincidental title words', () => {
+  const unrelated = normalizeBudgetCard(card({ title: 'Запрос предложений на субсидию театральным организациям' }));
+  const production = { ...unrelated, id: 'budget-6f564f52-ac51-4496-9db7-bd7b282f7b64', title: 'Развитие производства' };
+  withAICatalog([unrelated, production], () => {
+    const request = prepareAIContext({ task: 'workspace', question: 'Проанализируй сведения, предложи уточнения и адаптируй разделы.', context: { profile: {}, workspace: { savedIds: [], applications: [] } } }).request;
+    assert.deepEqual(contextualCatalog(request), []);
+    assert.deepEqual(contextualCatalog({ ...request, context: { ...request.context, profile: { industry: 'Производство мебели' } } }).map(o => o.id), [production.id]);
+    assert.deepEqual(contextualCatalog({ ...request, context: { ...request.context, workspace: { savedIds: [unrelated.id], applications: [] } } }).map(o => o.id), [unrelated.id]);
+  });
+});

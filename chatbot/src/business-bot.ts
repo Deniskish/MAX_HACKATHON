@@ -4,6 +4,7 @@ import { config } from 'dotenv';
 import path from 'node:path';
 config({ path: path.resolve(process.cwd(), '../.env') });
 config();
+config({ path: path.resolve(process.cwd(), '../.env.bot'), override: true, quiet: true });
 const token = process.env.BOT_TOKEN;
 const url = process.env.MINIAPP_URL;
 if (!token) throw new Error('Задайте BOT_TOKEN в .env');

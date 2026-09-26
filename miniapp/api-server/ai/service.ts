@@ -96,7 +96,10 @@ function shortlist(query: string, selected?: string) {
 export function contextualCatalog(request: AIRequest) {
   const { profile, need, workspace, programId } = request.context;
   const explicit = new Set([programId, ...(workspace?.savedIds ?? []), ...(workspace?.applications.map(a => a.programId) ?? [])]);
-  const query = [request.question, ...(request.history ?? []).filter(m => m.role === 'user').slice(-2).map(m => m.text),
+  // Workspace prompts are application instructions, not the business's financing intent.
+  // E.g. "предложи уточнения" must not match procurement titles "запрос предложений".
+  const dialogue = request.task === 'workspace' ? [] : [request.question, ...(request.history ?? []).filter(m => m.role === 'user').slice(-2).map(m => m.text)];
+  const query = [...dialogue,
     profile?.industry, ...(profile?.goals ?? []), need?.purpose].filter(Boolean).join(' ').toLowerCase().replace(/ё/g, 'е');
   const generic = /^(бизнес|поддерж|програм|подход|вариан|помощ|субсид|расскаж|проана|имеющ|сведен|адапти|раздел|данны|провер|компан|нужн|предпри)/;
   const terms = [...new Set((query.match(/[а-яa-z]{5,}/g) ?? []).map(w => w.slice(0, 6)).filter(w => !generic.test(w)))];

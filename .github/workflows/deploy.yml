@@ -22,6 +22,7 @@ jobs:
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_SSH_KEY_B64: ${{ secrets.SERVER_SSH_KEY_B64 }}
           DADATA_API_KEY: ${{ secrets.DADATA_API_KEY }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
           mkdir -p ~/.ssh
           printf '%s' "$SERVER_SSH_KEY_B64" | base64 -d > ~/.ssh/deploy_key
@@ -31,6 +32,10 @@ jobs:
 
           if [ -n "$DADATA_API_KEY" ]; then
             printf 'DADATA_API_KEY=%s\n' "$DADATA_API_KEY" | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$SERVER_USER@$SERVER_HOST" 'umask 077; cat > /opt/app/.env.dadata; chmod 600 /opt/app/.env.dadata'
+          fi
+
+          if [ -n "$BOT_TOKEN" ]; then
+            printf 'BOT_TOKEN=%s\n' "$BOT_TOKEN" | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$SERVER_USER@$SERVER_HOST" 'umask 077; cat > /opt/app/.env.bot; chmod 600 /opt/app/.env.bot'
           fi
 
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$SERVER_USER@$SERVER_HOST" '
@@ -49,6 +54,7 @@ jobs:
             # Keep old hashed chunks available for already opened app sessions.
             npm run build --prefix miniapp -- --emptyOutDir false
             npm run build --prefix miniapp/api-server
+            npm run build --prefix chatbot
 
             # Replace the old Vite command, not just restart its saved PM2 config.
             if pm2 describe opora-frontend >/dev/null 2>&1; then
