@@ -23,6 +23,8 @@ body:has(.home-dashboard), .opora-theme:has(.home-dashboard) { background: #191a
 .home-wordmark { position: relative; display: block; aspect-ratio: 1127 / 313; overflow: hidden; }
 .home-wordmark img { position: absolute; display: block; width: 111.269%; height: auto; max-width: none; left: -6.389%; top: -164.537%; }
 .home-wordmark-small { width: 112px; }
+.home-brand-icon { display: block; position: relative; flex: 0 0 44px; width: 44px; height: 44px; overflow: hidden; border-radius: 50%; }
+.home-brand-icon img { position: absolute; width: 260%; max-width: none; height: auto; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 .home-notifications { position: relative; isolation: isolate; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border-radius: 50%; border: 0; background: transparent; }
 .home-notifications::before { content: ''; position: absolute; z-index: -1; inset: 3px; border-radius: 50%; border: 1px solid #ffffff0f; background: linear-gradient(145deg, #242229, #1d1e23); }
 .home-notification-dot { position: absolute; width: 6px; height: 6px; right: 6px; top: 6px; border-radius: 50%; background: #a24dff; }

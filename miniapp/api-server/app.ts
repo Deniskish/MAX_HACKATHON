@@ -18,6 +18,7 @@ import { LiveCatalog } from './funding-catalog/live';
 import { withAICatalog } from './funding-catalog/ai-runtime';
 import { NotificationStore, notificationRouter } from './funding-catalog/notifications';
 import { untilAborted } from './funding-catalog/abort';
+import { accountRouter } from './account';
 
 export type AIClient = { complete(input: unknown): Promise<{ answer: string; mode: string }>; assist?(input: unknown, evidence?: AIEvidence[], signal?: AbortSignal): Promise<AIResult> };
 function isCertificateError(error: unknown): boolean {
@@ -65,6 +66,7 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
   app.use('/api/company', companyDataRouter(dadata ? new CompanyDataService(dadata) : new OfficialCompanyDataService(options.fnsDir)));
   if (options.catalog) app.get('/api/funding/live-status', (_req, res) => res.json(options.catalog!.status()));
   if (options.notifications) app.use('/api/notifications', notificationRouter(options.notifications, env.BOT_TOKEN ?? '', !!giga, options.notificationStatus));
+  if (options.notifications) app.use('/api/account', accountRouter(options.notifications, env.BOT_TOKEN ?? ''));
   app.use('/api/funding', fundingCatalogRouter(new FundingCatalogService(undefined, options.catalog)));
   if (options.catalog) app.use('/api/ai', (_req, _res, next) => withAICatalog(options.catalog!.getCatalog(), next));
   app.get('/api/funding/updates', async (_req, res, next) => { try { res.json(await sources.status()); } catch (e) { next(e); } });

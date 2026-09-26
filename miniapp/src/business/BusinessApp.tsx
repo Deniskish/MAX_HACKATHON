@@ -10,6 +10,9 @@ import { OfficialDetails, ProjectOnboarding } from './OfficialExperience';
 import { useLiveCatalog } from './live-catalog';
 import { toLegacyPrograms } from '../../api-server/funding-catalog/legacy-adapter';
 import { useSupportNotifications, SupportNotificationSettings, SupportNotificationList } from './SupportNotifications';
+import { AccountPanel, useAccount } from './AccountPanel';
+import { DemoSettings, DemoSubmission, VerificationPage, useVerificationDemo } from './VerificationDemo';
+import { demoConfirmed } from './verification-demo';
 import { matchFundingOpportunity, rankFundingMatches } from '../../api-server/funding-catalog/matching';
 import { toFundingProfile } from '../../api-server/funding-catalog/input';
 import { fundingKindLabels } from '../../api-server/funding-catalog/presentation';
@@ -91,6 +94,19 @@ export default function BusinessApp() {
   const setPage = (next: Page) => { prepare(next); setPageState(next); };
   const [initial] = useState(() => loadWorkspace(localStorage, programs.map((p) => p.id)));
   const [companyProfile, setProfile] = useState<Profile | null>(initial.profile);
+  const account = useAccount();
+  const demo = useVerificationDemo();
+  const [verificationReturn, setVerificationReturn] = useState<string | null>(null);
+  const [resumeVerification, setResumeVerification] = useState(false);
+  function openVerification(applicationId: string | null = null) { if (!demo.state.enabled && !demo.update({ ...demo.state, enabled: true })) return; setVerificationReturn(applicationId); setSelected(null); navigate('verification'); }
+  useEffect(() => { if (demo.state.inn && demo.state.inn !== companyProfile?.inn) demo.update({ ...demo.state, inn: null, role: null }); }, [companyProfile?.inn]);
+  function finishVerification() {
+    const application = apps.find(a => a.id === verificationReturn);
+    navigate(application ? 'applications' : 'settings');
+    if (application) setSelected(programs.find(p => p.id === application.programId) ?? null);
+    setVerificationReturn(null);
+  }
+  const [savingCompany, setSavingCompany] = useState(false);
   const [businessNotice, setBusinessNotice] = useState(initial.businessNotice ?? null);
   const [deletingBusiness, setDeletingBusiness] = useState(false);
   const [projectProfile, setProjectProfile] = useState<ProjectProfile | null>(initial.projectProfile);
@@ -180,6 +196,8 @@ export default function BusinessApp() {
   const [form, setForm] = useState<Profile>(emptyProfile);
   const [error, setError] = useState('');
   const [companyLoading, setCompanyLoading] = useState(false);
+  const autoFilledCompany = form.provenance?.name?.kind === 'source' && form.provenance?.inn?.kind !== 'manual'
+    && !!form.name.trim() && !!form.region.trim() && /^\d{2}(\.\d{1,2}){0,2}$/.test(form.okved);
   const companyRequest = useRef<AbortController | null>(null);
   useEffect(() => () => companyRequest.current?.abort(), []);
   const cancelCompanyRequest = () => {
@@ -350,16 +368,15 @@ export default function BusinessApp() {
     setToast('Рабочее место заявки создано');
   }
   // Сначала проверяем ИНН, затем остальные сведения для персонального подбора.
-  function saveProfile(e: FormEvent) {
+  async function saveProfile(e: FormEvent) {
     e.preventDefault();
-    if (companyLoading) return;
+    if (companyLoading || savingCompany) return;
     if (!validInn(form.inn)) {
       setError('Проверьте ИНН: нужны 10 или 12 цифр с верной контрольной суммой.');
       return;
     }
     if (step === 0) {
-      setStep(1);
-      setError('');
+      void loadCompany();
       return;
     }
     if (
@@ -369,6 +386,13 @@ export default function BusinessApp() {
     ) {
       setError('Укажите название, регион и ОКВЭД (например, 62.01).');
       return;
+    }
+    if (account.available && !account.account) { setError('Дождитесь подключения аккаунта MAX или повторите вход в настройках.'); return; }
+    if (account.account) {
+      setSavingCompany(true);
+      try { await account.save({ ...form, name: form.name.trim(), region: form.region.trim() }); }
+      catch (e) { setError(e instanceof Error ? e.message : 'Не удалось сохранить компанию в аккаунте.'); return; }
+      finally { setSavingCompany(false); }
     }
     setProjectProfile(null);
     if (companyProfile?.inn !== form.inn) {
@@ -381,7 +405,7 @@ export default function BusinessApp() {
       applicantType: form.inn.length === 12 ? 'individual_entrepreneur' : 'legal_entity',
     });
     close();
-    setPage('overview');
+    setPage(resumeVerification ? 'verification' : 'overview'); setResumeVerification(false);
     setCatalogScope('personal');
   }
   async function confirmBusinessRemoval() {
@@ -391,9 +415,14 @@ export default function BusinessApp() {
       if (supportNotifications.available && !await supportNotifications.subscribe(false, false)) {
         setDeleteBusinessError('Не удалось отключить уведомления на сервере. Проверьте соединение или откройте приложение заново через MAX и повторите удаление.'); return;
       }
+      if (account.available) {
+        try { await account.remove(); }
+        catch (e) { setDeleteBusinessError(e instanceof Error ? e.message : 'Не удалось удалить компанию из аккаунта.'); return; }
+      }
       const cleared = removeBusiness(localStorage, { profile: companyProfile, projectProfile, fundingNeed: need, saved, applications: apps, detachedApplicationIds, businessNotice });
       cancelCompanyRequest(); chatRequest.current?.abort(); chatRequest.current = null;
       setProfile(null); setProjectProfile(null); setNeed(cleared.fundingNeed);
+      demo.update({ ...demo.state, inn: null, role: null });
       setBusinessNotice(null);
       setDetachedApplicationIds(cleared.detachedApplicationIds ?? []);
       setForm({ ...emptyProfile, goals: [] }); setStep(0); setError(''); setOnboard(false);
@@ -468,10 +497,18 @@ export default function BusinessApp() {
   return (
     <div ref={shell} className={`app-shell shared-navigation page-${page}`}>
       {page !== 'overview' && page !== 'assistant' && <AppHeader
-        title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', 'funding-results': 'Варианты поддержки' }[page]}
-        backLabel={page === 'funding-results' ? 'К параметрам подбора' : page === 'calendar' ? 'В мой бизнес' : 'На главную'} onBack={() => page === 'funding-results' ? setHomePanel('funding') : navigate(page === 'calendar' ? 'profile' : 'overview')} onNotifications={() => setHomePanel('events')} hasNotifications={hasNotifications} notificationCount={page === 'programs' ? events.length + notificationUpdates.length : undefined}
+        title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', 'funding-results': 'Варианты поддержки', settings: 'Настройки', verification: 'Подтверждение компании' }[page]}
+        backLabel={page === 'funding-results' ? 'К параметрам подбора' : ['calendar', 'settings'].includes(page) ? 'В мой бизнес' : page === 'verification' ? 'Назад к сценарию' : 'На главную'} onBack={() => page === 'verification' ? finishVerification() : page === 'funding-results' ? setHomePanel('funding') : navigate(['calendar', 'settings'].includes(page) ? 'profile' : 'overview')} onNotifications={() => setHomePanel('events')} hasNotifications={hasNotifications} notificationCount={page === 'programs' ? events.length + notificationUpdates.length + supportNotifications.items.filter(n => !n.readAt).length + (businessNotice && !businessNotice.readAt ? 1 : 0) : undefined}
       />}
       <main ref={mainRef} className="app-content">
+          {page === 'verification' && <VerificationPage demo={demo} company={companyProfile} onAdd={() => { setResumeVerification(true); openProfile(); }} onDone={finishVerification} />}
+          {page === 'settings' && <div className="settings-page">
+            <AccountPanel state={account} presentation={demo.state.enabled} esiaSignedIn={demo.state.enabled && demo.state.signedIn} hasCompany={!!companyProfile} onRestore={(p) => { setProfile({ ...emptyProfile, ...p }); setProjectProfile(null); setToast('Компания загружена из аккаунта'); }} onSave={() => { if (companyProfile) void account.save(companyProfile).then(() => setToast('Компания сохранена в аккаунте')).catch(e => setToast(e.message)); }} />
+            {profile && <SupportNotificationSettings notifications={supportNotifications} />}
+            <section className="profile-panel"><h3>Оформление</h3><p>Тема автоматически повторяет настройки телефона.</p></section>
+            <DemoSettings demo={demo} onOpen={() => openVerification()} />
+            {profile && <div className="business-removal"><button type="button" className="remove-business" onClick={() => { setDeleteBusinessError(''); setDeleteBusinessOpen(true); }}>Удалить бизнес</button></div>}
+          </div>}
           {page === 'funding-results' && profile && <section className="funding-results-page">
             {fundingResult?.fingerprint === fundingFingerprint(fundingProfile, need) ? <>
               <div className="funding-result-intro"><div className="funding-result-mark"><GlassArt shape="ring" size={80} /></div><h2>{need.purpose}</h2>
@@ -603,11 +640,12 @@ export default function BusinessApp() {
                   const p = programs.find((p) => p.id === a.programId);
                   if (!p) return <article className="widget" key={a.id}><p>{a.project || 'Черновик заявки'}</p><p>Ожидаем загрузку программы. Черновик сохранён.</p></article>;
                   const count = p.documents.filter((d) => a.documents[d]).length;
+                  const receipt = demo.state.enabled && !detachedApplicationIds.includes(a.id) && demo.state.receipts.find(r => r.applicationId === a.id && r.inn === companyProfile?.inn);
                   return (
                     <article className="application-row" key={a.id}>
                       <GlassArt shape="tiles" size={54} className="application-art" />
                       <div className="application-info">
-                        <span className="tag">{detachedApplicationIds.includes(a.id) ? 'Сохранённый черновик без привязки к бизнесу' : applicationLabels[applicationStatus(a, officialFundingCatalog.find((o) => o.id === a.programId)!)]} · не отправлено</span>
+                        <span className="tag">{receipt ? `Заявка принята · ${receipt.id}` : `${detachedApplicationIds.includes(a.id) ? 'Сохранённый черновик без привязки к бизнесу' : applicationLabels[applicationStatus(a, officialFundingCatalog.find((o) => o.id === a.programId)!)]} · не отправлено`}</span>
                         <h3>{p.title}</h3>
                         <p>
                           {count} из {p.documents.length} документов отмечено · срок{' '}
@@ -682,17 +720,19 @@ export default function BusinessApp() {
                   ))}
               </div>
               <div className="data-note">
-                Экспорт .ics добавляет сроки в ваш календарь. Уведомления о новых мерах можно включить в «Мой бизнес».
+                Экспорт .ics добавляет сроки в ваш календарь. Уведомления о новых мерах — в настройках.
               </div>
             </>
           )}
+          {page === 'profile' && <button className="settings-entry" onClick={() => navigate('settings')}><span>Настройки</span><Icon name="chevron" /></button>}
+          {page === 'profile' && demoConfirmed(demo.state, companyProfile?.inn) && <p className="demo-company-status">Компания подтверждена</p>}
           {page === 'profile' && <BusinessHub profile={profile} project={!!projectProfile && !companyProfile}
             insight={businessAnalysis.data?.personalization?.sections.home} onInsight={followInsight}
             confirmed={personal.confirmed.length} pending={personal.pending.length} applications={apps.length} saved={saved.length} purpose={need.purpose}
             onAdd={() => setHomePanel('business')} onEdit={openProfile} onSupport={() => navigate('programs')}
             onNeed={() => setHomePanel('funding')} onAssistant={() => navigate('assistant')} onCalendar={() => navigate('calendar')}
             onApplications={() => navigate('applications')} onSaved={() => { navigate('programs'); setCatalogScope('saved'); setOnlySaved(true); }} />}
-          {page === 'profile' && profile && <SupportNotificationSettings notifications={supportNotifications} />}
+          {page === 'profile' && companyProfile && !demoConfirmed(demo.state, companyProfile.inn) && <section className="profile-panel"><h3>Подтверждение компании</h3><p>Подтвердите полномочия, чтобы перейти к подаче заявок.</p><ActionButton className="secondary" onClick={() => openVerification()}>Подтвердить через Госуслуги</ActionButton></section>}
           {page === 'profile' && profile && <details className="ai-entry page-ai-composer"><summary>Проанализировать бизнес и следующий шаг</summary><AIPanel title="План развития" task="analysis" context={aiContext} initialQuestion="Проанализируй мой бизнес: какие возможности рассмотреть, чего не хватает и какой следующий шаг?" {...aiHandlers} /></details>}
           {page === 'profile' && profile && <details className="ai-entry source-updates">
             <summary>Изменения в поддержке · разбор с AI</summary>
@@ -778,13 +818,10 @@ export default function BusinessApp() {
                 </div>
                 </>}
                 <div className="data-note">
-                  Профиль и черновики сохранены на этом устройстве. На другом устройстве их потребуется заполнить заново.
+                  {account.account?.company ? 'Компания сохранена в аккаунте MAX. Черновики и документы остаются на этом устройстве.' : 'Профиль и черновики сохранены на этом устройстве. Подключение аккаунта — в настройках.'}
                 </div>
               </details>
             ) : null)}
-          {page === 'profile' && profile && <div className="business-removal">
-            <button type="button" className="remove-business" onClick={() => { setDeleteBusinessError(''); setDeleteBusinessOpen(true); }}>Удалить бизнес</button>
-          </div>}
           {page === 'assistant' && <AssistantPage
   businessName={profile?.name ?? 'Вопросы о бизнесе'}
   guest={!profile}
@@ -847,13 +884,13 @@ export default function BusinessApp() {
         </div>
         <div className="modal">
           {onboard && (
-            <form className="company-profile-form" onSubmit={saveProfile}>
+            <form className="company-profile-form" onSubmit={saveProfile} onInvalid={(e) => { const details = (e.target as HTMLElement).closest('details'); if (details) details.open = true; }}>
               <header className="company-profile-heading">
                 <h2>{step === 0 ? 'ИНН вашего бизнеса' : 'Данные для подбора'}</h2>
                 <p className="muted">Шаг {step + 1} из 2</p>
               </header>
               <CompanySources profile={form} />
-              <fieldset className="company-form-fields" disabled={companyLoading}>
+              <fieldset className="company-form-fields" disabled={companyLoading || savingCompany}>
                 {step === 0 ? (
                   <label className="field">
                     ИНН
@@ -869,6 +906,9 @@ export default function BusinessApp() {
                   </label>
                 ) : (
                   <>
+                    {autoFilledCompany && <section className="company-loaded-summary"><span className="tag">Загружено по ИНН</span><h3>{form.name}</h3><p>ИНН {form.inn} · {form.region}</p><p>ОКВЭД {form.okved}</p></section>}
+                    <details className="company-fields-section" open={!autoFilledCompany}>
+                    <summary>Реквизиты компании</summary>
                     <div className="form-grid">
                       <label className="field">
                         Название
@@ -935,6 +975,10 @@ export default function BusinessApp() {
                           onChange={(e) => editForm({ ...form, okved: e.target.value })}
                         />
                       </label>
+                    </div></details>
+                    <details className="company-fields-section"><summary>Дополнительные параметры</summary>
+                    <p className="muted">Можно пропустить. Неизвестные значения не считаются нулевыми.</p>
+                    <div className="form-grid">
                       {(['ageMonths', 'employees', 'revenue'] as const).map((key, i) => (
                         <label className="field" key={key}>
                           {
@@ -990,6 +1034,8 @@ export default function BusinessApp() {
                         </select>
                       </label>
                     </div>
+                    </details>
+                    <label className="field">Чем занимается бизнес<BusinessInput maxLength={120} value={form.industry ?? ''} placeholder="Например, производство мебели · необязательно" onChange={(e) => editForm({ ...form, industry: e.target.value })} /></label>
                     <h3>Что вы планируете?</h3>
                     <div className="goal-chips">
                       {goals.map((g) => (
@@ -1014,11 +1060,6 @@ export default function BusinessApp() {
                     </div>
                   </>
                 )}
-                {form.inn && step === 0 && (
-                  <ActionButton type="button" className="secondary" onClick={() => void loadCompany()}>
-                    {companyLoading ? 'Получаем данные…' : 'Получить данные компании'}
-                  </ActionButton>
-                )}
                 {error && (
                   <p className="error" role="alert">
                     {error}
@@ -1031,9 +1072,10 @@ export default function BusinessApp() {
                     </ActionButton>
                   )}
                   <ActionButton className="primary" type="submit">
-                    {step === 0 ? 'Заполнить вручную' : 'Сохранить бизнес'}
+                    {step === 0 ? companyLoading ? 'Загружаем сведения…' : 'Загрузить по ИНН' : savingCompany ? 'Сохраняем…' : 'Сохранить бизнес'}
                     <Icon name="arrow" size={17} />
                   </ActionButton>
+                  {step === 0 && <button type="button" className="company-manual-fallback" onClick={() => { if (!validInn(form.inn)) { setError('Введите корректный ИНН.'); return; } setError(''); setStep(1); }}>Заполнить вручную</button>}
                 </div>
                 {step === 1 && <AIDataHelp>После сохранения GigaChat анализирует параметры бизнеса для персонального подбора. Исходные файлы автоматически не отправляются.</AIDataHelp>}
               </fieldset>
@@ -1119,6 +1161,7 @@ export default function BusinessApp() {
                   )}
                   <label className="checklist-title"><input type="checkbox" checked={!!activeApp.reviewConfirmed} onChange={(e) => updateApp(activeApp.id, { reviewConfirmed: e.target.checked })} />Я сверил перечень и комплект с условиями оператора</label>
                   <p role="status">{applicationLabels[applicationStatus(activeApp, officialFundingCatalog.find((o) => o.id === selected.id)!)]}</p>
+                  {companyProfile && <DemoSubmission key={activeApp.id} demo={demo} company={companyProfile} applicationId={activeApp.id} title={selected.title} ready={applicationStatus(activeApp, officialFundingCatalog.find((o) => o.id === selected.id)!) === 'ready_for_review'} onVerify={() => openVerification(activeApp.id)} />}
                   <div className="modal-actions">
                     <ActionButton className="secondary" onClick={() => { close(); setPage('applications'); }}>К моим заявкам</ActionButton>
                     <ActionButton
@@ -1200,9 +1243,9 @@ export default function BusinessApp() {
       {deleteBusinessOpen && <ModalSheet title="Удалить бизнес?" onClose={() => { if (!deletingBusiness) setDeleteBusinessOpen(false); }}>
         <div className="delete-business-confirmation">
           <h2>Удалить бизнес?</h2>
-          <p>С этого устройства будут удалены профиль компании или проекта, цель и параметры финансирования, история AI-чата и сохранённый AI-анализ.</p>
+          <p>Удалим профиль бизнеса, параметры подбора и историю AI с этого устройства{account.available ? ' и компанию из аккаунта MAX' : ''}.</p>
           {supportNotifications.available && <p>Подписка на новые меры и ожидающие сообщения MAX также будут удалены.</p>}
-          <p>Заявки, черновики, тексты и отметки документов, а также сохранённые программы останутся. Черновики не будут автоматически привязаны к новому бизнесу.</p>
+          <p>Черновики, документы и сохранённые программы останутся. Для нового бизнеса потребуется заново проверить реквизиты.</p>
           {deleteBusinessError && <p className="error" role="alert">{deleteBusinessError}</p>}
           <div className="modal-actions">
             <ActionButton className="secondary" disabled={deletingBusiness} onClick={() => setDeleteBusinessOpen(false)}>Отмена</ActionButton>

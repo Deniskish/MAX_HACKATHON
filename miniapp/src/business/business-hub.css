@@ -73,6 +73,14 @@
 
 .opora-theme .page-profile .hub-identity { padding: 20px; }
 .support-notification-settings { padding: 20px; }
+.company-manual-fallback { display: block; width: 100%; min-height: 44px; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 14px; text-align: center; cursor: pointer; }
+.company-fields-section { border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 20px; }
+.company-fields-section > summary { min-height: 44px; padding-block: 10px; font-weight: 600; cursor: pointer; }
+.company-loaded-summary { padding: 18px; border: 1px solid var(--line); border-radius: 20px; margin-bottom: 16px; }
+.company-loaded-summary h3 { margin: 10px 0; overflow-wrap: anywhere; }
+.company-loaded-summary p { margin: 6px 0; color: var(--muted); font-size: 14px; }
+.account-panel h3 { margin: 0 0 12px; }
+.account-panel > p { color: var(--muted); font-size: 14px; }
 .support-notification-settings h3 { margin: 0 0 8px; }
 .notification-toggle { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; padding: 8px 0; font-size: 14px; }
 .notification-toggle input { appearance: none; flex: 0 0 44px; width: 44px; height: 26px; min-height: 0; margin: 0; padding: 0; border-radius: 20px; background: #696873; border: 1px solid #92919b; position: relative; cursor: pointer; }
@@ -81,3 +89,14 @@
 .notification-toggle input:checked::after { transform: translateX(18px); }
 .notification-toggle input:focus-visible { outline: 2px solid #8064ff; outline-offset: 3px; }
 .notification-toggle input:disabled { opacity: .45; cursor: default; }
+.settings-page, .verification-page { display: grid; gap: 18px; min-width: 0; }
+.settings-page .profile-panel, .verification-page .profile-panel { margin: 0; }
+.settings-entry { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 14px 18px; margin-bottom: 18px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 20px; font: inherit; }
+.verification-steps { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0; margin: 0 0 8px; }
+.verification-steps li { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.verification-steps li > span { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; }
+.verification-steps li[aria-current] { color: var(--accent); }
+.verification-steps li[aria-current] > span { border-color: currentColor; }
+.demo-submission, .demo-settings { display: grid; gap: 12px; min-width: 0; }
+.demo-submission p, .demo-settings p { margin: 0; }
+.demo-company-status { color: var(--accent); font-size: 12px; }

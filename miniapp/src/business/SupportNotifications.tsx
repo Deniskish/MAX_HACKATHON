@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FundingNeed, FundingProfile } from '../../api-server/funding-catalog/types';
 import { ActionButton } from './MaxControls';
 import { ContextHelp } from './ContextHelp';
+import { maxInitData } from './max-auth';
 type Notice = { id: string; programId: string; title: string; reason: string; source: string; createdAt: number; readAt: number | null; delivery: string };
 type State = { enabled: boolean; bot: boolean; aiConfigured: boolean; items: Notice[]; monitor?: { lastRun: string | null; lastError: string | null } };
 export function useSupportNotifications(profile: FundingProfile | null, need: FundingNeed) {
@@ -14,15 +15,15 @@ export function useSupportNotifications(profile: FundingProfile | null, need: Fu
     const next = mutations.current.then(run, run); mutations.current = next.catch(() => {}); return next;
   }
   const fingerprint = JSON.stringify({ profile, need });
-  const [available, setAvailable] = useState(!!window.WebApp?.initData);
+  const [available, setAvailable] = useState(!!maxInitData());
   useEffect(() => {
-    const ready = () => setAvailable(!!window.WebApp?.initData);
+    const ready = () => setAvailable(!!maxInitData());
     ready(); window.addEventListener('opora:max-ready', ready);
     return () => window.removeEventListener('opora:max-ready', ready);
   }, []);
   const request = async (path = '', method = 'GET', body?: unknown) => {
     const response = await fetch('/api/notifications' + path, { method,
-      headers: { 'X-Max-Init-Data': window.WebApp?.initData ?? '', 'Content-Type': 'application/json' },
+      headers: { 'X-Max-Init-Data': maxInitData(), 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000) });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Не удалось обновить уведомления.');
@@ -42,7 +43,7 @@ export function useSupportNotifications(profile: FundingProfile | null, need: Fu
           await mutate(async () => {
             if (cancelled || version !== revision.current) return;
             if (current.current.profile) await request('/subscription', 'PUT', { ...current.current, bot: data.bot });
-            else await request('/subscription', 'DELETE');
+            // A new device has no local profile yet. Only explicit removal may unsubscribe it.
           });
           data = await request();
         }

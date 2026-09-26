@@ -8,6 +8,12 @@ import { NotificationStore, NotificationWorker, maxSender } from './funding-cata
 import { createGigaChatClient } from './gigachat';
 config({ path: path.resolve(process.cwd(), '../../.env'), quiet: true });
 config({ quiet: true });
+// The bot may keep its token in chatbot/.env, outside the API's own dotenv files.
+const botSettings: NodeJS.ProcessEnv = {};
+config({ path: path.resolve(process.cwd(), '../../chatbot/.env'), processEnv: botSettings, quiet: true });
+for (const key of ['BOT_TOKEN', 'MINIAPP_URL', 'MAX_BOT_USERNAME']) {
+  if (!process.env[key]?.trim() && botSettings[key]?.trim()) process.env[key] = botSettings[key]!.trim();
+}
 config({ path: path.resolve(__dirname, __dirname.endsWith('dist') ? '../../../.env.dadata' : '../../.env.dadata'), quiet: true });
 const port = Number(process.env.PORT || 3002);
 const sources = new SourceStore();

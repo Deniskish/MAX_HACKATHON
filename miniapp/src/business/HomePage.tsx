@@ -1,6 +1,7 @@
 import { ThemedImage } from './ThemedImage';
 import { Icon } from './Icon';
 import { AppNavigation, BrandWordmark } from './AppChrome';
+import mainLogo from './main-logo.webp';
 import { ContextHelp } from './ContextHelp';
 import type { BusinessAnalysis } from './useBusinessAnalysis';
 import type { WorkspaceInsight } from '../../api-server/ai/types';
@@ -28,7 +29,7 @@ export function HomePage({ showNavigation = true, onFindSupport, onAddBusiness, 
   const analyzing = personalized && analysis.status === 'loading';
   return <div className={`home-dashboard${personalized ? ' home-personalized' : ''}`}>
     <header className="home-topbar">
-      <BrandWordmark className="home-wordmark-small" />
+      <span className="home-brand-icon"><img src={mainLogo} alt="Опора" width={384} height={256} draggable={false} /></span>
       <button type="button" className="home-notifications" aria-label={hasNotifications ? 'Уведомления — есть новые события' : 'Уведомления'} onClick={onNotifications}>
         <Icon name="bell" size={22} />
         {hasNotifications && <span className="home-notification-dot" aria-hidden="true" />}

@@ -3,6 +3,7 @@ import { legacyPrograms } from './funding-catalog/legacy-adapter';
 import type { FieldProvenance } from './company-data/types';
 
 export type ProfileValues = {
+  industry?: string;
   inn: string;
   name: string;
   region: string;
@@ -82,6 +83,7 @@ export const goals = [
   'Обучение команды',
 ];
 export const emptyProfile: Profile = {
+  industry: '',
   inn: '',
   name: '',
   region: '',

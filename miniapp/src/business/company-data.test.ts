@@ -23,6 +23,9 @@ test('autofill preserves goals and unknown manual fields, and retains provenance
   assert.equal(edited.provenance?.name?.kind, 'manual');
   assert.equal(edited.provenance?.employees?.kind, 'source');
   assert.equal(edited.name, 'Моё название');
+  const described = editCompanyProfile(edited, { ...edited, industry: 'Производство мебели' });
+  assert.equal(described.provenance?.industry?.kind, 'manual');
+  assert.equal(editCompanyProfile(described, { ...described, inn: '9900000017' }).industry, '');
 });
 test('changing INN clears facts of the previous company and ignores an old response', async () => {
   const data = await service.getCompanyByInn('9900000031');

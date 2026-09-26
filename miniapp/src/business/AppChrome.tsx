@@ -1,7 +1,7 @@
 import { Icon } from './Icon';
 import { ThemedImage } from './ThemedImage';
 
-export type AppPage = 'overview' | 'programs' | 'applications' | 'calendar' | 'profile' | 'assistant' | 'funding-results';
+export type AppPage = 'overview' | 'programs' | 'applications' | 'calendar' | 'profile' | 'assistant' | 'funding-results' | 'settings' | 'verification';
 
 export function BrandWordmark({ className = '' }: { className?: string }) {
   return <span className={`home-wordmark ${className}`}>
@@ -21,7 +21,7 @@ export function AppNavigation({ active, onNavigate }: {
         aria-current={active === page || page === 'programs' && active === 'funding-results' ? 'page' : undefined} onClick={() => onNavigate(page)}>
         <Icon name={icon} /><span>{label}</span>
       </button>)}
-      <button type="button" aria-current={['calendar', 'profile', 'assistant'].includes(active) ? 'page' : undefined} onClick={() => onNavigate('profile')}>
+      <button type="button" aria-current={['calendar', 'profile', 'assistant', 'settings', 'verification'].includes(active) ? 'page' : undefined} onClick={() => onNavigate('profile')}>
         <Icon name="building" /><span>Мой бизнес</span>
       </button>
     </nav>
