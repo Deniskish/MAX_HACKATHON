@@ -60,6 +60,31 @@
 .opora-theme .page-programs .empty-state p { font-size: 15px; line-height: 1.65; }
 .catalog-empty-actions { display: grid; gap: 12px; margin: 20px 0 12px; }
 
+/* Keep the catalogue visible; advanced controls share one optional panel. */
+.opora-theme .page-programs .catalog-tools {
+  margin: 0 0 16px; border: 1px solid var(--line); border-radius: 20px;
+  background: var(--surface); color: var(--ink); min-width: 0;
+}
+.catalog-tools > summary { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 12px 16px; cursor: pointer; list-style: none; font-size: 14px; font-weight: 600; }
+.catalog-tools > summary::-webkit-details-marker { display: none; }
+.catalog-tools > summary > span:first-of-type { flex: 1; }
+.catalog-tools > summary > svg { flex: none; }
+.catalog-tools > summary > svg:last-child { transition: transform 180ms ease; }
+.catalog-tools[open] > summary > svg:last-child { transform: rotate(90deg); }
+.catalog-tools-count { display: grid; place-items: center; min-width: 22px; height: 22px; border-radius: 50%; background: var(--glass-selected); font-size: 12px; }
+.catalog-tools-body { display: grid; gap: 16px; padding: 4px 16px 16px; min-width: 0; }
+.opora-theme .page-programs .catalog-tools-body :is(.catalog-state, .filter-chips, .page-ai-composer, .adaptive-insight) { margin: 0; }
+.catalog-tools-body h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.opora-theme .page-programs .catalog-tools-body .filter-chips { display: flex; flex-wrap: wrap; overflow: visible; padding: 0; gap: 8px; }
+.opora-theme .page-programs .catalog-tools-body .filter-chips > button { white-space: normal; text-align: left; font-size: 13px; padding: 9px 12px; }
+.opora-theme .page-programs .catalog-tools-body :is(.catalog-guest-context, .catalog-glass-context) { margin: 0; padding: 16px 0 0; border: 0; border-top: 1px solid var(--line); }
+.catalog-clear-filters { justify-self: start; background: none; border: 0; padding: 6px 0; font: inherit; font-size: 14px; color: var(--accent); cursor: pointer; }
+.catalog-tools summary:focus-visible, .catalog-clear-filters:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.opora-theme .page-programs .catalog-tools + .catalog-results-header { margin-top: 20px; }
+.opora-theme .page-programs section.catalog-guest-context[role="status"] { padding: 12px 16px; margin: 0 0 16px; border: 1px solid var(--line); border-radius: 18px; }
+.opora-theme .page-programs section.catalog-guest-context[role="status"] p { margin: 0; font-size: 13px; line-height: 1.5; }
+.opora-theme .page-programs section.catalog-guest-context[role="status"] button { margin-top: 6px; font-size: 13px; }
+
 /* The three catalogue scopes share one moving selection surface. */
 .opora-theme .page-programs .catalog-scope-tabs { position: relative; isolation: isolate; }
 .catalog-scope-indicator {

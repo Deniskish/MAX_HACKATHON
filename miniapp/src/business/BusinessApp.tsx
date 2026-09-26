@@ -90,6 +90,9 @@ export default function BusinessApp() {
     } else browserDownload(text, name, type);
   }
   const [page, setPageState] = useState<Page>('overview');
+  const [settingsReturn, setSettingsReturn] = useState<Page>('overview');
+  const [catalogToolsOpen, setCatalogToolsOpen] = useState(false);
+  function openSettings() { setSettingsReturn(page); navigate('settings'); }
   const { shell, prepare } = useTabTransition(page);
   const setPage = (next: Page) => { prepare(next); setPageState(next); };
   const [initial] = useState(() => loadWorkspace(localStorage, programs.map((p) => p.id)));
@@ -498,11 +501,18 @@ export default function BusinessApp() {
     <div ref={shell} className={`app-shell shared-navigation page-${page}`}>
       {page !== 'overview' && page !== 'assistant' && <AppHeader
         title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', 'funding-results': 'Варианты поддержки', settings: 'Настройки', verification: 'Подтверждение компании' }[page]}
-        backLabel={page === 'funding-results' ? 'К параметрам подбора' : ['calendar', 'settings'].includes(page) ? 'В мой бизнес' : page === 'verification' ? 'Назад к сценарию' : 'На главную'} onBack={() => page === 'verification' ? finishVerification() : page === 'funding-results' ? setHomePanel('funding') : navigate(['calendar', 'settings'].includes(page) ? 'profile' : 'overview')} onNotifications={() => setHomePanel('events')} hasNotifications={hasNotifications} notificationCount={page === 'programs' ? events.length + notificationUpdates.length + supportNotifications.items.filter(n => !n.readAt).length + (businessNotice && !businessNotice.readAt ? 1 : 0) : undefined}
+        backLabel={page === 'settings' ? 'Назад' : page === 'funding-results' ? 'К параметрам подбора' : page === 'calendar' ? 'В мой бизнес' : page === 'verification' ? 'Назад к сценарию' : 'На главную'}
+        onBack={() => page === 'settings' ? setPage(settingsReturn) : page === 'verification' ? finishVerification() : page === 'funding-results' ? setHomePanel('funding') : navigate(page === 'calendar' ? 'profile' : 'overview')}
+        onSettings={page === 'settings' ? undefined : openSettings} hasNotifications={hasNotifications}
       />}
       <main ref={mainRef} className="app-content">
           {page === 'verification' && <VerificationPage demo={demo} company={companyProfile} onAdd={() => { setResumeVerification(true); openProfile(); }} onDone={finishVerification} />}
           {page === 'settings' && <div className="settings-page">
+            <button type="button" className="settings-notifications" onClick={() => setHomePanel('events')}>
+              <Icon name="bell" size={22} /><span>Уведомления</span>
+              {hasNotifications && <span className="settings-unread" aria-label="Есть новые уведомления" />}
+              <Icon name="chevron" size={18} />
+            </button>
             <AccountPanel state={account} presentation={demo.state.enabled} esiaSignedIn={demo.state.enabled && demo.state.signedIn} hasCompany={!!companyProfile} onRestore={(p) => { setProfile({ ...emptyProfile, ...p }); setProjectProfile(null); setToast('Компания загружена из аккаунта'); }} onSave={() => { if (companyProfile) void account.save(companyProfile).then(() => setToast('Компания сохранена в аккаунте')).catch(e => setToast(e.message)); }} />
             {profile && <SupportNotificationSettings notifications={supportNotifications} />}
             <section className="profile-panel"><h3>Оформление</h3><p>Тема автоматически повторяет настройки телефона.</p></section>
@@ -524,7 +534,7 @@ export default function BusinessApp() {
             onFindSupport={() => navigate('programs')}
             onAddBusiness={() => profile ? navigate('profile') : setHomePanel('business')}
             onAssistant={() => navigate('assistant')}
-            onNotifications={() => setHomePanel('events')}
+            onSettings={openSettings}
             onApplications={() => setPage('applications')}
             onBusiness={() => navigate('profile')} personalized={!!profile}
             analysis={businessAnalysis} onAIAction={followInsight}
@@ -532,8 +542,6 @@ export default function BusinessApp() {
           />}
           {page === 'programs' && (
             <>
-              {profile ? <><AdaptiveInsight analysis={businessAnalysis} section="programs" onAction={followInsight} /><div className="catalog-glass-context"><div className="catalog-personal-context"><p>{profile.region} · {need.purpose || 'Укажите цель для более точного подбора'}</p><button onClick={() => setHomePanel('funding')}>Изменить цель и параметры подбора <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={88} /></div></>
-                : <section className="catalog-guest-context"><div><button onClick={() => navigate('profile')}>Подобрать поддержку для моего бизнеса <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={104} /></section>}
               {profile && <div className="catalog-scopes catalog-scope-tabs" role="group" aria-label="Область подбора" data-scope={catalogScope}><span className="catalog-scope-indicator" aria-hidden="true" />{([['personal', 'Для вас'], ['all', 'Все меры'], ['saved', `Сохранённые · ${saved.length}`]] as const).map(([scope, title]) => <button key={scope} aria-pressed={catalogScope === scope} onClick={() => { setCatalogScope(scope); setOnlySaved(scope === 'saved'); }}>{title}</button>)}</div>}
               {profile && catalogScope === 'personal' && businessAnalysis.status !== 'ready' && <section className="catalog-guest-context" role="status">
                 <div><p>{businessAnalysis.status === 'loading' ? 'Подбираем меры для вашего бизнеса…' : 'Персональный AI-подбор временно недоступен.'}</p>
@@ -568,17 +576,14 @@ export default function BusinessApp() {
                   />
                 </div>
               </div>
-              <CatalogStatusFilter value={availability} onChange={setAvailability} />
-              {profile && <details className="ai-entry page-ai-composer"><summary>Найти поддержку по описанию задачи</summary><AIPanel title="Умный поиск" task="search" context={aiContext} initialQuestion={query} {...aiHandlers} /></details>}
-              <div className="catalog-results-header">
-                <h2>{filter === 'Все меры' ? profile && catalogScope === 'personal' ? 'Для вашего бизнеса' : 'Все возможности' : filter}</h2>
-                <span>{visiblePrograms.length} программ</span>
-                {filter !== 'Все меры' && (
-                  <button onClick={() => setFilter('Все меры')}>
-                    Сбросить <Icon name="close" size={13} />
-                  </button>
-                )}
-              </div>
+              <details className="catalog-tools" open={catalogToolsOpen} onToggle={event => setCatalogToolsOpen(event.currentTarget.open)}>
+                <summary><Icon name="settings" size={18} /><span>Фильтры и подбор</span>
+                  {(filter !== 'Все меры' || availability) && <span className="catalog-tools-count">{Number(filter !== 'Все меры') + Number(!!availability)}</span>}
+                  <Icon name="chevron" size={16} />
+                </summary>
+                <div className="catalog-tools-body">
+                  <CatalogStatusFilter value={availability} onChange={setAvailability} />
+                  <h3>Вид поддержки</h3>
               <div className="filter-chips" aria-label="Виды мер поддержки">
                 {['Все меры', ...new Set(officialFundingCatalog.map((o) => fundingKindLabels[o.kind]))].map((type) => (
                   <button
@@ -590,6 +595,24 @@ export default function BusinessApp() {
                     {type === 'Все меры' ? 'Все виды' : type}
                   </button>
                 ))}
+              </div>
+
+                  {(filter !== 'Все меры' || availability) && <button type="button" className="catalog-clear-filters" onClick={() => { setFilter('Все меры'); setAvailability(''); }}>Сбросить фильтры</button>}
+              {profile ? <><AdaptiveInsight analysis={businessAnalysis} section="programs" onAction={followInsight} /><div className="catalog-glass-context"><div className="catalog-personal-context"><p>{profile.region} · {need.purpose || 'Укажите цель для более точного подбора'}</p><button onClick={() => setHomePanel('funding')}>Изменить цель и параметры подбора <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={88} /></div></>
+                : <section className="catalog-guest-context"><div><button onClick={() => navigate('profile')}>Подобрать поддержку для моего бизнеса <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={104} /></section>}
+
+                  {profile && <details className="ai-entry page-ai-composer"><summary>Найти поддержку по описанию задачи</summary><AIPanel title="Умный поиск" task="search" context={aiContext} initialQuestion={query} {...aiHandlers} /></details>}
+                  <ActionButton className="secondary" onClick={() => setCatalogToolsOpen(false)}>Показать программы · {visiblePrograms.length}</ActionButton>
+                </div>
+              </details>
+              <div className="catalog-results-header">
+                <h2>{filter === 'Все меры' ? profile && catalogScope === 'personal' ? 'Для вашего бизнеса' : 'Все возможности' : filter}</h2>
+                <span>{visiblePrograms.length} программ</span>
+                {filter !== 'Все меры' && (
+                  <button onClick={() => setFilter('Все меры')}>
+                    Сбросить <Icon name="close" size={13} />
+                  </button>
+                )}
               </div>
               <div className="program-grid catalog">
                 {visiblePrograms.slice(0, catalogLimit).map(({ p }) => programCard(p))}
@@ -730,7 +753,6 @@ export default function BusinessApp() {
               </div>
             </>
           )}
-          {page === 'profile' && <button className="settings-entry" onClick={() => navigate('settings')}><span>Настройки</span><Icon name="chevron" /></button>}
           {page === 'profile' && demoConfirmed(demo.state, companyProfile?.inn) && <p className="demo-company-status">Компания подтверждена</p>}
           {page === 'profile' && <BusinessHub profile={profile} project={!!projectProfile && !companyProfile}
             insight={businessAnalysis.data?.personalization?.sections.home} onInsight={followInsight}

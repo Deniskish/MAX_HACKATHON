@@ -1,7 +1,9 @@
 import { ThemedImage } from './ThemedImage';
 import { Icon } from './Icon';
 import { AppNavigation, BrandWordmark } from './AppChrome';
-import mainLogo from './main-logo.webp';
+import { useSystemTheme } from '../theme';
+import darkMark from './brand-mark-dark.webp';
+import lightMark from './brand-mark-light.webp';
 import { ContextHelp } from './ContextHelp';
 import type { BusinessAnalysis } from './useBusinessAnalysis';
 import type { WorkspaceInsight } from '../../api-server/ai/types';
@@ -11,7 +13,7 @@ type HomePageProps = {
   onFindSupport: () => void;
   onAddBusiness: () => void;
   onAssistant: () => void;
-  onNotifications: () => void;
+  onSettings: () => void;
   onApplications: () => void;
   onBusiness: () => void;
   personalized: boolean;
@@ -24,14 +26,15 @@ function Arrow() {
   return <span className="home-arrow" aria-hidden="true"><Icon name="arrow" size={20} /></span>;
 }
 
-export function HomePage({ showNavigation = true, onFindSupport, onAddBusiness, onAssistant, onNotifications, onApplications, onBusiness, personalized, hasNotifications, analysis, onAIAction }: HomePageProps) {
+export function HomePage({ showNavigation = true, onFindSupport, onAddBusiness, onAssistant, onSettings, onApplications, onBusiness, personalized, hasNotifications, analysis, onAIAction }: HomePageProps) {
+  const theme = useSystemTheme();
   const insight = personalized ? analysis.data?.personalization?.sections.home : undefined;
   const analyzing = personalized && analysis.status === 'loading';
   return <div className={`home-dashboard${personalized ? ' home-personalized' : ''}`}>
     <header className="home-topbar">
-      <span className="home-brand-icon"><img src={mainLogo} alt="Опора" width={384} height={256} draggable={false} /></span>
-      <button type="button" className="home-notifications" aria-label={hasNotifications ? 'Уведомления — есть новые события' : 'Уведомления'} onClick={onNotifications}>
-        <Icon name="bell" size={22} />
+      <span className="home-brand-icon"><img src={theme === 'dark' ? darkMark : lightMark} alt="Опора" width={128} height={128} draggable={false} /></span>
+      <button type="button" className="home-notifications" aria-label={hasNotifications ? 'Настройки — есть новые уведомления' : 'Настройки'} onClick={onSettings}>
+        <Icon name="settings" size={22} />
         {hasNotifications && <span className="home-notification-dot" aria-hidden="true" />}
       </button>
     </header>
