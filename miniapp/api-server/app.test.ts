@@ -31,6 +31,23 @@ test('direct API catalogue is compressed even when ingress bypasses the frontend
   assert.equal(response.headers.get('content-encoding'), 'gzip');
   assert.ok((await response.json() as any).opportunities.length > 0);
 }));
+
+test('local ingress keeps per-client AI limits and does not trust a forged earlier forwarding hop', async () => server({ async complete() { return { answer: 'Ответ', mode: 'llm' }; } }, async url => {
+  const send = (forwarded: string) => fetch(url + '/api/assistant', { method: 'POST', headers: {
+    'Content-Type': 'application/json', 'X-Forwarded-For': forwarded,
+  }, body: JSON.stringify({ question: 'Вопрос', context: {} }) });
+  for (let i = 0; i < 15; i++) assert.equal((await send('198.51.100.10')).status, 200);
+  assert.equal((await send('198.51.100.10')).status, 429);
+  assert.equal((await send('198.51.100.11')).status, 200, 'another client must not inherit the proxy-wide limit');
+  assert.equal((await send('203.0.113.99, 198.51.100.10')).status, 429, 'forged leftmost hop cannot bypass the nearest untrusted client');
+}));
+
+test('forwarded headers are trusted only from a loopback peer', () => {
+  const trust = createApp({ giga: null, env: {} }).get('trust proxy fn');
+  assert.equal(trust('127.0.0.1', 0), true);
+  assert.equal(trust('::1', 0), true);
+  assert.equal(trust('198.51.100.10', 0), false);
+});
 test('configured AI becomes ready only after a successful request', async () => server({ async complete() { return { answer: 'Проверьте условия.', mode: 'llm' }; } }, async (url) => {
   const first = await (await fetch(url + '/api/ai/status')).json() as any;
   assert.equal(first.configured, true); assert.equal(first.checked, false); assert.notEqual(first.status, 'ready');

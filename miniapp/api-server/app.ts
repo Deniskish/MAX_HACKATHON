@@ -48,6 +48,10 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
     status: !giga ? invalidConfig ? 'unavailable' : 'not_configured' : lastError ? ['request_rejected', 'invalid_response'].includes(lastError) ? 'limited' : 'unavailable' : lastSuccess ? 'ready' : 'unavailable',
     checked: Boolean(lastSuccess || lastError), lastSuccess, lastFailure, reason: lastError ?? (giga && !lastSuccess ? 'not_verified' : null) });
   const app = express(); app.disable('x-powered-by');
+  // Production ingress is local Nginx (or the local frontend proxy). Trust only
+  // loopback hops, so clients behind it do not share the proxy's rate-limit key.
+  // Untrusted public peers cannot choose their identity via X-Forwarded-For.
+  app.set('trust proxy', 'loopback');
   // The HTTPS ingress can route /api directly here, bypassing the frontend proxy.
   app.use(compression());
   app.use((_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff'); next(); });

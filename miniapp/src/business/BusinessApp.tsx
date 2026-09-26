@@ -157,7 +157,7 @@ export default function BusinessApp() {
     workspace: { savedIds: saved.filter((id) => programs.some((p) => p.id === id)), applications: businessApps.filter((a) => programs.some((p) => p.id === a.programId)).map((a) => ({ programId: a.programId, project: a.project.slice(0, 2000),
       budget: a.budget.trim() && Number.isSafeInteger(Number(a.budget)) && Number(a.budget) >= 0 && Number(a.budget) <= 1e15 ? Number(a.budget) : null,
       preparedDocuments: Object.keys(a.documents).filter((d) => a.documents[d]), hasDraft: !!a.generatedDraft?.trim(), reviewConfirmed: !!a.reviewConfirmed })) } } : null;
-  const businessAnalysis = useBusinessAnalysis(analysisContext, officialFundingCatalog.map((o) => `${o.id}:${o.version}:${o.status}`).join('|') + sourceUpdates.map((u) => u.id).join('|'));
+  const businessAnalysis = useBusinessAnalysis(analysisContext, officialFundingCatalog.map((o) => `${o.id}:${o.version}:${o.status}`).join('|') + sourceUpdates.map((u) => u.id).join('|'), page === 'assistant');
   const aiPriorities = businessAnalysis.data?.personalization?.priorities ?? [];
   const personal = personalFunding(matches.filter((m) => !m.opportunity.imported || aiPriorities.some((p) => p.programId === m.opportunity.id) || supportNotifications.items.some((n) => n.programId === m.opportunity.id)), !!profile);
   const priorityRank = (id: string) => { const index = aiPriorities.findIndex((p) => p.programId === id); return index < 0 ? 100 : index; };

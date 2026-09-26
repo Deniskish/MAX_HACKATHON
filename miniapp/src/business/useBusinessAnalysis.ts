@@ -11,12 +11,14 @@ export function validPersonalization(value: unknown): value is AIPersonalization
     && Array.isArray(data.priorities) && data.priorities.length <= 6
     && data.priorities.every((p) => p && typeof p.programId === 'string' && typeof p.reason === 'string' && p.reason.length <= 300);
 }
-export function useBusinessAnalysis(context: AIRequest['context'] | null, sourceVersion: string) {
+export function useBusinessAnalysis(context: AIRequest['context'] | null, sourceVersion: string, paused = false) {
   const fingerprint = JSON.stringify({ version: 1, context, sourceVersion });
   const [state, setState] = useState<{ fingerprint: string; status: 'loading' | 'ready' | 'unavailable'; data?: AIResult; at?: number; error?: string }>({ fingerprint: '', status: 'loading' });
   const [retry, setRetry] = useState(0);
   useEffect(() => {
-    if (!context) return;
+    // An interactive conversation must not wait behind this tab's background job.
+    // Effect cleanup cancels the HTTP request and the provider generation upstream.
+    if (!context || paused) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
       void (async () => {
@@ -40,7 +42,7 @@ export function useBusinessAnalysis(context: AIRequest['context'] | null, source
       })();
     }, 1800);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [fingerprint, retry]);
+  }, [fingerprint, retry, paused]);
   return { status: context ? state.fingerprint === fingerprint ? state.status : 'loading' : 'guest' as const,
     data: state.fingerprint === fingerprint ? state.data : undefined,
     at: state.fingerprint === fingerprint ? state.at : undefined,
