@@ -20,6 +20,14 @@ const assert = require('node:assert/strict');
   assert.equal(image.headers.get('cache-control'), 'public, max-age=31536000, immutable');
   const health = await fetch(new URL('/api/health', origin), { signal: AbortSignal.timeout(10000) });
   assert.equal(health.status, 200);
-  assert.equal((await health.json()).status, 'ok');
+  const api = await health.json();
+  assert.equal(api.status, 'ok');
+  if (process.env.EXPECTED_RELEASE_SHA) {
+    assert.equal(api.revision, process.env.EXPECTED_RELEASE_SHA, 'API must run the deployed commit');
+    const version = await fetch(new URL('/version.json', origin), { signal: AbortSignal.timeout(10000), cache: 'no-store' });
+    assert.equal(version.status, 200);
+    assert.equal(version.headers.get('cache-control'), 'no-store');
+    assert.equal((await version.json()).revision, process.env.EXPECTED_RELEASE_SHA, 'Frontend must run the same commit');
+  }
   console.log('PASS production entry, gzip, versioned image cache and API proxy');
 })().catch((error) => { console.error(error.message); process.exitCode = 1; });

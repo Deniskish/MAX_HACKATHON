@@ -2,10 +2,12 @@ name: Deploy
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
 
-# All deployments share /opt/app; keep every queued run and finish the active one.
+permissions:
+  contents: read
+
 concurrency:
   group: opora-production-deploy
   cancel-in-progress: false
@@ -13,10 +15,13 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30
     steps:
-      - name: Deploy to server
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH and backend secrets
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
@@ -24,66 +29,112 @@ jobs:
           DADATA_API_KEY: ${{ secrets.DADATA_API_KEY }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
-          mkdir -p ~/.ssh
+          set -euo pipefail
+          test -n "$SERVER_HOST" && test -n "$SERVER_USER" && test -n "$SERVER_SSH_KEY_B64"
+          install -d -m 700 ~/.ssh
           printf '%s' "$SERVER_SSH_KEY_B64" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-
-          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
-
+          ssh-keyscan -T 10 -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host opora-production
+            HostName $SERVER_HOST
+            User $SERVER_USER
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            BatchMode yes
+            ConnectTimeout 15
+            ServerAliveInterval 15
+            ServerAliveCountMax 4
+          EOF
+          chmod 600 ~/.ssh/config
+          ssh opora-production 'mkdir -p /opt/opora-deploy; chmod 700 /opt/opora-deploy'
           if [ -n "$DADATA_API_KEY" ]; then
-            printf 'DADATA_API_KEY=%s\n' "$DADATA_API_KEY" | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$SERVER_USER@$SERVER_HOST" 'umask 077; cat > /opt/app/.env.dadata; chmod 600 /opt/app/.env.dadata'
+            printf 'DADATA_API_KEY=%s\n' "$DADATA_API_KEY" | ssh opora-production 'umask 077; cat > /opt/app/.env.dadata.new; mv /opt/app/.env.dadata.new /opt/app/.env.dadata'
           fi
-
           if [ -n "$BOT_TOKEN" ]; then
-            printf 'BOT_TOKEN=%s\n' "$BOT_TOKEN" | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$SERVER_USER@$SERVER_HOST" 'umask 077; cat > /opt/app/.env.bot; chmod 600 /opt/app/.env.bot'
+            printf 'BOT_TOKEN=%s\n' "$BOT_TOKEN" | ssh opora-production 'umask 077; cat > /opt/app/.env.bot.new; mv /opt/app/.env.bot.new /opt/app/.env.bot'
+          fi
+          scp ops/deploy.cjs opora-production:/opt/opora-deploy/deploy.cjs
+
+      - name: Build, test and deploy exact commit with rollback
+        id: release
+        run: |
+          set +e
+          ssh opora-production "flock -w 900 /opt/opora-deploy/deploy.lock node /opt/opora-deploy/deploy.cjs /opt/app $GITHUB_SHA"
+          code=$?
+          set -e
+          if [ "$code" = 3 ]; then
+            echo 'deployed=false' >> "$GITHUB_OUTPUT"
+            echo 'A newer commit is already installed; this outdated run was skipped.' >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$code" = 0 ]; then
+            echo 'deployed=true' >> "$GITHUB_OUTPUT"
+          else
+            exit "$code"
           fi
 
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$SERVER_USER@$SERVER_HOST" '
-            set -e
+      - name: Verify public HTTPS and release revision
+        id: public
+        if: steps.release.outputs.deployed == 'true'
+        env:
+          FRONTEND_URL: https://business-opora.ru
+          EXPECTED_RELEASE_SHA: ${{ github.sha }}
+        run: node miniapp/scripts/check-production.cjs
 
-            cd /opt/app
+      # Integration outcomes remain visible without undoing a healthy installation.
+      - name: Check company autofill
+        id: company
+        if: steps.release.outputs.deployed == 'true'
+        continue-on-error: true
+        run: ssh opora-production 'cd /opt/app; timeout 60 node miniapp/api-server/company-data/smoke-check.cjs'
 
-            git fetch origin main
-            git reset --hard origin/main
+      - name: Check AI chat, personalization and documents
+        id: ai
+        if: steps.release.outputs.deployed == 'true'
+        continue-on-error: true
+        run: |
+          ssh opora-production 'cd /opt/app; timeout 300 node miniapp/api-server/ai/smoke-check.cjs || { timeout 90 node miniapp/api-server/ai/check-provider.cjs; exit 1; }'
 
-            npm ci --prefix miniapp
-            npm ci --prefix miniapp/api-server
-            npm ci --prefix chatbot
+      - name: Check MAX bot authorization without sending messages
+        id: max
+        if: steps.release.outputs.deployed == 'true'
+        continue-on-error: true
+        run: ssh opora-production 'cd /opt/app; OPORA_FUNDING_CHECK=bot timeout 60 node miniapp/api-server/funding-catalog/smoke-check.cjs'
 
-            npm run test:production --prefix miniapp
-            # Keep old hashed chunks available for already opened app sessions.
-            npm run build --prefix miniapp -- --emptyOutDir false
-            npm run build --prefix miniapp/api-server
-            npm run build --prefix chatbot
+      - name: Check live funding source and AI matching
+        id: funding
+        if: steps.release.outputs.deployed == 'true'
+        continue-on-error: true
+        run: ssh opora-production 'cd /opt/app; OPORA_FUNDING_CHECK=catalog timeout 180 node miniapp/api-server/funding-catalog/smoke-check.cjs'
 
-            # Replace the old Vite command, not just restart its saved PM2 config.
-            if pm2 describe opora-frontend >/dev/null 2>&1; then
-              pm2 delete opora-frontend
+      - name: Deployment summary
+        if: always()
+        env:
+          RELEASE: ${{ steps.release.outcome }}
+          DEPLOYED: ${{ steps.release.outputs.deployed }}
+          PUBLIC: ${{ steps.public.outcome }}
+          COMPANY: ${{ steps.company.outcome }}
+          AI: ${{ steps.ai.outcome }}
+          MAX: ${{ steps.max.outcome }}
+          FUNDING: ${{ steps.funding.outcome }}
+        run: |
+          {
+            echo "Commit: $GITHUB_SHA"
+            echo
+            echo '| Check | Result |'
+            echo '| --- | --- |'
+            echo "| Release installation | $RELEASE (installed: $DEPLOYED) |"
+            echo "| Public HTTPS and revision | $PUBLIC |"
+            echo "| Company autofill | $COMPANY |"
+            echo "| GigaChat | $AI |"
+            echo "| MAX authorization | $MAX |"
+            echo "| Live funding source and matching | $FUNDING |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for check in COMPANY AI MAX FUNDING; do
+            if [ "${!check}" = failure ]; then
+              echo "::warning title=External integration failed::$check failed. Application installation does not mean this integration is healthy; inspect its check logs."
             fi
-            pm2 start ecosystem.config.cjs --only opora-frontend
-            node miniapp/scripts/restart-api.cjs
-            if pm2 describe opora-bot >/dev/null 2>&1; then
-              pm2 restart opora-bot
-            fi
-            pm2 save
+          done
 
-            for i in {1..15}; do
-              if curl -fsS http://localhost:3000/ >/dev/null && curl -fsS http://localhost:3000/api/health && curl -fsS http://localhost:3002/api/health; then
-                npm run check:production --prefix miniapp
-                node miniapp/api-server/company-data/smoke-check.cjs
-                checks_failed=0
-                node miniapp/api-server/ai/smoke-check.cjs || {
-                  node miniapp/api-server/ai/check-provider.cjs || true
-                  checks_failed=1
-                }
-                node miniapp/api-server/funding-catalog/smoke-check.cjs || checks_failed=1
-                exit "$checks_failed"
-              fi
-              echo "Waiting for app... $i/15"
-              sleep 2
-            done
-
-            echo "Health check failed"
-            pm2 status
-            exit 1
-          '
+      - name: Remove runner SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

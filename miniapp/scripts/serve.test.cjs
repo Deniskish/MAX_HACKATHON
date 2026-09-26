@@ -12,6 +12,7 @@ test('production serves compressed builds, caches safely and preserves API reque
   const script = 'const message = "support";\n'.repeat(300);
   await fs.mkdir(path.join(root, 'assets'));
   await fs.writeFile(path.join(root, 'index.html'), html);
+  await fs.writeFile(path.join(root, 'version.json'), JSON.stringify({ revision: 'test-release' }));
   await fs.writeFile(path.join(root, 'assets/app-a1b2c3d4.js'), script);
   await fs.writeFile(path.join(root, 'assets/orb.png'), 'image');
   await fs.writeFile(path.join(root, 'assets/orb-a1b2c3d4.webp'), 'old-image');
@@ -37,6 +38,9 @@ test('production serves compressed builds, caches safely and preserves API reque
       assert.equal(await response.text(), html);
     }
     const response = await fetch(origin + '/assets/app-a1b2c3d4.js', { headers: { 'Accept-Encoding': 'gzip' } });
+    const version = await fetch(origin + '/version.json');
+    assert.equal(version.headers.get('cache-control'), 'no-store');
+    assert.equal((await version.json()).revision, 'test-release');
     assert.equal(response.headers.get('content-encoding'), 'gzip');
     assert.match(response.headers.get('content-type'), /javascript/);
     assert.match(response.headers.get('cache-control'), /immutable/);

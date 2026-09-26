@@ -22,12 +22,15 @@ if (!process.env.OPORA_FUNDING_CHECK_CHILD) {
   const { BudgetSource, normalizeBudgetCard } = require('../dist/funding-catalog/live');
   const { createGigaChatClient } = require('../dist/gigachat');
   (async () => {
+    if (process.env.OPORA_FUNDING_CHECK !== 'catalog') {
     if (!process.env.BOT_TOKEN) throw new Error('FUNDING_BOT_NOT_CONFIGURED');
     const bot = await fetch('https://platform-api2.max.ru/me', { headers: { Authorization: process.env.BOT_TOKEN }, signal: AbortSignal.timeout(15000), redirect: 'error' });
     if (!bot.ok) throw new Error('FUNDING_BOT_HTTP_' + bot.status);
     const identity = await bot.json();
     if (!identity.user_id || identity.is_bot !== true) throw new Error('FUNDING_BOT_IDENTITY_INVALID');
     console.log('Funding MAX:', JSON.stringify({ authenticated: true, usernameConfigured: !!process.env.MAX_BOT_USERNAME, messagesSent: 0 }));
+    }
+    if (process.env.OPORA_FUNDING_CHECK === 'bot') return;
     const status = await (await fetch('http://127.0.0.1:3002/api/funding/live-status', { signal: AbortSignal.timeout(10000) })).json();
     console.log('Funding monitor:', JSON.stringify({ imported: status.imported, checkedAt: status.checkedAt, error: status.error }));
     const source = new BudgetSource(), page = await source.page(1);

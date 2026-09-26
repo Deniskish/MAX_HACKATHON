@@ -1,6 +1,6 @@
 // Run from api-server. Only response structure is logged, never content or credentials.
 import { config } from 'dotenv';
-import { createGigaChatClient, GIGACHAT_CHAT_URL } from '../gigachat';
+import { createGigaChatClient, GIGACHAT_CHAT_URL, GIGACHAT_OAUTH_URL } from '../gigachat';
 import { SourceStore } from './sources';
 config({ path: '../../.env', quiet: true });
 config({ quiet: true });
@@ -15,13 +15,22 @@ async function main() {
   if (!process.env.GIGACHAT_AUTH_KEY) throw new Error('DIAGNOSTIC_KEY_NOT_CONFIGURED');
   const transport: typeof fetch = async (url, init) => {
     const response = await fetch(url, init);
+    if (String(url) === GIGACHAT_OAUTH_URL && response.ok) {
+      const auth: any = await response.clone().json();
+      try {
+        const balance = await fetch('https://api.giga.chat/v1/balance', { headers: { Authorization: `Bearer ${auth.access_token}` }, signal: AbortSignal.timeout(10000), redirect: 'error' });
+        const data: any = await balance.json();
+        console.log('AI balance:', JSON.stringify({ status: balance.status, models: Array.isArray(data.balance) ? data.balance.map((b: any) => ({ model: /^GigaChat[\w.-]*$/.test(b.usage) ? b.usage : 'other', remaining: typeof b.value === 'number' ? b.value : undefined })) : undefined }));
+      } catch { console.log('AI balance: unavailable'); }
+    }
     if (String(url) === GIGACHAT_CHAT_URL) {
       const data: any = await response.clone().json();
       const choice = data.choices?.[0], message = choice?.message;
       let value = message?.function_call?.arguments ?? message?.content;
       let json = typeof value === 'object';
       try { if (typeof value === 'string') { value = JSON.parse(value.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')); json = true; } } catch { /* Report structure only. */ }
-      console.log('AI response shape:', JSON.stringify({ status: response.status, finish: ['stop', 'length', 'function_call', 'blacklist'].includes(choice?.finish_reason) ? choice.finish_reason : 'other', functionCall: message?.function_call?.name === 'adapt_workspace', json, shape: shape(value) }));
+      // Error code is safe to log; messages may contain request content.
+      console.log('AI response shape:', JSON.stringify({ status: response.status, errorCode: typeof data.code === 'number' ? data.code : undefined, finish: ['stop', 'length', 'function_call', 'blacklist'].includes(choice?.finish_reason) ? choice.finish_reason : 'other', functionCall: message?.function_call?.name === 'adapt_workspace', json, shape: shape(value) }));
     }
     return response;
   };

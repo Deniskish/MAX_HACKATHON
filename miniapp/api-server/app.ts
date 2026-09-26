@@ -59,7 +59,7 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
     if (++usage.count > (isAI ? 15 : 120)) { res.setHeader('Retry-After', '60'); res.status(429).json({ error: 'Слишком много запросов. Повторите через минуту.', code: 'RATE_LIMITED' }); return; }
     requests.set(key, usage); next();
   });
-  app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'opora', catalog: 'official', privacy: 'context-v2', legacyPrivacy: 'strict-v1' }));
+  app.get('/api/health', (_req, res) => res.set('Cache-Control', 'no-store').json({ status: 'ok', service: 'opora', revision: process.env.OPORA_RELEASE_SHA || null, catalog: 'official', privacy: 'context-v2', legacyPrivacy: 'strict-v1' }));
   app.get('/api/ai/status', (_req, res) => res.json(aiStatus()));
   app.get('/api/providers/status', (_req, res) => res.json({ company: { ...providerStatus(options.fnsDir), activeProvider: dadata ? 'dadata' : 'fns', dadata: dadata?.status() ?? { configured: false, state: 'not_configured', lastSuccess: null } },
     funding: { officialSnapshot: 'ready', opportunities: fundingCatalogStatus().total, verifiedAt: fundingCatalogStatus().verifiedAt }, ai: { gigachat: aiStatus().status } }));
