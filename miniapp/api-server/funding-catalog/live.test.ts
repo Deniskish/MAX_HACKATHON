@@ -8,6 +8,7 @@ import { matchFundingOpportunity } from './matching';
 import { emptyFundingNeed } from './types';
 import { withAICatalog } from './ai-runtime';
 import { prepareAIContext } from '../ai/context';
+import { contextualCatalog } from '../ai/service';
 
 export const card = (override: Partial<BudgetCard> = {}): BudgetCard => ({ competitionId: '5f564f52-ac51-4496-9db7-bd7b282f7b64',
   title: 'Субсидия субъектам малого и среднего предпринимательства на производство', pppItemName: 'Официальный организатор',
@@ -56,4 +57,15 @@ test('AI catalogue is scoped to the request and accepts live programme IDs witho
   assert.throws(() => prepareAIContext(request));
   await Promise.all([withAICatalog([o], async () => { await Promise.resolve(); assert.equal(prepareAIContext(request).request.context.programId, o.id); }),
     withAICatalog([], async () => { await Promise.resolve(); assert.throws(() => prepareAIContext(request)); })]);
+});
+
+test('vague AI question uses business purpose and never pads the shortlist with unrelated live records', () => {
+  const production = normalizeBudgetCard(card({ title: 'Субсидия на развитие производства' }));
+  const unrelated = { ...production, id: 'budget-6f564f52-ac51-4496-9db7-bd7b282f7b64', title: 'Субсидия театральным организациям' };
+  withAICatalog([unrelated, production], () => {
+    const request = prepareAIContext({ task: 'chat', question: 'Что мне подходит?', context: { profile: {}, need: { ...emptyFundingNeed, purpose: 'запуск производства' } } }).request;
+    assert.deepEqual(contextualCatalog(request).map(o => o.id), [production.id]);
+    assert.deepEqual(contextualCatalog({ ...request, context: { profile: {} } }), []);
+    assert.ok(contextualCatalog({ ...request, context: { programId: unrelated.id, profile: {} } }).some(o => o.id === unrelated.id));
+  });
 });

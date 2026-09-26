@@ -1,4 +1,4 @@
-import { getAICatalog } from '../funding-catalog/ai-runtime';
+import { getAICatalog, withAICatalog } from '../funding-catalog/ai-runtime';
 import { emptyFundingNeed, fundingPurposes, type FundingNeed, type FundingProfile } from '../funding-catalog/types';
 import { parseFundingNeed, parseFundingProfile } from '../funding-catalog/input';
 import { matchFundingOpportunity, rankFundingMatches } from '../funding-catalog/matching';
@@ -92,6 +92,20 @@ function shortlist(query: string, selected?: string) {
   const words = query.toLowerCase().match(/[\p{L}]{4,}/gu) ?? [];
   return getAICatalog().map((o) => ({ o, score: Number(o.id === selected) * 1000 + Number(o.status === 'active') * 10 + words.reduce((n, w) => n + Number(o.title.toLowerCase().includes(w)), 0) })).sort((a, b) => b.score - a.score).slice(0, 60).map(({ o }) => o);
 }
+/** Do not fill vague requests with arbitrary active selections from unrelated sectors. */
+export function contextualCatalog(request: AIRequest) {
+  const { profile, need, workspace, programId } = request.context;
+  const explicit = new Set([programId, ...(workspace?.savedIds ?? []), ...(workspace?.applications.map(a => a.programId) ?? [])]);
+  const query = [request.question, ...(request.history ?? []).filter(m => m.role === 'user').slice(-2).map(m => m.text),
+    profile?.industry, ...(profile?.goals ?? []), need?.purpose].filter(Boolean).join(' ').toLowerCase().replace(/ё/g, 'е');
+  const generic = /^(бизнес|поддерж|програм|подход|вариан|помощ|субсид|расскаж|проана|имеющ|сведен|адапти|раздел|данны|провер|компан|нужн|предпри)/;
+  const terms = [...new Set((query.match(/[а-яa-z]{5,}/g) ?? []).map(w => w.slice(0, 6)).filter(w => !generic.test(w)))];
+  const catalog = getAICatalog();
+  const related = catalog.filter(o => o.imported && !explicit.has(o.id) && o.status === 'active')
+    .map(o => ({ o, score: terms.reduce((n, w) => n + Number(o.title.toLowerCase().replace(/ё/g, 'е').includes(w)), 0) }))
+    .filter(({ score }) => score > 0).sort((a, b) => b.score - a.score).slice(0, 24).map(({ o }) => o);
+  return [...catalog.filter(o => !o.imported || explicit.has(o.id)), ...related];
+}
 function catalogEvidence(): AIEvidence[] {
   return getAICatalog().map((o) => ({ id: `program:${o.id}`, title: o.title, opportunityId: o.id,
     url: o.source.url!, checkedAt: o.source.verifiedAt,
@@ -114,6 +128,10 @@ function evaluate(profile: FundingProfile, need: FundingNeed, request: AIRequest
   })));
 }
 export async function runAssistant(input: unknown, model?: AIModel, extraEvidence: AIEvidence[] = [], signal = AbortSignal.timeout(65000), semantic?: SemanticSearch): Promise<AIResult> {
+  const { request } = prepareAIContext(input);
+  return withAICatalog(contextualCatalog(request), () => runScopedAssistant(input, model, extraEvidence, signal, semantic));
+}
+async function runScopedAssistant(input: unknown, model: AIModel | undefined, extraEvidence: AIEvidence[], signal: AbortSignal, semantic?: SemanticSearch): Promise<AIResult> {
   const started = Date.now();
   const { request, redact } = prepareAIContext(input);
   // Crawled pages are unreviewed change-monitor material, not programme criteria.
@@ -127,7 +145,7 @@ export async function runAssistant(input: unknown, model?: AIModel, extraEvidenc
   if (model && ['chat', 'intake', 'search'].includes(request.task)) {
     try {
       const result = await model('plan', { request, purposes: fundingPurposes,
-        catalog: shortlist(request.question, request.context.programId).map((o) => ({ id: o.id, title: o.title, description: o.description, purposes: o.purposes })) }, signal);
+        catalog: shortlist([request.question, originalNeed.purpose, originalProfile.industry, ...(originalProfile.goals ?? [])].filter(Boolean).join(' '), request.context.programId).map((o) => ({ id: o.id, title: o.title, description: o.description, purposes: o.purposes })) }, signal);
       calls += result.calls ?? 1; tokens += result.tokens ?? 0; plan = object(result.value);
     } catch (error) {
       if (signal.aborted) throw error;
