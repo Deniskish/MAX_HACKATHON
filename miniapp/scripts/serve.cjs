@@ -10,6 +10,8 @@ function createApp({ root = path.resolve(__dirname, '../dist'), api = 'http://12
   const app = express();
   app.disable('x-powered-by');
   app.use((_req, res, next) => { res.setHeader('X-Content-Type-Options', 'nosniff'); next(); });
+  // Compress proxied catalogue JSON too: the live catalogue is several MB raw.
+  app.use(compression());
   // Proxy the original path and body without parsing documents or JSON here.
   app.use(createProxyMiddleware({
     pathFilter: (pathname) => pathname === '/api' || pathname.startsWith('/api/'),
@@ -20,7 +22,6 @@ function createApp({ root = path.resolve(__dirname, '../dist'), api = 'http://12
       res.end(JSON.stringify({ error: 'Сервис временно недоступен. Повторите запрос позже.', code: 'UPSTREAM_UNAVAILABLE' }));
     } },
   }));
-  app.use(compression());
   app.use(express.static(root, {
     dotfiles: 'deny',
     setHeaders(res, filename) {

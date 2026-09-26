@@ -22,6 +22,10 @@ const assert = require('node:assert/strict');
   assert.equal(health.status, 200);
   const api = await health.json();
   assert.equal(api.status, 'ok');
+  const catalog = await fetch(new URL('/api/funding/catalog', origin), { headers: { 'Accept-Encoding': 'gzip' }, signal: AbortSignal.timeout(15000) });
+  assert.equal(catalog.status, 200, 'Catalogue API must respond independently of the external source');
+  assert.equal(catalog.headers.get('content-encoding'), 'gzip', 'Catalogue JSON must be compressed for mobile networks');
+  assert.ok(Array.isArray((await catalog.json()).opportunities), 'Catalogue JSON must contain opportunities');
   if (process.env.EXPECTED_RELEASE_SHA) {
     assert.equal(api.revision, process.env.EXPECTED_RELEASE_SHA, 'API must run the deployed commit');
     const version = await fetch(new URL('/version.json', origin), { signal: AbortSignal.timeout(10000), cache: 'no-store' });
@@ -29,5 +33,5 @@ const assert = require('node:assert/strict');
     assert.equal(version.headers.get('cache-control'), 'no-store');
     assert.equal((await version.json()).revision, process.env.EXPECTED_RELEASE_SHA, 'Frontend must run the same commit');
   }
-  console.log('PASS production entry, gzip, versioned image cache and API proxy');
+  console.log('PASS production entry, gzip, versioned image cache, API proxy and compressed catalogue');
 })().catch((error) => { console.error(error.message); process.exitCode = 1; });

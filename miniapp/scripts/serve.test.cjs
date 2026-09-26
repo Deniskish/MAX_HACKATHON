@@ -22,6 +22,7 @@ test('production serves compressed builds, caches safely and preserves API reque
     req.on('data', (data) => { body += data; });
     req.on('end', () => {
       res.writeHead(req.url === '/api/missing' ? 404 : 200, { 'Content-Type': 'application/json' });
+      if (req.url === '/api/funding/catalog') return res.end(JSON.stringify({ opportunities: Array.from({ length: 100 }, (_, id) => ({ id, title: 'Мера поддержки бизнеса', description: 'Официальные условия программы' })) }));
       res.end(JSON.stringify({ url: req.url, method: req.method, body, type: req.headers['content-type'] }));
     });
   });
@@ -66,6 +67,9 @@ test('production serves compressed builds, caches safely and preserves API reque
     const body = JSON.stringify({ text: 'Тестовый запрос', amount: 400000 });
     const proxy = await fetch(origin + '/api/ai/assist?mode=chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
     assert.deepEqual(await proxy.json(), { url: '/api/ai/assist?mode=chat', method: 'POST', body, type: 'application/json' });
+    const catalog = await fetch(origin + '/api/funding/catalog', { headers: { 'Accept-Encoding': 'gzip' } });
+    assert.equal(catalog.headers.get('content-encoding'), 'gzip', 'Catalogue JSON must be compressed through the API proxy');
+    assert.equal((await catalog.json()).opportunities.length, 100);
     assert.equal((await fetch(origin + '/api/missing')).status, 404);
     await new Promise((resolve) => backend.close(resolve));
     const unavailable = await fetch(origin + '/api/health');
