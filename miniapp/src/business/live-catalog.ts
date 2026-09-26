@@ -22,8 +22,14 @@ export function useLiveCatalog() {
     const refresh = async () => {
       if (busy || document.hidden) return;
       busy = true;
+      // MAX may use an older Android WebView without AbortSignal.any/timeout.
+      const request = new AbortController();
+      const cancel = () => request.abort();
+      controller.signal.addEventListener('abort', cancel, { once: true });
+      if (controller.signal.aborted) cancel();
+      const timer = setTimeout(cancel, 20000);
       try {
-        const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]);
+        const signal = request.signal;
         const response = await fetch('/api/funding/catalog', { headers: etag ? { 'If-None-Match': etag } : {}, signal });
         if (response.ok) {
           const data = await response.json();
@@ -35,7 +41,7 @@ export function useLiveCatalog() {
         const health = await fetch('/api/funding/live-status', { signal });
         if (health.ok && !controller.signal.aborted) setStatus(await health.json());
       } catch { /* Keep the last successfully received catalogue. */ }
-      finally { busy = false; }
+      finally { clearTimeout(timer); controller.signal.removeEventListener('abort', cancel); busy = false; }
     };
     void refresh(); const timer = setInterval(() => void refresh(), 60000);
     document.addEventListener('visibilitychange', refresh); window.addEventListener('online', refresh);

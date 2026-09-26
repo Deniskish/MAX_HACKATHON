@@ -535,6 +535,11 @@ export default function BusinessApp() {
               {profile ? <><AdaptiveInsight analysis={businessAnalysis} section="programs" onAction={followInsight} /><div className="catalog-glass-context"><div className="catalog-personal-context"><p>{profile.region} · {need.purpose || 'Укажите цель для более точного подбора'}</p><button onClick={() => setHomePanel('funding')}>Изменить цель и параметры подбора <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={88} /></div></>
                 : <section className="catalog-guest-context"><div><button onClick={() => navigate('profile')}>Подобрать поддержку для моего бизнеса <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={104} /></section>}
               {profile && <div className="catalog-scopes catalog-scope-tabs" role="group" aria-label="Область подбора" data-scope={catalogScope}><span className="catalog-scope-indicator" aria-hidden="true" />{([['personal', 'Для вас'], ['all', 'Все меры'], ['saved', `Сохранённые · ${saved.length}`]] as const).map(([scope, title]) => <button key={scope} aria-pressed={catalogScope === scope} onClick={() => { setCatalogScope(scope); setOnlySaved(scope === 'saved'); }}>{title}</button>)}</div>}
+              {profile && catalogScope === 'personal' && businessAnalysis.status !== 'ready' && <section className="catalog-guest-context" role="status">
+                <div><p>{businessAnalysis.status === 'loading' ? 'Подбираем меры для вашего бизнеса…' : 'Персональный AI-подбор временно недоступен.'}</p>
+                  <button onClick={() => { setCatalogScope('all'); setOnlySaved(false); setFilter('Все меры'); setQuery(''); setAvailability(''); }}>Открыть весь каталог · {officialFundingCatalog.length} <Icon name="arrow" size={14} /></button>
+                </div>
+              </section>}
               <div className="catalog-toolbar">
                 {!profile && <div className="segmented-control" aria-label="Показать программы">
                   <button
@@ -599,13 +604,14 @@ export default function BusinessApp() {
                   <h2>
                     {onlySaved && !saved.length
                       ? 'Пока нет сохранённых программ'
+                      : profile && catalogScope === 'personal' && businessAnalysis.status !== 'ready' ? 'Подбор ещё не завершён'
                       : 'Здесь пока нет программ'}
                   </h2>
                   <p>
                     {onlySaved && !saved.length
                       ? 'Нажмите на закладку в карточке, чтобы сохранить возможность.'
                       : profile && catalogScope === 'personal'
-                        ? 'По текущим параметрам бизнеса и фильтрам подходящих программ не найдено. Измените цель, сумму или сведения о бизнесе — либо посмотрите все меры.'
+                        ? businessAnalysis.status !== 'ready' ? 'Каталог доступен — откройте все меры или повторите анализ позже.' : 'По текущим параметрам и фильтрам подходящих программ не найдено. Уточните цель или посмотрите все меры.'
                         : 'С выбранными фильтрами нет результатов. Попробуйте изменить категорию или запрос.'}
                   </p>
                   {profile && catalogScope === 'personal' && <div className="catalog-empty-actions">

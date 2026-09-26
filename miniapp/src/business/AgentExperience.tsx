@@ -201,7 +201,7 @@ export function DraftComposer({
         context: { profile: toFundingProfile(profile), identifiers: { name: profile.name, inn: profile.inn },
           programId: program.id, draftKind: draftKinds[kind], project: app.project, documents,
           preparedDocuments: program.documents.filter((d) => app.documents[d]), budget: app.budget.trim() ? Number(app.budget) : null } },
-        AbortSignal.any([controller.signal, AbortSignal.timeout(70000)]));
+        controller.signal);
       if (data.mode !== 'llm' || !data.draft?.trim())
         throw new Error('invalid');
       text =

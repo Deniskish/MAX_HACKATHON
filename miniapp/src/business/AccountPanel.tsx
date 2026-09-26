@@ -9,9 +9,12 @@ export function useAccount() {
   const generation = useRef(0);
   const mutation = useRef(false);
   const request = async (path = '', method = 'GET', body?: unknown): Promise<Account> => {
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15000);
+    try {
     const response = await fetch('/api/account' + path, { method, headers: { 'X-Max-Init-Data': maxInitData(), 'Content-Type': 'application/json' },
-      body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000) });
+      body: body ? JSON.stringify(body) : undefined, signal: controller.signal });
     const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Нет связи с аккаунтом.'); return data;
+    } finally { clearTimeout(timer); }
   };
   const refresh = async () => {
     if (!maxInitData() || mutation.current) return;

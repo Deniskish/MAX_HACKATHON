@@ -7,6 +7,7 @@ import { createOpportunityAssessor } from './funding-catalog/notification-ai';
 import { runAssistant } from './ai/service';
 import type { AIEvidence } from './ai/types';
 import { createSemanticSearch, EMBEDDINGS_URL } from './ai/embeddings';
+import { serialTransport } from './ai/serial-transport';
 
 export const GIGACHAT_OAUTH_URL = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth';
 export const GIGACHAT_CHAT_URL = 'https://api.giga.chat/v1/chat/completions';
@@ -32,6 +33,7 @@ export function createGigaChatClient(
     throw new PrivacyError('INVALID_GIGACHAT_CONFIG');
   let cached: { token: string; expiresAt: number } | undefined;
   let pending: Promise<string> | undefined;
+  const queuedTransport = serialTransport(transport);
   async function getToken(): Promise<string> {
     if (cached && cached.expiresAt > now() + 60000) return cached.token;
     if (pending) return pending;
@@ -77,14 +79,14 @@ export function createGigaChatClient(
   }
   const authorizedTransport: typeof fetch = async (url, init) => {
     if (![GIGACHAT_CHAT_URL, EMBEDDINGS_URL].includes(String(url))) throw new PrivacyError('INVALID_PROVIDER_URL');
-    const response = await transport(url, init);
+    const response = await queuedTransport(url, init);
     if (response.status !== 401) return response;
     await response.body?.cancel();
     // Не сбрасываем новый токен, если другой запрос уже успел его обновить.
     const headers = new Headers(init?.headers);
     if (cached && headers.get('Authorization') === `Bearer ${cached.token}`) cached = undefined;
     headers.set('Authorization', `Bearer ${await getToken()}`);
-    return transport(url, { ...init, headers }); // One retry only, with the same protected body.
+    return queuedTransport(url, { ...init, headers }); // One retry only, with the same protected body.
   };
   const semantic = createSemanticSearch(getToken, authorizedTransport);
   return {

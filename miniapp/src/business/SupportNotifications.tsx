@@ -22,12 +22,15 @@ export function useSupportNotifications(profile: FundingProfile | null, need: Fu
     return () => window.removeEventListener('opora:max-ready', ready);
   }, []);
   const request = async (path = '', method = 'GET', body?: unknown) => {
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15000);
+    try {
     const response = await fetch('/api/notifications' + path, { method,
       headers: { 'X-Max-Init-Data': maxInitData(), 'Content-Type': 'application/json' },
-      body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000) });
+      body: body ? JSON.stringify(body) : undefined, signal: controller.signal });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Не удалось обновить уведомления.');
     return data;
+    } finally { clearTimeout(timer); }
   };
   useEffect(() => {
     if (!available) return;
