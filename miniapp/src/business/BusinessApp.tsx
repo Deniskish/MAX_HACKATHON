@@ -301,11 +301,14 @@ export default function BusinessApp() {
   };
   const updateApp = (id: string, patch: Partial<Application>) =>
     setApps((old) => old.map((a) => (a.id === id ? { ...a, ...patch, reviewConfirmed: ['project', 'budget', 'documents', 'documentTexts', 'generatedDraft'].some(key => key in patch) ? false : patch.reviewConfirmed ?? a.reviewConfirmed } : a)));
-  useScreenHistory({ page, selectedId: selected?.id ?? null, homePanel, onboard, projectOnboard }, snapshot => {
+  useScreenHistory({ page, selectedId: selected?.id ?? null, homePanel, onboard, projectOnboard, deleteBusinessOpen }, snapshot => {
+    if (deletingBusiness) return;
     setPage(snapshot.page); setSelected(snapshot.selectedId ? programsById.get(snapshot.selectedId) ?? null : null);
     setHomePanel(snapshot.homePanel); setOnboard(snapshot.onboard); setProjectOnboard(snapshot.projectOnboard);
+    setDeleteBusinessOpen(snapshot.deleteBusinessOpen && !!profile);
   }, page !== 'overview' || !!selected || !!homePanel || onboard || projectOnboard, () => {
-    if (onboard || selected) close(); else if (homePanel) setHomePanel(null); else if (projectOnboard) setProjectOnboard(false);
+    if (deleteBusinessOpen) { if (!deletingBusiness) setDeleteBusinessOpen(false); }
+    else if (onboard || selected) close(); else if (homePanel) setHomePanel(null); else if (projectOnboard) setProjectOnboard(false);
     else if (page === 'assistant') returnFromAssistant(); else if (page === 'settings') setPage(settingsReturn);
     else navigate(['business-details', 'calendar', 'verification'].includes(page) ? 'profile' : 'overview');
   });
@@ -402,6 +405,7 @@ export default function BusinessApp() {
       setDeleteBusinessError('Не удалось сохранить удаление на устройстве. Бизнес не удалён. Попробуйте ещё раз.');
     } finally { setDeletingBusiness(false); }
   }
+  const requestBusinessRemoval = () => { setDeleteBusinessError(''); setDeleteBusinessOpen(true); };
   const aiContext = { profile: profile ? fundingProfile : undefined, need: need.purpose ? need : undefined, page, workspace: analysisContext?.workspace,
     identifiers: profile ? { name: profile.name, inn: profile.inn } : undefined };
   function applyAIProfile(patch: FundingProfile) {
@@ -475,8 +479,7 @@ export default function BusinessApp() {
           {page === 'verification' && <section className="profile-panel"><h2>Подтверждение компании</h2><p>Подключение Госуслуг пока недоступно. Подтверждение полномочий выполняется на сайте оператора при подаче.</p><ActionButton className="primary" onClick={() => navigate('profile')}>К моему бизнесу</ActionButton></section>}
           {page === 'settings' && <SettingsPage account={account} companyProfile={companyProfile} profile={profile} supportNotifications={supportNotifications}
             onRestore={p => { setProfile({ ...emptyProfile, ...p }); setProjectProfile(null); setToast('Компания загружена из аккаунта'); }}
-            onSave={() => { if (companyProfile) void account.save(companyProfile).then(() => setToast('Компания сохранена в аккаунте')).catch(() => {}); }}
-            onRemove={() => { setDeleteBusinessError(''); setDeleteBusinessOpen(true); }} />}
+            onSave={() => { if (companyProfile) void account.save(companyProfile).then(() => setToast('Компания сохранена в аккаунте')).catch(() => {}); }} />}
           {page === 'overview' && <HomePage
             showNavigation={false}
             onFindSupport={() => navigate('programs')}
@@ -586,7 +589,8 @@ export default function BusinessApp() {
           {onboard && (
             <CompanyProfileForm form={form} editForm={editForm} step={step} setStep={setStep}
               companyLoading={companyLoading} savingCompany={savingCompany} autoFilledCompany={autoFilledCompany}
-              error={error} setError={setError} account={account} saveProfile={saveProfile} />
+              error={error} setError={setError} account={account} saveProfile={saveProfile}
+              onRemove={companyProfile ? requestBusinessRemoval : undefined} />
           )}
           {selected && <ProgrammeDetails match={matchesById.get(selected.id)!} profile={profile} activeApp={activeApp}
             detached={!!activeApp && detachedApplicationIds.includes(activeApp.id)}
@@ -620,6 +624,7 @@ export default function BusinessApp() {
           <p>Удалим профиль бизнеса, параметры подбора и историю AI с этого устройства{account.available ? ' и компанию из аккаунта MAX' : ''}.</p>
           {supportNotifications.available && <p>Подписка на новые меры и ожидающие сообщения MAX также будут удалены.</p>}
           <p>Черновики, документы и сохранённые программы останутся. Для нового бизнеса потребуется заново проверить реквизиты.</p>
+          {deleteBusinessError && <p role="alert">{deleteBusinessError}</p>}
           <div className="modal-actions">
             <ActionButton className="secondary" disabled={deletingBusiness} onClick={() => setDeleteBusinessOpen(false)}>Отмена</ActionButton>
             <ActionButton className="secondary danger-button" disabled={deletingBusiness} onClick={() => void confirmBusinessRemoval()}>{deletingBusiness ? 'Удаляем…' : deleteBusinessError ? 'Повторить удаление' : 'Удалить'}</ActionButton>
@@ -637,7 +642,7 @@ export default function BusinessApp() {
           }}>Удалить</ActionButton>
         </div>
       </ModalSheet>}
-      {projectOnboard && <ProjectOnboarding initial={aiProjectSeed ?? (projectProfile ? { ...projectProfile, fundingPurpose: need.purpose, fundingNeed: need.amount } : null)} onCancel={() => { setProjectOnboard(false); setAIProjectSeed(null); }} onSave={(project) => { if (!projectProfile || companyProfile) { const notice = businessAddedNotice(true); setBusinessNotice(notice); setToast(notice.title); } setProjectProfile(project); setProfile(null); setNeed({ ...need, purpose: project.fundingPurpose, amount: project.fundingNeed }); setProjectOnboard(false); setAIProjectSeed(null); setPage('overview'); setCatalogScope('personal'); }} />}
+      {projectOnboard && <ProjectOnboarding onRemove={projectProfile && !companyProfile ? requestBusinessRemoval : undefined} initial={aiProjectSeed ?? (projectProfile ? { ...projectProfile, fundingPurpose: need.purpose, fundingNeed: need.amount } : null)} onCancel={() => { setProjectOnboard(false); setAIProjectSeed(null); }} onSave={(project) => { if (!projectProfile || companyProfile) { const notice = businessAddedNotice(true); setBusinessNotice(notice); setToast(notice.title); } setProjectProfile(project); setProfile(null); setNeed({ ...need, purpose: project.fundingPurpose, amount: project.fundingNeed }); setProjectOnboard(false); setAIProjectSeed(null); setPage('overview'); setCatalogScope('personal'); }} />}
       {toast && (
         <div className="toast" role="status">
           <Icon name="check" size={18} />

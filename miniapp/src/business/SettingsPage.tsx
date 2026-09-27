@@ -13,7 +13,6 @@ export function SettingsPage({
   supportNotifications,
   onRestore,
   onSave,
-  onRemove,
 }: {
   account: ReturnType<typeof useAccount>;
   companyProfile: Profile | null;
@@ -21,7 +20,6 @@ export function SettingsPage({
   supportNotifications: ReturnType<typeof useSupportNotifications>;
   onRestore: (profile: Profile) => void;
   onSave: () => void;
-  onRemove: () => void;
 }) {
   return (
     <>
@@ -36,17 +34,6 @@ export function SettingsPage({
           />
           {profile && (
             <SupportNotificationSettings notifications={supportNotifications} />
-          )}
-          {profile && (
-            <div className="business-removal">
-              <button
-                type="button"
-                className="remove-business"
-                onClick={onRemove}
-              >
-                Удалить бизнес
-              </button>
-            </div>
           )}
         </div>
       }

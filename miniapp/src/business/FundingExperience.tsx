@@ -1,3 +1,5 @@
+import { InfoDisclosureRow } from './InfoDisclosureRow';
+import { InfoDisclosure } from './InfoDisclosure';
 import { ThemedImage } from './ThemedImage';
 import React, { useEffect, useState, type FormEvent } from 'react';
 import { ActionButton, BusinessInput } from './MaxControls';
@@ -51,7 +53,7 @@ export function FundingResults({ result, onOpen, onSave, saved = [] }: { result:
       <div className="funding-grid">{group.matches.slice(0, limit).map((match) => <FundingOpportunityCard key={match.opportunity.id} match={match} onOpen={onOpen} onSave={onSave} saved={saved.includes(match.opportunity.id)} />)}</div>
       {group.matches.length > limit && <ActionButton className="secondary" onClick={() => setLimit((n) => n + 12)}>Показать ещё</ActionButton>}
     </section>)}
-    {result.matches.some((m) => m.status === 'not_eligible') && <details className="widget"><summary>Не подходят по условиям</summary><div className="funding-grid">{result.matches.filter((m) => m.status === 'not_eligible').slice(0, limit).map((match) => <FundingOpportunityCard key={match.opportunity.id} match={match} onOpen={onOpen} />)}</div>{result.matches.filter((m) => m.status === 'not_eligible').length > limit && <ActionButton className="secondary" onClick={() => setLimit((n) => n + 12)}>Показать ещё</ActionButton>}</details>}
+    {result.matches.some((m) => m.status === 'not_eligible') && <InfoDisclosure summary={<InfoDisclosureRow as="summary" label="Не подходят по условиям" />}><div className="funding-grid">{result.matches.filter((m) => m.status === 'not_eligible').slice(0, limit).map((match) => <FundingOpportunityCard key={match.opportunity.id} match={match} onOpen={onOpen} />)}</div>{result.matches.filter((m) => m.status === 'not_eligible').length > limit && <ActionButton className="secondary" onClick={() => setLimit((n) => n + 12)}>Показать ещё</ActionButton>}</InfoDisclosure>}
   </div>;
 }
 

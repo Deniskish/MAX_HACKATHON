@@ -1,3 +1,4 @@
+import { InfoDisclosure } from './InfoDisclosure';
 import { InfoDisclosureRow } from './InfoDisclosureRow';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActionButton, BusinessTextarea } from './MaxControls';
@@ -16,38 +17,9 @@ const fieldLabels: Record<string, string> = { purpose: 'Цель', amount: 'Ну
   region: 'Регион', industry: 'Направление', okved: 'ОКВЭД', companyType: 'Форма бизнеса', applicantType: 'Заявитель', ageMonths: 'Возраст, мес.', employees: 'Сотрудники', revenue: 'Оборот, ₽', isSme: 'Статус МСП', stage: 'Стадия' };
 const values: Record<string, string> = { legal_entity: 'Компания', individual_entrepreneur: 'ИП', project: 'Проект', team: 'Команда', individual: 'Физическое лицо', idea: 'Идея', prototype: 'Прототип', mvp: 'MVP', revenue: 'Есть выручка', yes: 'Да', no: 'Нет', unknown: 'Неизвестно' };
 
-/** Native disclosure keeps keyboard semantics and form state while its height settles. */
 export function AIIntakeDisclosure({ children }: { children: ReactNode }) {
-  const ref = useRef<HTMLDetailsElement>(null);
-  const animation = useRef<Animation | null>(null);
-  const expanded = useRef(false);
-  useEffect(() => {
-    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const settle = () => {
-      animation.current?.cancel(); animation.current = null;
-      if (ref.current) { ref.current.open = expanded.current; ref.current.classList.remove('is-toggling'); }
-    };
-    motion.addEventListener('change', settle);
-    window.addEventListener('resize', settle);
-    return () => { settle(); motion.removeEventListener('change', settle); window.removeEventListener('resize', settle); };
-  }, []);
-  return <details ref={ref} className="ai-entry business-intake-ai"><summary onClick={(event) => {
-    const element = ref.current!;
-    event.preventDefault();
-    const start = element.getBoundingClientRect().height;
-    animation.current?.cancel();
-    expanded.current = !expanded.current;
-    element.open = expanded.current;
-    const end = element.getBoundingClientRect().height;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !element.animate) return;
-    element.open = true;
-    element.classList.add('is-toggling');
-    const transition = element.animate([{ height: `${start}px` }, { height: `${end}px` }], {
-      duration: 240, easing: 'cubic-bezier(.22,.8,.25,1)',
-    });
-    animation.current = transition;
-    transition.onfinish = () => { element.open = expanded.current; element.classList.remove('is-toggling'); animation.current = null; };
-  }}>Заполнить с помощью AI</summary>{children}</details>;
+  return <InfoDisclosure className="ai-entry business-intake-ai"
+    summary={<InfoDisclosureRow as="summary" label="Заполнить с помощью AI" icon="spark" />}>{children}</InfoDisclosure>;
 }
 function Facts({ data }: { data: object }) {
   return <dl className="ai-facts">{Object.entries(data).map(([k, v]) => <div key={k}><dt>{fieldLabels[k] ?? k}</dt><dd>{v == null ? 'Не указано' : typeof v === 'boolean' ? v ? 'Да' : 'Нет' : typeof v === 'number' ? v.toLocaleString('ru-RU') : values[String(v)] ?? String(v)}</dd></div>)}</dl>;
@@ -70,11 +42,11 @@ export function AIResultView({ result, onOpen, onPrepare, onFunding, onNeed, onP
       <ActionButton className="secondary" disabled={applied.includes('need')} onClick={() => { onNeed(result.proposedNeed!); setApplied((v) => [...v, 'need']); }}>{applied.includes('need') ? 'Задача сохранена' : 'Применить к подбору'}</ActionButton></section>}
     {result.proposedProfile && onProfile && <section className="ai-proposal"><h3>Предложенные сведения о бизнесе</h3><Facts data={result.proposedProfile} />
       <ActionButton className="secondary" onClick={() => onProfile(result.proposedProfile!)}>Проверить в профиле</ActionButton></section>}
-    {!!result.scenarios.length && <details className="info-disclosure"><InfoDisclosureRow as="summary" label="Сравнение сценариев" />{result.scenarios.map((s, i) => <section className="ai-proposal" key={i}><h3>{s.label}</h3><Facts data={s.need} />
-      {s.matches.map((m) => <p key={m.id}>{m.title}: {fundingStatusLabels[m.status as keyof typeof fundingStatusLabels] ?? m.status}</p>)}</section>)}</details>}
-    {!!result.citations.length && <details className="ai-sources info-disclosure"><InfoDisclosureRow as="summary" label={`Источники и основания · ${result.citations.length}`} />{result.citations.map((s) => <div key={s.id}>
+    {!!result.scenarios.length && <InfoDisclosure summary={<InfoDisclosureRow as="summary" label="Сравнение сценариев" />}>{result.scenarios.map((s, i) => <section className="ai-proposal" key={i}><h3>{s.label}</h3><Facts data={s.need} />
+      {s.matches.map((m) => <p key={m.id}>{m.title}: {fundingStatusLabels[m.status as keyof typeof fundingStatusLabels] ?? m.status}</p>)}</section>)}</InfoDisclosure>}
+    {!!result.citations.length && <InfoDisclosure className="ai-sources" summary={<InfoDisclosureRow as="summary" label={`Источники и основания · ${result.citations.length}`} />}>{result.citations.map((s) => <div key={s.id}>
       {s.url?.startsWith('https://') ? <a href={s.url} target="_blank" rel="noreferrer">{s.title} ↗</a> : <b>{s.title}{s.page ? ` · стр. ${s.page}` : ''}</b>}
-      {s.checkedAt && <small>Проверен {s.checkedAt}</small>}<p>{s.text}</p></div>)}</details>}
+      {s.checkedAt && <small>Проверен {s.checkedAt}</small>}<p>{s.text}</p></div>)}</InfoDisclosure>}
     <div className="ai-actions">{result.actions.map((a, i) => {
       const run = a.type === 'open_program' && a.programId && onOpen ? () => onOpen(a.programId!)
         : a.type === 'prepare_application' && a.programId && onPrepare ? () => onPrepare(a.programId!)

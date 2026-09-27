@@ -11,10 +11,7 @@
   color: #c9bfff;
   line-height: 1.5;
 }
-.ai-entry[open] > summary {
-  margin-bottom: 16px;
-}
-.ai-entry > .ai-panel {
+.ai-entry > .info-disclosure-content > .ai-panel {
   border: 0;
   background: transparent;
   padding: 0;
@@ -93,7 +90,7 @@
   font-size: 12px;
   color: #9293a0;
 }
-.ai-sources > div {
+.ai-sources > .info-disclosure-content > div {
   margin-top: 14px;
   overflow-wrap: anywhere;
 }
@@ -126,19 +123,13 @@
   overflow-wrap: anywhere;
 }
 
-/* Only the business-intake sheet: one surface around the composer, not a nested widget. */
+/* The shared disclosure surface contains the composer without another widget frame. */
 .opora-theme .business-intake-ai {
   min-width: 0;
   margin: 0;
-  padding: 20px;
+  padding: 0;
 }
-.business-intake-ai.is-toggling {
-  overflow: clip;
-}
-.opora-theme .business-intake-ai[open] > summary {
-  margin-bottom: 20px;
-}
-.opora-theme .business-intake-ai > .ai-panel {
+.opora-theme .business-intake-ai > .info-disclosure-content > .ai-panel {
   min-width: 0;
   margin: 0;
   padding: 0;

@@ -23,7 +23,7 @@ export function OfficialDetails({ match, onAsk, personalized = true }: { match: 
     <ActionButton className="secondary" onClick={onAsk}>Объяснить с AI</ActionButton></> : <p className="data-note">Это общие условия. Добавьте бизнес для проверки соответствия.</p>}
   </section>;
 }
-export function ProjectOnboarding({ initial, onSave, onCancel }: { initial: ProjectProfile | null; onSave: (project: ProjectProfile) => void; onCancel: () => void }) {
+export function ProjectOnboarding({ initial, onSave, onCancel, onRemove }: { initial: ProjectProfile | null; onSave: (project: ProjectProfile) => void; onCancel: () => void; onRemove?: () => void }) {
   const [form, setForm] = React.useState<ProjectProfile>(initial ?? { name: '', region: '', industry: '', stage: 'idea', teamSize: null, fundingNeed: null, fundingPurpose: '', hasLegalEntity: false });
   const [error, setError] = React.useState('');
   function submit(e: FormEvent) {
@@ -43,5 +43,8 @@ export function ProjectOnboarding({ initial, onSave, onCancel }: { initial: Proj
       <label className="field">Цель<select value={form.fundingPurpose} onChange={(e) => setForm({ ...form, fundingPurpose: e.target.value })}><option value="">Укажу позже</option>{fundingPurposes.map((p) => <option key={p}>{p}</option>)}</select></label>
       <label className="field">Сумма финансирования, ₽<BusinessInput type="number" min="1" step="1" value={form.fundingNeed ?? ''} onChange={(e) => setForm({ ...form, fundingNeed: e.target.value ? Number(e.target.value) : null })} /></label>
     </div>{error && <p className="muted">Заполните название, регион и направление проекта.</p>}<div className="modal-actions"><ActionButton type="button" className="secondary" onClick={onCancel}>Отмена</ActionButton><ActionButton className="primary" type="submit">Сохранить проект</ActionButton></div></form>
+    {onRemove && <div className="business-removal">
+      <button type="button" className="remove-business" onClick={onRemove}>Удалить бизнес</button>
+    </div>}
   </ModalSheet>;
 }

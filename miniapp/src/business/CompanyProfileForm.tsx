@@ -1,3 +1,4 @@
+import { InfoDisclosure } from './InfoDisclosure';
 import type { FormEvent } from "react";
 import type { Profile } from "./domain";
 import { goals, validInn } from "./domain";
@@ -19,6 +20,7 @@ export function CompanyProfileForm({
   setError,
   account,
   saveProfile,
+  onRemove,
 }: {
   form: Profile;
   editForm: (next: Profile) => void;
@@ -31,6 +33,7 @@ export function CompanyProfileForm({
   setError: (next: string) => void;
   account: ReturnType<typeof useAccount>;
   saveProfile: (event: FormEvent) => void;
+  onRemove?: () => void;
 }) {
   return (
     <>
@@ -77,15 +80,15 @@ export function CompanyProfileForm({
                   <p>ОКВЭД {form.okved}</p>
                 </section>
               )}
-              <details
-                className="company-fields-section info-disclosure"
-                open={!autoFilledCompany}
-              >
-                <InfoDisclosureRow
+              <InfoDisclosure
+                className="company-fields-section"
+                defaultOpen={!autoFilledCompany}
+                summary={<InfoDisclosureRow
                   as="summary"
                   label="Реквизиты компании"
                   icon="building"
-                />
+                />}
+              >
                 <div className="form-grid">
                   <label className="field">
                     Название
@@ -164,12 +167,13 @@ export function CompanyProfileForm({
                     />
                   </label>
                 </div>
-              </details>
-              <details className="company-fields-section info-disclosure">
-                <InfoDisclosureRow
+              </InfoDisclosure>
+              <InfoDisclosure className="company-fields-section"
+                summary={<InfoDisclosureRow
                   as="summary"
                   label="Дополнительные параметры"
-                />
+                />}
+              >
                 <p className="muted">
                   Можно пропустить. Неизвестные значения не считаются нулевыми.
                 </p>
@@ -247,7 +251,7 @@ export function CompanyProfileForm({
                     </select>
                   </label>
                 </div>
-              </details>
+              </InfoDisclosure>
               <label className="field">
                 Чем занимается бизнес
                 <BusinessInput
@@ -349,6 +353,9 @@ export function CompanyProfileForm({
               </button>
             )}
           </div>
+          {onRemove && <div className="business-removal">
+            <button type="button" className="remove-business" onClick={onRemove}>Удалить бизнес</button>
+          </div>}
         </fieldset>
       </form>
     </>

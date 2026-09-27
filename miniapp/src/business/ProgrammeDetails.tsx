@@ -1,3 +1,4 @@
+import { InfoDisclosure } from './InfoDisclosure';
 import type { Dispatch, SetStateAction } from "react";
 import type { FundingMatch } from "../../api-server/funding-catalog/types";
 import { fundingKindLabels } from "../../api-server/funding-catalog/presentation";
@@ -49,18 +50,18 @@ export function ProgrammeDetails({
           </div>
           <span className="tag">{fundingKindLabels[selected.kind]}</span>
           <h2>{selected.title}</h2>
-          <details
+          <InfoDisclosure
             key={selected.id}
-            className="application-conditions info-disclosure"
+            className="application-conditions"
+            summary={<InfoDisclosureRow as="summary" label="Условия программы" />}
           >
-            <InfoDisclosureRow as="summary" label="Условия программы" />
             <p className="muted">{selected.description}</p>
             <OfficialDetails
               personalized={!!profile}
               match={match}
               onAsk={() => onAsk("strategy", "Объясни следующий шаг")}
             />
-          </details>
+          </InfoDisclosure>
           {activeApp && detached && (
             <section className="retained-application">
               <h3>Сохранённый черновик</h3>

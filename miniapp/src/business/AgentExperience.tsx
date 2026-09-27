@@ -1,3 +1,4 @@
+import { InfoDisclosure } from './InfoDisclosure';
 import type { FundingOpportunity } from '../../api-server/funding-catalog/types';
 import { InfoDisclosureRow } from './InfoDisclosureRow';
 // Файлы читаются на устройстве; отправка текста в AI запускается отдельной кнопкой.
@@ -87,8 +88,7 @@ export function DocumentChecklist({
                 </small>
               </span>
             </label>
-            <details className="info-disclosure">
-              <InfoDisclosureRow as="summary" label="Подготовить документ" icon="file" />
+            <InfoDisclosure summary={<InfoDisclosureRow as="summary" label="Подготовить документ" icon="file" />}>
               <dl>
                 <dt>Зачем</dt>
                 <dd>{guide.why}</dd>
@@ -165,7 +165,7 @@ export function DocumentChecklist({
                   <small>{reviews[name].notice}</small>
                 </div>
               )}
-            </details>
+            </InfoDisclosure>
           </section>
         );
       })}

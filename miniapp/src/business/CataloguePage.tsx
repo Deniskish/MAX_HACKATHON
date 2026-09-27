@@ -1,3 +1,4 @@
+import { InfoDisclosure } from './InfoDisclosure';
 import type { Dispatch, SetStateAction, ReactNode } from "react";
 import type {
   FundingNeed,
@@ -127,12 +128,11 @@ export function CataloguePage({
         </span>
         <Icon name="chevron" size={18} />
       </button>
-      <details
+      <InfoDisclosure
         className="catalog-tools"
         open={catalogToolsOpen}
-        onToggle={(event) => setCatalogToolsOpen(event.currentTarget.open)}
-      >
-        <summary>
+        onOpenChange={setCatalogToolsOpen}
+        summary={<summary>
           <Icon name="settings" size={18} />
           <span>Фильтры</span>
           {(filter !== "Все меры" || availability) && (
@@ -141,7 +141,8 @@ export function CataloguePage({
             </span>
           )}
           <Icon name="chevron" size={16} />
-        </summary>
+        </summary>}
+      >
         <div className="catalog-tools-body">
           <CatalogStatusFilter
             value={availability}
@@ -186,7 +187,7 @@ export function CataloguePage({
             Показать программы · {visiblePrograms.length}
           </ActionButton>
         </div>
-      </details>
+      </InfoDisclosure>
       <div className="catalog-results-header">
         <h2>
           {filter === "Все меры"

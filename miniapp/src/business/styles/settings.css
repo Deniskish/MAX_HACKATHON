@@ -170,6 +170,7 @@
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 .business-details-tabs > button[aria-selected="true"] {
   background: var(--surface);
@@ -180,6 +181,13 @@
 .business-details-link:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
+}
+.business-details-panels {
+  display: flow-root;
+  min-width: 0;
+}
+.business-details-panels.is-toggling {
+  overflow: clip;
 }
 .business-details-panel {
   min-width: 0;
@@ -243,7 +251,7 @@
   }
 }
 
-/* One compact interactive row; revealed content is not another framed card. */
+/* Shared native disclosure: a compact row and a separate inset content surface. */
 .opora-theme .info-disclosure {
   min-width: 0;
   padding: 0;
@@ -292,7 +300,7 @@
 .info-disclosure-row > svg:last-child {
   transition: transform 180ms ease;
 }
-.info-disclosure[open] > .info-disclosure-row > svg:last-child {
+.info-disclosure[open]:not([data-expanded="false"]) > .info-disclosure-row > svg:last-child {
   transform: rotate(90deg);
 }
 .opora-theme .info-disclosure-row:active {
@@ -302,15 +310,37 @@
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
-.info-disclosure > :not(summary) {
+.info-disclosure.is-toggling {
+  overflow: clip;
+}
+.opora-theme .info-disclosure-content {
+  display: flow-root;
+  min-width: 0;
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--glass-inset);
+  overflow-wrap: anywhere;
+}
+.info-disclosure-content > :first-child {
+  margin-top: 0;
+}
+.info-disclosure-content > * + * {
   margin-top: 16px;
+}
+.info-disclosure-content > :last-child {
+  margin-bottom: 0;
 }
 .opora-theme .company-fields-section.info-disclosure {
   margin-top: 16px;
 }
-.opora-theme .company-fields-section.info-disclosure > .form-grid {
+.opora-theme .company-fields-section .info-disclosure-content > .form-grid {
   margin: 16px 0 0;
   padding: 0;
+}
+.opora-theme .company-fields-section .info-disclosure-content > .form-grid:first-child {
+  margin-top: 0;
 }
 
 /* Auxiliary screens use section spacing instead of stacked framed surfaces. */

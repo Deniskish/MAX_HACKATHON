@@ -1,3 +1,5 @@
+import { InfoDisclosureRow } from './InfoDisclosureRow';
+import { InfoDisclosure } from './InfoDisclosure';
 import {
   useState,
   type Dispatch,
@@ -159,8 +161,7 @@ export function ApplicationWorkspace({
           setDocuments={setDocuments}
           onUpdate={onUpdate}
         />
-        <details className="document-composer">
-          <summary>Подготовить текст документа</summary>
+        <InfoDisclosure className="document-composer" summary={<InfoDisclosureRow as="summary" label="Подготовить текст документа" icon="file" />}>
           <DraftComposer
             program={opportunity}
             profile={profile}
@@ -170,7 +171,7 @@ export function ApplicationWorkspace({
             onAsk={(text) => onAsk("draft", text)}
             onDownload={(text) => onDownload(text, "document")}
           />
-        </details>
+        </InfoDisclosure>
         <ActionButton className="primary" onClick={() => move(2)}>
           Проверить комплект <Icon name="arrow" />
         </ActionButton>

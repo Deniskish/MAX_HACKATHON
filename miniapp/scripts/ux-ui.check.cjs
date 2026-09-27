@@ -127,6 +127,19 @@ async function close(page) {
     .getByRole("button", { name: "Закрыть", exact: true })
     .click();
 }
+async function disclosure(page, selector, open) {
+  const panel = page.locator(selector);
+  const reduced = await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
+  await panel.locator(':scope > summary').click();
+  assert.equal(await panel.evaluate(e => e.getAnimations().length > 0), !reduced);
+  await panel.evaluate(async e => { await Promise.all(e.getAnimations().map(a => a.finished.catch(() => {}))); });
+  assert.equal(await panel.evaluate(e => e.open), open);
+  if (open) {
+    const surface = panel.locator(':scope > .info-disclosure-content');
+    assert.equal(await surface.evaluate(e => getComputedStyle(e).borderTopWidth), '1px');
+    assert.equal(await surface.evaluate(e => e.scrollWidth <= e.clientWidth + 1), true);
+  }
+}
 async function snapshot(page, name) {
   assert.deepEqual(
     await page
@@ -251,6 +264,18 @@ async function snapshot(page, name) {
             });
             // Unknown checklist remains incomplete even with a historical confirmation.
             await load(page, withoutDocs.id);
+            assert.equal(await page.locator('.modal > h2').evaluate(e => getComputedStyle(e).textAlign), 'justify');
+            await disclosure(page, '.application-conditions', true);
+            await snapshot(page, name + '-conditions');
+            await disclosure(page, '.application-conditions', false);
+            await page.emulateMedia({ reducedMotion: 'reduce' });
+            await disclosure(page, '.application-conditions', true);
+            await disclosure(page, '.application-conditions', false);
+            await page.emulateMedia({ reducedMotion: 'no-preference' });
+            // Rapid reversals settle closed and leave no fixed height behind.
+            await page.locator('.application-conditions > summary').evaluate(e => { e.click(); e.click(); });
+            await page.waitForFunction(() => !document.querySelector('.application-conditions.is-toggling'));
+            assert.equal(await page.locator('.application-conditions').evaluate(e => e.open), false);
             await tab(page, "Проверка");
             assert.equal(
               await page
@@ -364,6 +389,17 @@ async function snapshot(page, name) {
             // Rule-based results survive AI outage; filters and scroll survive navigation.
             await nav(page, 1);
             assert.ok((await page.locator(".funding-card").count()) > 0);
+            assert.ok(await page.locator('.funding-card > h3').evaluateAll(nodes => nodes.every(e =>
+              getComputedStyle(e).textAlign === 'center' && e.scrollWidth <= e.clientWidth + 1)));
+            assert.ok(['left', 'start'].includes(await page.locator('.funding-card > p.muted').first().evaluate(e => getComputedStyle(e).textAlign)));
+            await disclosure(page, '.catalog-tools', true);
+            await snapshot(page, name + '-filters');
+            await nav(page, 3);
+            await nav(page, 1);
+            assert.equal(await page.locator('.catalog-tools').evaluate(e => e.open), true);
+            await page.getByRole('button', { name: /Показать программы ·/ }).click();
+            await page.waitForFunction(() => !document.querySelector('.catalog-tools.is-toggling'));
+            assert.equal(await page.locator('.catalog-tools').evaluate(e => e.open), false);
             await page
               .getByRole("button", { name: "Все меры", exact: true })
               .click();
@@ -452,6 +488,7 @@ async function snapshot(page, name) {
                 .getByRole("button", { name: "Настройки", exact: true })
                 .click();
               assert.equal(await page.getByRole("radio").count(), 3);
+              assert.equal(await page.getByRole('button', { name: 'Удалить бизнес', exact: true }).count(), 0);
               assert.equal(
                 await page
                   .getByRole("button", { name: /^Уведомления/ })
@@ -506,7 +543,16 @@ async function snapshot(page, name) {
             await page
               .getByRole("tab", { name: "Данные", exact: true })
               .click();
+            assert.equal(await page.locator('.business-details-panels').evaluate(e => e.getAnimations().length > 0), true);
+            await page.waitForFunction(() => !document.querySelector('.business-details-panels.is-toggling'));
             await snapshot(page, name + "-company-data");
+            await page.getByRole('tab', { name: 'Данные', exact: true }).press('ArrowLeft');
+            await page.waitForFunction(() => !document.querySelector('.business-details-panels.is-toggling'));
+            assert.equal(await page.getByRole('tab', { name: 'Рекомендации', exact: true }).getAttribute('aria-selected'), 'true');
+            await page.emulateMedia({ reducedMotion: 'reduce' });
+            await page.getByRole('tab', { name: 'Данные', exact: true }).click();
+            assert.equal(await page.locator('.business-details-panels').evaluate(e => e.getAnimations().length), 0);
+            await page.emulateMedia({ reducedMotion: 'no-preference' });
             await page.locator(".app-back").click();
             assert.equal(
               await page
@@ -518,6 +564,28 @@ async function snapshot(page, name) {
               0,
             );
             assert.equal(await page.getByRole("button", { name: /^Уведомления/ }).count(), 0);
+            await page.getByRole('button', { name: 'Редактировать профиль', exact: true }).click();
+            await disclosure(page, '.company-fields-section:first-of-type', false);
+            await disclosure(page, '.company-fields-section:first-of-type', true);
+            await disclosure(page, '.company-fields-section:nth-of-type(2)', true);
+            const companyName = page.locator('.company-fields-section').first().getByRole('textbox').first();
+            await companyName.fill('Несохранённое название');
+            await page.getByRole('button', { name: 'Удалить бизнес', exact: true }).click();
+            const confirmation = page.getByRole('dialog', { name: 'Удалить бизнес?', exact: true });
+            await confirmation.waitFor();
+            assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('opora.workspace')).data.profile.name), workspace.data.profile.name);
+            await snapshot(page, name + '-delete-confirmation');
+            await confirmation.getByRole('button', { name: 'Отмена', exact: true }).click();
+            assert.equal(await companyName.inputValue(), 'Несохранённое название');
+            await page.getByRole('button', { name: 'Удалить бизнес', exact: true }).click();
+            await page.keyboard.press('Escape');
+            assert.equal(await confirmation.count(), 0);
+            assert.equal(await companyName.inputValue(), 'Несохранённое название');
+            await page.getByRole('button', { name: 'Удалить бизнес', exact: true }).click();
+            await page.goBack();
+            await confirmation.waitFor({ state: 'detached' });
+            assert.equal(await companyName.inputValue(), 'Несохранённое название');
+            await close(page);
             await nav(page, 0);
             await page.locator(".home-opportunities").click();
             failAI = true;
@@ -647,6 +715,25 @@ async function snapshot(page, name) {
             assert.ok(subscriptionCalls.some(call => call.method === "DELETE"));
             assert.equal(await page.getByRole("button", { name: /^Уведомления/ }).count(), 0);
             await snapshot(page, name + "-max-delivery");
+            // Deletion operates only on this isolated test workspace; no MAX account is connected.
+            await page.evaluate(() => { window.WebApp = { ...window.WebApp, initData: '' }; window.dispatchEvent(new Event('opora:max-ready')); });
+            await page.locator('.app-back').click();
+            await nav(page, 3);
+            await page.getByRole('button', { name: 'Редактировать профиль', exact: true }).click();
+            await page.getByRole('button', { name: 'Удалить бизнес', exact: true }).click();
+            const retained = await page.evaluate(() => { const { applications, saved } = JSON.parse(localStorage.getItem('opora.workspace')).data; return { applications, saved }; });
+            await page.getByRole('dialog', { name: 'Удалить бизнес?', exact: true }).getByRole('button', { name: 'Удалить', exact: true }).click();
+            await page.locator('.guest-hub').waitFor();
+            assert.equal(await page.locator('dialog[open]').count(), 0);
+            assert.deepEqual(await page.evaluate(() => { const { profile, applications, saved } = JSON.parse(localStorage.getItem('opora.workspace')).data; return { profile, applications, saved }; }), { profile: null, ...retained });
+            // A project without a legal entity exposes the same safe removal path.
+            await page.evaluate(() => { const data = JSON.parse(localStorage.getItem('opora.workspace')); data.data.projectProfile = { name: 'Тестовый проект', region: 'Москва', industry: 'Мебель', stage: 'idea', hasLegalEntity: false, teamSize: null, fundingNeed: null, fundingPurpose: '' }; localStorage.setItem('opora.workspace', JSON.stringify(data)); });
+            await load(page);
+            await nav(page, 3);
+            await page.getByRole('button', { name: 'Редактировать профиль', exact: true }).click();
+            await page.getByRole('button', { name: 'Удалить бизнес', exact: true }).click();
+            await page.getByRole('dialog', { name: 'Удалить бизнес?', exact: true }).getByRole('button', { name: 'Отмена', exact: true }).click();
+            await page.getByRole('dialog', { name: 'Проект без компании', exact: true }).waitFor();
             assert.deepEqual(errors, []);
             results.push({
               engine,
@@ -654,7 +741,7 @@ async function snapshot(page, name) {
               width,
               height,
               status: "PASS",
-              checks: 21,
+              checks: 28,
             });
             console.log(name, "PASS");
             fs.writeFileSync(
