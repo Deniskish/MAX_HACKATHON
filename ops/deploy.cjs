@@ -159,10 +159,19 @@ async function main(root, sha) {
           const processes = JSON.parse(run('pm2', ['jlist'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
           let health;
           try { health = JSON.parse(fs.readFileSync(botHealthFile, 'utf8')); } catch { /* startup */ }
+          if (health?.revision === revision && health.phase === 'failed') {
+            console.error('Bot startup failure:', JSON.stringify({ phase: health.failedAt, code: health.code, status: health.status }));
+            throw new Error('BOT_STARTUP_FAILED');
+          }
           if (botReady(processes, health, revision)) { pollingReady = true; break; }
           await new Promise(resolve => setTimeout(resolve, 3000));
         }
-        if (!pollingReady) throw new Error('BOT_POLLING_NOT_READY');
+        if (!pollingReady) {
+          let phase;
+          try { phase = JSON.parse(fs.readFileSync(botHealthFile, 'utf8')).phase; } catch { /* absent */ }
+          console.error('Bot readiness timeout:', phase || 'no startup report');
+          throw new Error('BOT_POLLING_NOT_READY');
+        }
         console.log('Bot readiness: API authenticated, MAX polling active.');
       }
       // Catch crash loops, including an already configured bot that fails after restart.

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { writeFileSync, renameSync } from 'node:fs';
 import { createHandler } from './transport';
 import { OporaAPI } from './api-client';
+import { waitForAPI } from './startup';
 config({ path: path.resolve(process.cwd(), '../.env'), quiet: true });
 config({ quiet: true });
 config({ path: path.resolve(process.cwd(), '../.env.bot'), override: true, quiet: true });
@@ -27,23 +28,32 @@ bot.catch(() => console.error('MAX update failed'));
 // A running process alone does not prove MAX updates reach it. Publish readiness
 // only after the shared API accepts our signature and MAX returns an update batch.
 const getUpdates = bot.api.getUpdates.bind(bot.api);
+function health(data: Record<string, unknown>) {
+  const file = process.env.OPORA_BOT_HEALTH_FILE;
+  if (!file) return;
+  const temp = `${file}.${process.pid}.tmp`;
+  writeFileSync(temp, JSON.stringify({ pid: process.pid, revision: process.env.OPORA_RELEASE_SHA, ...data }), { mode: 0o600 });
+  renameSync(temp, file);
+}
 bot.api.getUpdates = async (...args) => {
   const result = await getUpdates(...args);
-  const file = process.env.OPORA_BOT_HEALTH_FILE;
-  if (file) {
-    const temp = `${file}.${process.pid}.tmp`;
-    writeFileSync(temp, JSON.stringify({ pid: process.pid, revision: process.env.OPORA_RELEASE_SHA, polledAt: Date.now() }), { mode: 0o600 });
-    renameSync(temp, file);
-  }
+  health({ phase: 'polling', polledAt: Date.now() });
   return result;
 };
+let phase = 'max_identity';
 async function start() {
+  health({ phase });
   const identity = await bot.api.getMyInfo();
-  await new OporaAPI(process.env.BOT_API_URL || 'http://127.0.0.1:3002', token!, String(identity.user_id))
-    .request('GET', '/api/bot/workspace');
+  phase = 'shared_api'; health({ phase });
+  await waitForAPI(new OporaAPI(process.env.BOT_API_URL || 'http://127.0.0.1:3002', token!, String(identity.user_id)));
+  phase = 'max_polling'; health({ phase });
   await bot.start();
 }
-start().catch(() => {
+start().catch(error => {
+  const code = error.cause?.code || error.code;
+  const diagnostic = { phase: 'failed', failedAt: phase, code: /^[A-Z_]{1,50}$/.test(code || '') ? code : 'STARTUP_FAILED', status: Number.isInteger(error.status) ? error.status : undefined };
+  try { health(diagnostic); } catch { /* report to stderr if health storage fails */ }
+  console.error('Bot startup:', JSON.stringify(diagnostic));
   console.error('Не удалось запустить бота MAX. Проверьте токен и соединение.');
-  process.exitCode = 1;
+  process.exit(1);
 });
