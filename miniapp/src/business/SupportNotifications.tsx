@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FundingNeed, FundingProfile } from '../../api-server/funding-catalog/types';
 import { ActionButton } from './MaxControls';
-import { ContextHelp } from './ContextHelp';
+
 import { maxInitData } from './max-auth';
 type Notice = { id: string; programId: string; title: string; reason: string; source: string; createdAt: number; readAt: number | null; delivery: string };
 type State = { enabled: boolean; bot: boolean; aiConfigured: boolean; items: Notice[]; monitor?: { lastRun: string | null; lastError: string | null } };
@@ -85,7 +85,6 @@ export function SupportNotificationSettings({ notifications: n }: { notification
       {n.aiConfigured && n.monitor?.lastError && <p role="status">Проверка или доставка задерживается. Повторим автоматически.</p>}
       {n.error && <p className="error" role="alert">{n.error}</p>}
     </> : <p>Откройте «Опору» в MAX, чтобы подключить уведомления.</p>}
-    <ContextHelp title="Как это работает"><p>Проверяем официальный каталог каждые 15 минут. AI сравнивает новые меры с регионом, деятельностью и целями бизнеса. Подтверждение всех условий и решение по заявке остаются у оператора.</p><p>Для фоновой проверки на сервере сохраняются параметры подбора и ваш ID в MAX. ИНН, название компании и документы не отправляются. Отключение уведомлений удаляет подписку и её историю.</p><p>Бот сможет написать, если вы начали с ним диалог и не заблокировали его. Повторите вход в приложение, если MAX просит обновить авторизацию.</p></ContextHelp>
   </section>;
 }
 export function SupportNotificationList({ notifications: n, onOpen }: { notifications: ReturnType<typeof useSupportNotifications>; onOpen: (id: string) => void }) {

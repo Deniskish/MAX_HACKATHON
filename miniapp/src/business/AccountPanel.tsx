@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Profile } from './domain';
 import { maxInitData } from './max-auth';
-import { ContextHelp } from './ContextHelp';
+
 type Account = { id: string; company: Profile | null; revision: number; identity: 'max'; authority: 'unverified'; esia: 'not_configured'; canSubmitApplications: false };
 export function useAccount() {
   const [account, setAccount] = useState<Account | null>(null), [error, setError] = useState('');
@@ -36,7 +36,7 @@ export function useAccount() {
     save: (company: Profile) => update('PUT', company),
     remove: () => update('DELETE') };
 }
-export function AccountPanel({ state, onRestore, onSave, hasCompany, presentation = false, esiaSignedIn = false }: { state: ReturnType<typeof useAccount>; onRestore: (profile: Profile) => void; onSave: () => void; hasCompany: boolean; presentation?: boolean; esiaSignedIn?: boolean }) {
+export function AccountPanel({ state, onRestore, onSave, hasCompany, esiaSignedIn = false }: { state: ReturnType<typeof useAccount>; onRestore: (profile: Profile) => void; onSave: () => void; hasCompany: boolean; esiaSignedIn?: boolean }) {
   return <section className="profile-panel account-panel">
     <h3>{state.account ? 'Аккаунт MAX' : esiaSignedIn ? 'Аккаунт' : state.available ? 'Подключение аккаунта' : 'Гостевой режим'}</h3>
     <p>{state.account ? 'Вход подтверждён через MAX.' : esiaSignedIn ? 'Вход через Госуслуги.' : state.available ? 'Проверяем данные входа.' : 'Профиль хранится на этом устройстве. Для аккаунта откройте «Опору» через MAX.'}</p>
@@ -44,9 +44,5 @@ export function AccountPanel({ state, onRestore, onSave, hasCompany, presentatio
     {state.error && <button className="secondary" onClick={() => void state.refresh()}>Повторить вход</button>}
     {state.account && hasCompany && !state.account.company && <button className="secondary" disabled={state.loading} onClick={onSave}>Сохранить компанию в аккаунте</button>}
     {state.account?.company && !hasCompany && <button className="secondary" onClick={() => onRestore(state.account!.company!)}>Загрузить компанию из аккаунта</button>}
-    <ContextHelp title="Полномочия и подача заявок">
-      <p>Вход через MAX подтверждает аккаунт пользователя. ИНН загружает открытые сведения о компании и не подтверждает, что вы её руководитель или представитель.</p>
-      <p>{presentation ? 'Для подачи подтвердите полномочия выбранной компании и подготовьте комплект документов.' : 'Подбор поддержки и подготовка черновиков доступны. Подача проходит на сайте оператора программы.'}</p>
-    </ContextHelp>
   </section>;
 }

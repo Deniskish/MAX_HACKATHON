@@ -1,10 +1,10 @@
 import { AssistantPage } from './AssistantPage';
 import { ThemeSettings } from './ThemeSettings';
 import { BusinessDetailsPage } from './BusinessDetailsPage';
-import { AIDataHelp, ContextHelp, GuideLink } from './ContextHelp';
+
 import { GlassArt } from './GlassArt';
 // Общее состояние экранов, профиля и заявок. Условия программ считаются в domain.
-import { CompanySources, FieldSource } from './CompanySource';
+import { FieldSource } from './CompanySource';
 import { editCompanyProfile, mergeCompanyProfile, requestCompanyData } from './company-data';
 import { FundingExperience, FundingOpportunityCard, FundingResults } from './FundingExperience';
 import { fundingFingerprint } from './funding';
@@ -168,13 +168,11 @@ export default function BusinessApp() {
     else if (action === 'profile') openProfile();
     else navigate(action);
   }
-  const [sourcesCheckedAt, setSourcesCheckedAt] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     const refresh = () => fetch('/api/funding/updates', { signal: controller.signal }).then((r) => r.ok ? r.json() : null).then((data) => {
       if (data && !controller.signal.aborted) {
         setSourceUpdates(Array.isArray(data.updates) ? data.updates.filter((u: any) => u && typeof u.id === 'string' && typeof u.title === 'string' && typeof u.url === 'string' && u.url.startsWith('https://')).slice(0, 30) : []);
-        setSourcesCheckedAt(typeof data.checkedAt === 'string' ? data.checkedAt : null);
       }
     }).catch(() => {});
     void refresh(); const timer = setInterval(() => void refresh(), 5 * 60 * 1000);
@@ -497,8 +495,7 @@ export default function BusinessApp() {
   function exportCalendar() { download(calendarICS(calendarCatalog), 'opora-calendar.ics', 'text/calendar;charset=utf-8'); }
   function programCard(p: Program) {
     const match = matches.find((m) => m.opportunity.id === p.id)!;
-    return <FundingOpportunityCard key={p.id} match={match} onOpen={openFunding} onSave={toggleSaved} saved={saved.includes(p.id)} personalized={!!profile}
-      aiReason={profile ? aiPriorities.find((item) => item.programId === p.id)?.reason : undefined} />;
+    return <FundingOpportunityCard key={p.id} match={match} onOpen={openFunding} onSave={toggleSaved} saved={saved.includes(p.id)} personalized={!!profile} />;
   }
 
   return (
@@ -518,7 +515,7 @@ export default function BusinessApp() {
               <Icon name="chevron" size={18} />
             </button>
             <ThemeSettings />
-            <AccountPanel state={account} presentation={demo.state.enabled} esiaSignedIn={demo.state.enabled && demo.state.signedIn} hasCompany={!!companyProfile} onRestore={(p) => { setProfile({ ...emptyProfile, ...p }); setProjectProfile(null); setToast('Компания загружена из аккаунта'); }} onSave={() => { if (companyProfile) void account.save(companyProfile).then(() => setToast('Компания сохранена в аккаунте')).catch(e => setToast(e.message)); }} />
+            <AccountPanel state={account} esiaSignedIn={demo.state.enabled && demo.state.signedIn} hasCompany={!!companyProfile} onRestore={(p) => { setProfile({ ...emptyProfile, ...p }); setProjectProfile(null); setToast('Компания загружена из аккаунта'); }} onSave={() => { if (companyProfile) void account.save(companyProfile).then(() => setToast('Компания сохранена в аккаунте')).catch(e => setToast(e.message)); }} />
             {profile && <SupportNotificationSettings notifications={supportNotifications} />}
             <DemoSettings demo={demo} onOpen={() => openVerification()} />
             {profile && <div className="business-removal"><button type="button" className="remove-business" onClick={() => { setDeleteBusinessError(''); setDeleteBusinessOpen(true); }}>Удалить бизнес</button></div>}
@@ -547,12 +544,11 @@ export default function BusinessApp() {
           {page === 'programs' && (
             <>
               {profile && <div className="catalog-scopes catalog-scope-tabs" role="group" aria-label="Область подбора" data-scope={catalogScope}><span className="catalog-scope-indicator" aria-hidden="true" />{([['personal', 'Для вас'], ['all', 'Все меры'], ['saved', `Сохранённые · ${saved.length}`]] as const).map(([scope, title]) => <button key={scope} aria-pressed={catalogScope === scope} onClick={() => { setCatalogScope(scope); setOnlySaved(scope === 'saved'); }}>{title}</button>)}</div>}
-              {profile && catalogScope === 'personal' && businessAnalysis.status !== 'ready' && <ContextHelp title={businessAnalysis.status === 'loading' ? 'AI уточняет подбор…' : 'AI-подбор не завершён'}>
+              {profile && catalogScope === 'personal' && businessAnalysis.status !== 'ready' && <div className="catalog-ai-status" role="status">
                 <p>{businessAnalysis.status === 'loading' ? 'Сравниваем меры с данными бизнеса.' : businessAnalysis.error}</p>
-                {personal.candidates.length > 0 && <p>Ниже — варианты по условиям каталога. Соответствие указано в каждой карточке; это не AI-рекомендации.</p>}
                 {businessAnalysis.status === 'unavailable' && <button onClick={businessAnalysis.refresh}>Повторить анализ</button>}
                   <button onClick={() => { setCatalogScope('all'); setOnlySaved(false); setFilter('Все меры'); setQuery(''); setAvailability(''); }}>Открыть весь каталог · {officialFundingCatalog.length} <Icon name="arrow" size={14} /></button>
-              </ContextHelp>}
+              </div>}
               <div className="catalog-toolbar">
                 {!profile && <div className="segmented-control" aria-label="Показать программы">
                   <button
@@ -623,7 +619,7 @@ export default function BusinessApp() {
                 {visiblePrograms.slice(0, catalogLimit).map(({ p }) => programCard(p))}
               </div>
               {visiblePrograms.length > catalogLimit && <ActionButton className="secondary" onClick={() => setCatalogLimit((n) => n + 30)}>Показать ещё</ActionButton>}
-              <ContextHelp title="Обновление каталога"><p>{liveStatus?.checkedAt ? `Проверен ${new Date(liveStatus.checkedAt).toLocaleString('ru-RU')}.` : 'Загружаем актуальные меры.'} {liveStatus?.error ? 'Источник временно недоступен, показываем последнюю сохранённую версию.' : 'Автоматическая проверка каждые 15 минут.'}</p><p>Источник новых отборов: <a href="https://promote.budget.gov.ru/public/minfin/activity" target="_blank" rel="noreferrer">портал Минфина России</a>. Условия и сроки сверяйте в объявлении. В разделе «Для бизнеса» новые меры появляются после AI-анализа.</p></ContextHelp>
+              {liveStatus?.error && <p role="status">Не удалось обновить каталог. Показана сохранённая версия.</p>}
               {!visiblePrograms.length && (
                 <div className="empty-state">
                   <span className="empty-symbol">
@@ -659,9 +655,6 @@ export default function BusinessApp() {
                   </ActionButton>
                 </div>
               )}
-              <ContextHelp title="Как работает подбор"><p>
-                Условия проверены по официальным страницам; перед подачей сверяйте актуальную редакцию. Совпадение правил не подтверждает право на поддержку.
-              </p></ContextHelp>
             </>
           )}
           {page === 'applications' && !profile && <section className="empty-state guest-applications"><GlassArt shape="tiles" size={120} /><h2>Заявки вашего бизнеса</h2><p>Добавьте бизнес, чтобы подготовить заявку.</p><ActionButton className="primary" onClick={() => setHomePanel('business')}>Добавить бизнес</ActionButton><ActionButton className="secondary" onClick={() => browse()}>Посмотреть программы</ActionButton></section>}
@@ -772,7 +765,6 @@ export default function BusinessApp() {
           {page === 'business-details' && profile && <BusinessDetailsPage name={profile.name}
             analysis={<AIPanel title="План развития" task="analysis" context={aiContext} initialQuestion="Проанализируй мой бизнес: какие возможности рассмотреть, чего не хватает и какой следующий шаг?" {...aiHandlers} />}
             updates={<div className="business-updates"><h2>Изменения в поддержке</h2>
-            <ContextHelp title="Об источниках"><p>{sourcesCheckedAt ? `Последняя проверка: ${new Date(sourcesCheckedAt).toLocaleString('ru-RU')}.` : 'Первая проверка источников ещё не завершена.'} Изменение страницы требует сверки условий программы.</p></ContextHelp>
             {sourceUpdates.length ? sourceUpdates.map((update) => <article className="ai-proposal" key={update.id}>
               <span className="tag">{update.kind === 'discovered' ? 'Найден новый материал' : saved.includes(update.opportunityId ?? '') ? 'По сохранённой программе' : 'Изменилась страница'}</span>
               <p><a href={update.url} target="_blank" rel="noreferrer">{update.title} ↗</a></p>
@@ -792,7 +784,7 @@ export default function BusinessApp() {
                     Редактировать
                   </ActionButton>
                 </div>
-                {companyProfile && <><CompanySources profile={profile} /><FieldSource profile={profile} field="name" /></>}
+                {companyProfile && <><FieldSource profile={profile} field="name" /></>}
                 {projectProfile && !companyProfile ? <dl className="profile-grid">
                   {[
                     ['Регион', projectProfile.region],
@@ -879,10 +871,9 @@ export default function BusinessApp() {
             onClear={() => { chatRequest.current?.abort(); chatRequest.current = null; setSending(false); setMessages([]); setChatProgram(null); setQuestion(''); setChatFailure(null); }}
             program={chatProgram ? { title: chatProgram.title, onOpen: () => setSelected(chatProgram), onRemove: () => setChatProgram(null) } : undefined}
             context={(closeInfo) => <>
-              {profile ? <p><b>{profile.name}</b> · {profile.region}<br />Цель: {need.purpose || 'пока не указана'}. Ответы учитывают этот профиль.</p>
-                : <><p>Задавайте общие вопросы без профиля. Для персонального подбора можно добавить бизнес.</p><ActionButton className="secondary" onClick={() => { closeInfo(); setHomePanel('business'); }}>Добавить бизнес</ActionButton></>}
+              {profile ? <p><b>{profile.name}</b> · {profile.region}<br />Цель: {need.purpose || 'пока не указана'}.</p>
+                : <ActionButton className="secondary" onClick={() => { closeInfo(); setHomePanel('business'); }}>Добавить бизнес</ActionButton>}
               <AdaptiveInsight analysis={businessAnalysis} section="assistant" onAction={(action) => { closeInfo(); followInsight(action); }} compact />
-              <p>GigaChat получает вопрос, последние сообщения, параметры бизнеса и выбранной заявки. Известные реквизиты скрываются. Не добавляйте лишние персональные данные. История сохраняется на этом устройстве.</p>
             </>}
             renderMessage={(index) => {
               const message = messages[index];
@@ -924,7 +915,6 @@ export default function BusinessApp() {
                 <h2>{step === 0 ? 'ИНН вашего бизнеса' : 'Данные для подбора'}</h2>
                 <p className="muted">Шаг {step + 1} из 2</p>
               </header>
-              <CompanySources profile={form} />
               <fieldset className="company-form-fields" disabled={companyLoading || savingCompany}>
                 {step === 0 ? (
                   <label className="field">
@@ -1112,7 +1102,6 @@ export default function BusinessApp() {
                   </ActionButton>
                   {step === 0 && <button type="button" className="company-manual-fallback" onClick={() => { if (!validInn(form.inn)) { setError('Введите корректный ИНН.'); return; } setError(''); setStep(1); }}>Заполнить вручную</button>}
                 </div>
-                {step === 1 && <AIDataHelp>После сохранения GigaChat анализирует параметры бизнеса для персонального подбора. Исходные файлы автоматически не отправляются.</AIDataHelp>}
               </fieldset>
             </form>
           )}
@@ -1151,7 +1140,6 @@ export default function BusinessApp() {
                     hasBudget={Number(activeApp.budget) > 0}
                   />
                   <h3 id="application-documents">Подготовка документов</h3>
-                  <GuideLink topic="documents" />
                   {!selected.documents.length && <p>Точный перечень документов не подтвержден. Сверьте комплект с официальным оператором.</p>}
                   <DocumentChecklist
                     key={`checklist:${selected.id}`}

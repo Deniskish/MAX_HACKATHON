@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActionButton } from './MaxControls';
-import { ContextHelp } from './ContextHelp';
+
 import { Icon } from './Icon';
 import type { Profile } from './domain';
 import { demoConfirmed, demoKey, demoSubmit, emptyDemo, readDemo, type VerificationDemo } from './verification-demo';
@@ -54,7 +54,6 @@ export function VerificationPage({ demo, company, onAdd, onDone }: { demo: DemoC
         }}>Подтвердить компанию</ActionButton>
         {error && <p className="error" role="alert">{error}</p>}
       </section> : <section className="profile-panel"><Icon name="check" size={34} /><h2>Компания подтверждена</h2><p>{company.name}</p><p>Подготовьте комплект документов и перейдите к подаче.</p><ActionButton className="primary" onClick={onDone}>Продолжить</ActionButton></section>}
-    <ContextHelp title="Зачем нужна проверка"><p>ИНН позволяет загрузить открытые сведения. Для подачи заявки нужно подтвердить право действовать от имени компании. Для другой компании проверка выполняется заново.</p></ContextHelp>
     {demo.error && <p role="alert" className="error">{demo.error}</p>}
   </section>;
 }

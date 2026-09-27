@@ -4,7 +4,7 @@ import { aiErrorMessage, requestAI, type AIRequest, type AIResult } from './ai-c
 import type { FundingNeed, FundingProfile } from '../../api-server/funding-catalog/types';
 import { fundingStatusLabels } from '../../api-server/funding-catalog/presentation';
 import { Icon } from './Icon';
-import { AIDataHelp } from './ContextHelp';
+
 
 type Handlers = {
   onOpen?: (id: string) => void; onPrepare?: (id: string) => void; onFunding?: () => void;
@@ -108,7 +108,6 @@ export function AIPanel({ title, task, context, initialQuestion = '', button = '
   }
   return <section className="widget ai-panel" aria-busy={busy}><div className="widget-heading"><h2>{title}</h2><Icon name="spark" /></div>
     <label className="field">Задача для помощника<BusinessTextarea rows={3} maxLength={2000} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Опишите задачу своими словами" /></label>
-    <AIDataHelp>GigaChat получает запрос и сведения, нужные для этой задачи. Для проверки заявки — также текст проекта, черновика и выбранных документов.</AIDataHelp>
     <ActionButton className="primary" disabled={busy || !question.trim()} onClick={() => void run()}>{busy ? 'Анализируем…' : error ? 'Повторить запрос' : button}</ActionButton>
     {busy && <ActionButton className="text-button" onClick={() => { pending.current?.abort(); pending.current = null; setBusy(false); }}>Отменить</ActionButton>}
     {error && <p className="error" role="alert">{error}</p>}

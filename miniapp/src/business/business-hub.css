@@ -54,7 +54,6 @@
 .home-actions .adaptive-insight button { color: #c3b4ff; }
 .chat-panel .adaptive-insight { max-height: 158px; overflow-y: auto; margin: 0; padding: 12px; }
 .chat-panel .adaptive-insight h2 { font-size: 14px; margin: 7px 0; }
-.ai-program-reason { border-left: 2px solid #8064ff80; padding: 6px 0 6px 12px; margin: 12px 0; font-size: 12px; line-height: 1.7; color: #b8afcf; }
 .home-adaptive { aspect-ratio: auto; min-height: 96px; align-items: center; }
 .home-adaptive .home-action-title { overflow-wrap: anywhere; }
 

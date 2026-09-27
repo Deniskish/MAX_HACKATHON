@@ -34,12 +34,10 @@
 .business-details-panel .widget-heading h2 { margin: 0; }
 .business-details-panel .ai-panel > .field { margin: 0; gap: 10px; font-weight: 500; }
 .opora-theme .business-details-panel .opora-native-textarea { min-height: 180px; padding: 16px; font-size: 16px; font-weight: 400; line-height: 1.5; }
-.business-details-panel .ai-panel > .context-help { margin: 0; }
 .business-information .section-title { display: grid; gap: 16px; }
 .business-information .profile-grid { grid-template-columns: minmax(0, 1fr); }
 .business-information .profile-grid > div { min-width: 0; }
 .business-information dd { overflow-wrap: anywhere; }
-.business-updates > .context-help { margin: 12px 0 20px; }
 .business-updates .ai-proposal { margin: 12px 0; padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--glass-inset); overflow-wrap: anywhere; }
 .business-updates-empty { display: grid; justify-items: center; gap: 12px; padding: 40px 8px; text-align: center; color: var(--muted); }
 .business-updates-empty h3, .business-updates-empty p { margin: 0; }

@@ -9,9 +9,9 @@ import { amountLabel, fundingKindLabels, fundingSourceLabel, fundingStatusLabels
   rateLabel, scoreNotice, termLabel } from '../../api-server/funding-catalog/presentation';
 import { fundingFingerprint, requestFunding, restoreFundingNeed } from './funding';
 import { AIPanel } from './AIExperience';
-import { ContextHelp, GuideLink } from './ContextHelp';
 
-export function FundingOpportunityCard({ match, onOpen, onSave, saved, personalized = true, aiReason }: { match: FundingMatch; onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: boolean; personalized?: boolean; aiReason?: string }) {
+
+export function FundingOpportunityCard({ match, onOpen, onSave, saved, personalized = true }: { match: FundingMatch; onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: boolean; personalized?: boolean }) {
   const o = match.opportunity;
   const rate = rateLabel(o), term = termLabel(o);
   return <article className="widget funding-card">
@@ -24,7 +24,6 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved, personali
     </div>
     <h3>{o.title}</h3>
     <p className="muted">{o.providerName}</p>
-    {aiReason && <details className="ai-program-reason"><summary>Почему рекомендовано</summary><p>{aiReason}</p></details>}
     <strong>{amountLabel(o)}</strong>
     <div className="funding-key-facts">{rate && <span>{rate}</span>}{term && <span>Срок: {term}</span>}</div>
     <span className={`funding-status funding-status-${personalized ? match.status : o.status}`}>{personalized ? fundingStatusLabels[match.status] : { active: 'Приём открыт', closed: 'Приём завершён', upcoming: 'Ожидается открытие', unknown: 'Статус уточняется' }[o.status ?? 'unknown']}</span>
@@ -60,11 +59,9 @@ export function FundingResults({ result, onOpen, onSave, saved = [] }: { result:
     { title: 'Следить за открытием', matches: result.matches.filter((m) => ['expired', 'upcoming'].includes(m.status)) },
   ];
   return <div className="funding-results" aria-live="polite">
-    <GuideLink topic="funding" />
     <section className="widget funding-strategy">{result.mode === 'demo' && <span className="tag">Учебные данные</span>}
       <h2>Варианты финансирования</h2><p>{result.strategy.summary}</p>
       <ol>{result.strategy.options.map((option) => <li key={option.opportunityId}>{option.role === 'support' ? 'Сопутствующая поддержка: ' : 'Вариант финансирования: '}{onOpen ? <button className="text-button" onClick={() => onOpen(option.opportunityId)}>{option.text}</button> : option.text}</li>)}</ol>
-      {!!result.strategy.notices.length && <ContextHelp title="Что учесть при выборе">{result.strategy.notices.map((notice) => <p key={notice}>{notice}</p>)}</ContextHelp>}
     </section>
     {!result.matches.length && <p className="muted">Вариантов пока нет. Попробуйте изменить параметры подбора.</p>}
     {groups.filter((group) => group.matches.length).map((group) => <section key={group.title}><h2>{group.title}</h2>
@@ -157,7 +154,6 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onResu
           </select>
         </label>
       </div>
-      <GuideLink topic="funding" />
       <ActionButton type="submit" className="primary" disabled={loading}>
         {loading ? 'Подбираем варианты…' : 'Найти варианты'}
       </ActionButton>

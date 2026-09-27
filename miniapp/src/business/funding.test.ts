@@ -72,7 +72,9 @@ test('rendered guarantee and strategy do not represent support limits as cash or
   const html = renderToStaticMarkup(createElement(FundingOpportunityCard, { match }));
   assert.match(html, /Это не выдача денег/);
   const strategy = renderToStaticMarkup(createElement(FundingResults, { result }));
-  assert.match(strategy, /Совместимость инструментов необходимо проверить по условиям конкретных программ/);
+  // Guidance is no longer rendered as interface help; the underlying constraint remains.
+  assert.ok(result.strategy.notices.some(notice => notice.includes('Совместимость инструментов необходимо проверить по условиям конкретных программ')));
+  assert.doesNotMatch(strategy, /совместимость подтверждена|финансирование гарантировано/i);
   assert.match(strategy, /Сопутствующая поддержка/);
   assert.match(strategy, /Учебные данные/);
 });

@@ -72,7 +72,7 @@
 :where(html[data-theme="light"]) .opora-theme :is(input, textarea)::placeholder { color: #756e80; }
 :where(html[data-theme="light"]) .opora-theme :is(.opora-action.text-button, .text-button, .official-link,
     .funding-card > a, .funding-card summary, .ai-result a, .ai-finding small,
-    .ai-followups button, .ai-entry > summary, .ai-program-reason,
+    .ai-followups button, .ai-entry > summary,
     .assistant-prompts button, .assistant-program button, .checklist-item summary,
     .checklist-item .attach, .catalog-personal-context button, .catalog-guest-context button,
     .hub-personal, .hub-service-icon, .hub-need-link, .hub-browse, .hub-benefits svg,

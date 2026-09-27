@@ -52,8 +52,8 @@ export function AssistantPage({ businessName, guest = false, backLabel = 'В м�
   return <section className="assistant-page" aria-label="Чат с AI-помощником">
     <header className="assistant-header">
       <button className="assistant-icon-button assistant-back" aria-label={backLabel} onClick={onBack}><Icon name="chevron" /></button>
-      <div className="assistant-heading"><h1>Опора AI</h1><span title={businessName}>{businessName}</span></div>
-      <button className="assistant-icon-button" aria-label="О чате и контексте бизнеса" onClick={() => setInfoOpen(true)}><Icon name="spark" /></button>
+      <div className="assistant-heading"><h1>Опора AI</h1><span>{businessName}</span></div>
+      <button className="assistant-icon-button" aria-label="Параметры чата" onClick={() => setInfoOpen(true)}><Icon name="settings" /></button>
     </header>
     {program && <div className="assistant-program">
       <button onClick={program.onOpen}><Icon name="file" size={17} /><span>{program.title}</span></button>
@@ -86,10 +86,9 @@ export function AssistantPage({ businessName, guest = false, backLabel = 'В м�
         {sending ? <button type="button" className="assistant-send" aria-label="Остановить ответ" onClick={onStop}><span className="assistant-stop-symbol" /></button>
           : <button type="submit" className="assistant-send" aria-label="Отправить сообщение" disabled={!question.trim()} onMouseDown={(event) => event.preventDefault()}><Icon name="arrow" /></button>}
       </div>
-      <small>Важные условия проверяйте в официальном источнике</small>
     </form>
-    {infoOpen && <ModalSheet title="О чате" onClose={() => setInfoOpen(false)}>
-      <div className="assistant-info"><h2>Помощник вашего бизнеса</h2><p>{status}</p>{context(() => setInfoOpen(false))}
+    {infoOpen && <ModalSheet title="Параметры чата" onClose={() => setInfoOpen(false)}>
+      <div className="assistant-info"><p>{status}</p>{context(() => setInfoOpen(false))}
         <button className="assistant-clear" onClick={() => { onClear(); setInfoOpen(false); pinned.current = true; }}>Очистить историю чата</button>
       </div>
     </ModalSheet>}

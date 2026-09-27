@@ -59,6 +59,9 @@
 .catalog-empty-actions { display: grid; gap: 12px; margin: 20px 0 12px; }
 
 /* Keep the catalogue visible; advanced controls share one optional panel. */
+.catalog-ai-status { margin: 0 0 16px; font-size: 13px; color: var(--muted); }
+.catalog-ai-status p { margin: 0 0 8px; }
+.catalog-ai-status button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 12px 8px 0; background: transparent; border: 0; color: var(--accent); font: inherit; cursor: pointer; }
 .opora-theme .page-programs .catalog-tools {
   margin: 0 0 16px; border: 1px solid var(--line); border-radius: 20px;
   background: var(--surface); color: var(--ink); min-width: 0;

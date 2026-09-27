@@ -66,7 +66,5 @@
 .page-ai-composer .ai-panel > .field { margin: 0; min-width: 0; gap: 10px; }
 .opora-theme :is(.page-profile, .page-programs) .page-ai-composer .opora-native-textarea { min-height: 120px; padding: 12px 14px; font-size: 16px; line-height: 1.5; background: var(--canvas); border: 1px solid var(--line); border-radius: 14px; box-shadow: none; }
 .opora-theme :is(.page-profile, .page-programs) .page-ai-composer .opora-native-textarea:focus-visible { border-color: var(--accent); box-shadow: none; }
-.opora-theme :is(.page-profile, .page-programs) .page-ai-composer .ai-panel > .context-help { margin: 0; }
-.page-ai-composer .ai-panel > .context-help p { color: var(--muted); font-size: 14px; line-height: 1.6; }
 .page-ai-composer .ai-panel > .opora-action { margin: 4px 0 0; min-height: 48px; }
 @media (max-width: 359px) { .opora-theme :is(.page-profile, .page-programs) .page-ai-composer { padding-inline: 18px; } }
