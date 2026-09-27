@@ -47,6 +47,5 @@ export function BusinessHub({ profile, project, confirmed, applications, saved, 
       <b>{insight?.title ?? (!purpose ? 'Расскажите, на что нужны средства' : applications ? 'Продолжить подготовку заявки' : 'Посмотреть персональную подборку')}</b>
       <Icon name="arrow" />
     </button>
-    <button className="hub-need-link" onClick={onNeed}><Icon name="compass" size={18} />{purpose ? 'Изменить цель и сумму' : 'Настроить подбор'}<Icon name="chevron" size={15} /></button>
   </div>;
 }

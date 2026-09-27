@@ -75,7 +75,7 @@
     .ai-followups button, .ai-entry > summary,
     .assistant-prompts button, .assistant-program button, .checklist-item summary,
     .checklist-item .attach, .catalog-personal-context button, .catalog-guest-context button,
-    .hub-personal, .hub-service-icon, .hub-need-link, .hub-browse, .hub-benefits svg,
+    .hub-personal, .hub-service-icon, .hub-browse, .hub-benefits svg,
     .adaptive-label, .adaptive-insight button, .adaptive-insight a,
     .home-ai-label, .modal .eyebrow, .date-tile, .detail-emblem, .empty-symbol, .program-icon) {
     color: var(--accent);

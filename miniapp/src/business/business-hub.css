@@ -19,7 +19,7 @@
 .hub-services b { display: block; font-size: 15px; font-weight: 600; }
 .hub-services small { display: block; margin-top: 6px; color: #9293a0; font-size: 11px; line-height: 1.5; }
 .hub-service-icon { flex: 0 0 42px; height: 42px; display: grid; place-items: center; border-radius: 15px; background: #604dca1c; color: #b8a7ff; }
-.hub-need-link, .hub-browse { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 6px; min-height: 44px; background: none; border: 0; color: #b8a7ff; font-size: 12px; }
+.hub-browse { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 6px; min-height: 44px; background: none; border: 0; color: #b8a7ff; font-size: 12px; }
 .hub-welcome { display: flex; flex-direction: column; align-items: flex-start; padding: 4px 4px 8px; }
 .hub-welcome img { align-self: center; width: 150px; height: 125px; object-fit: contain; pointer-events: none; margin: 0 0 12px; }
 .hub-welcome h2 { font-size: 30px; line-height: 1.2; letter-spacing: -.9px; margin: 12px 0; }
