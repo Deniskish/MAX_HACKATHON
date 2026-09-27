@@ -4,7 +4,6 @@ import { AppNavigation, BrandWordmark } from './AppChrome';
 import { useSystemTheme } from '../theme';
 import darkMark from './brand-mark-dark.webp';
 import lightMark from './brand-mark-light.webp';
-import { ContextHelp } from './ContextHelp';
 import type { BusinessAnalysis } from './useBusinessAnalysis';
 import type { WorkspaceInsight } from '../../api-server/ai/types';
 
@@ -67,12 +66,6 @@ export function HomePage({ showNavigation = true, onFindSupport, onAddBusiness, 
           </span>
           {!analyzing && <Arrow />}
         </button>
-        {personalized && <ContextHelp title={insight || analyzing ? 'Как выбран следующий шаг' : 'Почему нет следующего шага'}>
-          <p>{insight ? 'Рекомендация AI на основе профиля бизнеса, вашей цели и текущих заявок.' : analyzing ? 'AI анализирует профиль бизнеса, вашу цель и текущие заявки.' : 'AI-анализ не завершён. Кнопка открывает чат, где можно задать отдельный вопрос.'}</p>
-          {insight && <p>{insight.text}</p>}
-          {analysis.error && <p role="status">{analysis.error}{insight ? ' Сохранён предыдущий анализ для этих же данных.' : ''}</p>}
-          {analysis.error && <button type="button" onClick={analysis.refresh} disabled={analysis.refreshing}>{analysis.refreshing ? 'Обновляем анализ…' : 'Повторить анализ'}</button>}
-        </ContextHelp>}
       </section>
     </div>
     {showNavigation && <AppNavigation active="overview" onNavigate={(page) => {

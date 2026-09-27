@@ -76,7 +76,7 @@ export function useSupportNotifications(profile: FundingProfile | null, need: Fu
 }
 export function SupportNotificationSettings({ notifications: n }: { notifications: ReturnType<typeof useSupportNotifications> }) {
   return <section className="profile-panel support-notification-settings">
-    <h3>Новые меры поддержки</h3>
+    <h3>Уведомления о поддержке</h3>
     <p>{n.enabled ? 'Следим за мерами для вашего бизнеса.' : 'Сообщим, когда найдём подходящую возможность.'}</p>
     {n.available ? <>
       <label className="notification-toggle"><span>Уведомления в приложении</span><input type="checkbox" checked={n.enabled} disabled={n.busy} onChange={(e) => void n.subscribe(e.target.checked, e.target.checked && n.bot)} /></label>
