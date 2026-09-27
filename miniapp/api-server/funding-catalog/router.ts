@@ -7,7 +7,7 @@ export function fundingCatalogRouter(service = new FundingCatalogService()) {
   const router = Router();
   router.use((_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
   router.get('/catalog', (_req, res) => res.json({ mode: 'official', opportunities: service.getCatalog().map((o) =>
-    o.imported ? { ...o, imported: { ...o.imported, detail: undefined } } : o) }));
+    o.imported ? { ...o, imported: { ...o.imported, detail: undefined, evidence: undefined } } : o) }));
   router.get('/calendar.ics', (req, res) => {
     const catalog = service.getCatalog();
     const ids = typeof req.query.ids === 'string' ? req.query.ids.split(',') : undefined;

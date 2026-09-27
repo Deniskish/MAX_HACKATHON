@@ -102,7 +102,7 @@ export function contextualCatalog(request: AIRequest) {
   const terms = [...new Set((query.match(/[а-яa-z]{5,}/g) ?? []).map(w => w.slice(0, 6)).filter(w => !generic.test(w)))];
   const catalog = getAICatalog();
   const related = catalog.filter(o => o.imported && !explicit.has(o.id) && o.status === 'active')
-    .map(o => ({ o, score: terms.reduce((n, w) => n + Number(o.title.toLowerCase().replace(/ё/g, 'е').includes(w)), 0) }))
+    .map(o => ({ o, score: terms.reduce((n, w) => n + Number(`${o.title} ${o.imported?.provider !== 'budget' ? o.description : ''}`.toLowerCase().replace(/ё/g, 'е').includes(w)), 0) }))
     .filter(({ score }) => score > 0).sort((a, b) => b.score - a.score).slice(0, 24).map(({ o }) => o);
   return [...catalog.filter(o => !o.imported || explicit.has(o.id)), ...related];
 }

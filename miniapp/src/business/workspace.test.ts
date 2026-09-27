@@ -40,6 +40,17 @@ test('live programme bookmarks and drafts survive an absent catalogue cache', ()
   const restored = loadWorkspace(storage, ids);
   assert.deepEqual(restored.saved, [id]); assert.equal(restored.applications[0].programId, id);
 });
+
+test('official web programme bookmarks and drafts survive catalogue loading and reload', () => {
+  const storage = memory(), id = 'web-1234567890abcdef12345678';
+  storage.setItem('opora.workspace', JSON.stringify({ version: 2, data: {
+    saved: [id, 'web-invalid'], applications: [{ id: 'draft-web', programId: id, project: 'Оборудование', budget: '400000', documents: {} }],
+  } }));
+  const restored = loadWorkspace(storage, ids);
+  assert.deepEqual(restored.saved, [id]); assert.equal(restored.applications[0].programId, id);
+  saveWorkspace(storage, restored);
+  assert.deepEqual(loadWorkspace(storage, ids), restored);
+});
 test('versioned workspace migrates bookmarks and drops synthetic profiles/unknown program drafts', () => {
   const storage = memory(); storage.setItem('opora.saved.v1', JSON.stringify([ids[0], ids[0], 'removed-program']));
   storage.setItem('opora.profile.v1', JSON.stringify({ inn: '9900000031', name: 'Учебная компания', goals: [] }));

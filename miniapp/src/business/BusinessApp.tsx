@@ -98,6 +98,13 @@ export default function BusinessApp() {
   const setPage = (next: Page) => { prepare(next); setPageState(next); };
   const [initial] = useState(() => loadWorkspace(localStorage, programs.map((p) => p.id)));
   const [companyProfile, setProfile] = useState<Profile | null>(initial.profile);
+  useEffect(() => {
+    if (!companyProfile?.region) return;
+    const controller = new AbortController();
+    void fetch('/api/funding/interest', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ region: companyProfile.region }), signal: controller.signal }).catch(() => {});
+    return () => controller.abort();
+  }, [companyProfile?.region]);
   const account = useAccount();
   const demo = useVerificationDemo();
   const [verificationReturn, setVerificationReturn] = useState<string | null>(null);
@@ -323,7 +330,7 @@ export default function BusinessApp() {
     ({ p }) =>
       (filter === 'Все меры' || p.type === filter) &&
       (!onlySaved || saved.includes(p.id)) &&
-      (!profile || catalogScope !== 'personal' || personal.candidates.some((m) => m.opportunity.id === p.id) && (!p.id.startsWith('budget-') || aiPriorities.some((a) => a.programId === p.id) || supportNotifications.items.some((n) => n.programId === p.id))) &&
+      (!profile || catalogScope !== 'personal' || personal.candidates.some((m) => m.opportunity.id === p.id) && (!officialFundingCatalog.find(o => o.id === p.id)?.imported || aiPriorities.some((a) => a.programId === p.id) || supportNotifications.items.some((n) => n.programId === p.id))) &&
       (availability
         ? (officialFundingCatalog.find((o) => o.id === p.id)?.status ?? 'unknown') === availability
         : onlySaved || officialFundingCatalog.find((o) => o.id === p.id)?.status !== 'closed') &&
@@ -752,7 +759,7 @@ export default function BusinessApp() {
           {page === 'profile' && <BusinessHub profile={profile} project={!!projectProfile && !companyProfile}
             verification={companyProfile ? <CompanyVerificationCard demo={demo} inn={companyProfile.inn} onOpen={() => openVerification()} /> : undefined}
             insight={businessAnalysis.data?.personalization?.sections.home} onInsight={followInsight}
-            confirmed={personal.confirmed.length} pending={personal.pending.length} applications={apps.length} saved={saved.length} purpose={need.purpose}
+            confirmed={personal.confirmed.length} applications={apps.length} saved={saved.length} purpose={need.purpose}
             onAdd={() => setHomePanel('business')} onEdit={openProfile} onSupport={() => navigate('programs')}
             onNeed={() => setHomePanel('funding')} onAssistant={() => navigate('assistant')} onCalendar={() => navigate('calendar')}
             onApplications={() => navigate('applications')} onSaved={() => { navigate('programs'); setCatalogScope('saved'); setOnlySaved(true); }} />}

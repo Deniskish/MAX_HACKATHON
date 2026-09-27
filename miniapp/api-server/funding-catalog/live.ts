@@ -6,6 +6,8 @@ import type { ApplicantType, FundingOpportunity } from './types';
 import { providerJson } from '../provider-json';
 import { budgetTransport } from './budget-transport';
 import { setTimeout as delay } from 'node:timers/promises';
+import type { OfficialWebCatalog } from './web-catalog';
+import { mergeCatalog } from './identity';
 
 const origin = 'https://promote.budget.gov.ru';
 const guid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
@@ -108,6 +110,10 @@ export class BudgetSource {
 type CatalogState = { entries: FundingOpportunity[]; checkedAt: string | null; total: number; cursor: number; error: string | null;
   attemptedAt?: string; refreshedAt?: string; errorCode?: string | null; failedPage?: number | null; refreshedPages?: number };
 export class LiveCatalog implements FundingProvider {
+  private web?: OfficialWebCatalog;
+  attachWeb(web: OfficialWebCatalog) { this.web = web; }
+  registerInterest(region: string) { this.web?.registerInterest(region); }
+  monitorStatus() { return { budget: this.status(), web: this.web?.status() ?? { sources: [], unsupportedRegions: [] } }; }
   private state: CatalogState = { entries: [], checkedAt: null, total: 0, cursor: 11, error: null };
   private syncing = false;
   private pendingDetails = new Map<string, Promise<FundingOpportunity | undefined>>();
@@ -119,8 +125,8 @@ export class LiveCatalog implements FundingProvider {
   }
   getCatalog() {
     const now = Date.now();
-    return [...officialFundingCatalog, ...this.state.entries.map((o) => o.imported?.endsAt && Date.parse(o.imported.endsAt) < now
-      ? { ...o, status: 'closed' as const } : o)];
+    return mergeCatalog([...officialFundingCatalog, ...this.state.entries.map((o) => o.imported?.endsAt && Date.parse(o.imported.endsAt) < now
+      ? { ...o, status: 'closed' as const } : o), ...(this.web?.getCatalog() ?? [])]);
   }
   status() { return { checkedAt: this.state.checkedAt, imported: this.state.entries.length, totalAtSource: this.state.total,
     nextPage: this.state.cursor, error: this.state.error, syncing: this.syncing, intervalMinutes: 15,
@@ -152,7 +158,7 @@ export class LiveCatalog implements FundingProvider {
           const previous = entries.get(item.id);
           if (item.status !== 'closed' || previous) entries.set(item.id, { ...item,
             source: previous?.version === item.version ? previous.source : item.source,
-            imported: { ...item.imported!, firstSeenAt: previous?.imported?.firstSeenAt ?? new Date().toISOString(),
+            imported: { ...item.imported!, checkedAt: new Date().toISOString(), firstSeenAt: previous?.imported?.firstSeenAt ?? new Date().toISOString(),
               detail: previous?.version === item.version ? previous.imported?.detail : undefined } });
         }
         // Continue through the current-selection block when it grows beyond the first 1,000 cards.
@@ -182,6 +188,7 @@ export class LiveCatalog implements FundingProvider {
     finally { this.syncing = false; }
   }
   enrich(id: string) {
+    if (this.web?.getCatalog().some(o => o.id === id)) return this.web.enrich(id);
     const pending = this.pendingDetails.get(id);
     if (pending) return pending;
     const request = this.loadDetails(id).finally(() => this.pendingDetails.delete(id));

@@ -4,6 +4,7 @@ import { privateCompletion, PrivacyError } from './privacy';
 import { providerJson } from './provider-json';
 import { createAIModel } from './ai/transport';
 import { createOpportunityAssessor } from './funding-catalog/notification-ai';
+import { createOpportunityExtractor } from './funding-catalog/extraction';
 import { runAssistant } from './ai/service';
 import type { AIEvidence } from './ai/types';
 import { createSemanticSearch, EMBEDDINGS_URL } from './ai/embeddings';
@@ -100,7 +101,9 @@ export function createGigaChatClient(
   };
   const semantic = createSemanticSearch(getToken, authorizedTransport);
   const assess = createOpportunityAssessor(GIGACHAT_CHAT_URL, config.model, getToken, authorizedTransport);
+  const extract = createOpportunityExtractor(GIGACHAT_CHAT_URL, config.model, getToken, authorizedTransport);
   return {
+    extractOpportunity: (...args: Parameters<typeof extract>) => withAIPriority('background', () => extract(...args)),
     assessOpportunity: (...args: Parameters<typeof assess>) => withAIPriority('background', () => assess(...args)),
     async assist(input: unknown, evidence: AIEvidence[] = [], signal?: AbortSignal) {
       const background = (input as { task?: unknown })?.task === 'workspace';

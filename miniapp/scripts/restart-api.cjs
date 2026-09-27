@@ -6,7 +6,7 @@ const processes = JSON.parse(run('pm2', ['jlist'], { encoding: 'utf8' }));
 const previous = processes.find((process) => process.name === 'opora-api')?.pm2_env;
 const bot = processes.find((process) => process.name === 'opora-bot')?.pm2_env;
 const env = { ...process.env, NODE_ENV: 'production' };
-const names = ['GIGACHAT_AUTH_KEY', 'GIGACHAT_SCOPE', 'GIGACHAT_MODEL', 'NODE_EXTRA_CA_CERTS', 'NODE_OPTIONS', 'DADATA_API_KEY', 'APP_ORIGIN', 'OPORA_SOURCE_DIR', 'FNS_DATA_DIR', 'AI_SOURCE_SYNC', 'BOT_TOKEN', 'MINIAPP_URL', 'MAX_BOT_USERNAME', 'OPORA_FUNDING_DIR', 'FUNDING_SYNC'];
+const names = ['GIGACHAT_AUTH_KEY', 'GIGACHAT_SCOPE', 'GIGACHAT_MODEL', 'NODE_EXTRA_CA_CERTS', 'NODE_OPTIONS', 'DADATA_API_KEY', 'APP_ORIGIN', 'OPORA_SOURCE_DIR', 'FNS_DATA_DIR', 'AI_SOURCE_SYNC', 'BOT_TOKEN', 'MINIAPP_URL', 'MAX_BOT_USERNAME', 'OPORA_FUNDING_DIR', 'FUNDING_SYNC', 'OPORA_MONITOR_TOKEN'];
 for (const name of names) {
   const value = previous?.[name] ?? previous?.env?.[name];
   if (typeof value === 'string') env[name] = value;

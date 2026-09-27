@@ -88,6 +88,5 @@ export function SupportNotificationList({ notifications: n, onOpen }: { notifica
   return <>{n.items.map((item) => <article className="ai-proposal" key={item.id}>
     <span className="tag">{item.readAt ? 'Мера поддержки' : 'Новое для вашего бизнеса'}</span><h3>{item.title}</h3>
     <p>{item.reason}</p><ActionButton className="secondary" onClick={() => { void n.read(item.id); onOpen(item.programId); }}>Посмотреть меру</ActionButton>
-    {item.delivery === 'failed' && <small>Сообщение в MAX не доставлено. Проверьте, доступен ли бот.</small>}
   </article>)}</>;
 }

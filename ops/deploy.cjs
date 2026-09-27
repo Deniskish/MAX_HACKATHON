@@ -100,7 +100,7 @@ async function main(root, sha) {
     const apiEnv = snapshot.find(p => p.name === 'opora-api').pm2_env;
     const secretNames = ['GIGACHAT_AUTH_KEY', 'GIGACHAT_SCOPE', 'GIGACHAT_MODEL', 'NODE_EXTRA_CA_CERTS', 'NODE_OPTIONS',
       'DADATA_API_KEY', 'APP_ORIGIN', 'OPORA_SOURCE_DIR', 'FNS_DATA_DIR', 'AI_SOURCE_SYNC', 'BOT_TOKEN',
-      'MINIAPP_URL', 'MAX_BOT_USERNAME', 'OPORA_FUNDING_DIR', 'FUNDING_SYNC'];
+      'MINIAPP_URL', 'MAX_BOT_USERNAME', 'OPORA_FUNDING_DIR', 'FUNDING_SYNC', 'OPORA_MONITOR_TOKEN'];
     const retainedEnv = {};
     for (const key of secretNames) {
       const value = apiEnv[key] ?? apiEnv.env?.[key];

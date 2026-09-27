@@ -1,6 +1,7 @@
 import type { FundingMatch, FundingNeed, FundingOpportunity, FundingProfile,
   FundingRequirement, FundingStatus, RequirementCheck } from './types';
 import { fundingStatusLabels, hasTerm, isLoan, isSupporting, lenderNotice } from './presentation';
+import { normalizeRegion } from './source-registry';
 
 const unknown = (value: unknown) => value === undefined || value === null || value === ''
   || value === 'unknown' || (Array.isArray(value) && value.length === 0)
@@ -28,7 +29,8 @@ export function evaluateFundingRequirement(profile: FundingProfile, requirement:
       // goals содержит цель; списки регионов/форм содержат скаляр профиля (OR внутри списка).
       pass = Array.isArray(value)
         ? (Array.isArray(expected) ? expected : [expected]).some((item) => (value as unknown[]).includes(item))
-        : Array.isArray(expected) && typeof value === 'string' && expected.includes(value);
+        : Array.isArray(expected) && typeof value === 'string' && (requirement.field === 'region'
+          ? expected.some(item => normalizeRegion(String(item)) === normalizeRegion(value as string)) : expected.includes(value));
       break;
   }
   return { ...requirement, status: pass ? 'fulfilled' : 'missing' };

@@ -14,7 +14,7 @@ const record = (value: unknown): value is Record<string, unknown> => !!value && 
 const stringMap = (value: unknown) => record(value) ? Object.fromEntries(Object.entries(value).filter(([, v]) => typeof v === 'string')) as Record<string, string> : {};
 const nullableNumber = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
 export function loadWorkspace(storage: Pick<Storage, 'getItem'>, ids: string[]): Workspace {
-  const known = (id: unknown): id is string => typeof id === 'string' && (ids.includes(id) || /^budget-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id));
+  const known = (id: unknown): id is string => typeof id === 'string' && (ids.includes(id) || /^budget-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id) || /^web-[a-f0-9]{24}$/.test(id));
   const read = (key: string) => { try { return JSON.parse(storage.getItem(key) ?? 'null'); } catch { return null; } };
   const current = read(workspaceKey);
   const oldProfile = read('opora.profile.v1');

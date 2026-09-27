@@ -5,8 +5,8 @@ import type { Profile } from './domain';
 import type { WorkspaceInsight } from '../../api-server/ai/types';
 import type { ReactNode } from 'react';
 
-export function BusinessHub({ profile, project, confirmed, pending, applications, saved, purpose, onAdd, onEdit, onSupport, onNeed, onAssistant, onCalendar, onApplications, onSaved, insight, onInsight, verification }: {
-  profile: Profile | null; project: boolean; confirmed: number; pending: number; applications: number; saved: number; purpose: string;
+export function BusinessHub({ profile, project, confirmed, applications, saved, purpose, onAdd, onEdit, onSupport, onNeed, onAssistant, onCalendar, onApplications, onSaved, insight, onInsight, verification }: {
+  profile: Profile | null; project: boolean; confirmed: number; applications: number; saved: number; purpose: string;
   onAdd: () => void; onEdit: () => void; onSupport: () => void; onNeed: () => void;
   onAssistant: () => void; onCalendar: () => void; onApplications: () => void; onSaved: () => void;
   insight?: WorkspaceInsight; onInsight: (action: WorkspaceInsight['action']) => void;
@@ -47,7 +47,6 @@ export function BusinessHub({ profile, project, confirmed, pending, applications
       <b>{insight?.title ?? (!purpose ? 'Расскажите, на что нужны средства' : applications ? 'Продолжить подготовку заявки' : 'Посмотреть персональную подборку')}</b>
       <Icon name="arrow" />
     </button>
-    {!confirmed && <p className="hub-hint">{pending ? `Нужно уточнить соответствие: ${pending} программ.` : 'Совпадений пока нет. Уточните профиль или посмотрите каталог.'}</p>}
     <button className="hub-need-link" onClick={onNeed}><Icon name="compass" size={18} />{purpose ? 'Изменить цель и сумму' : 'Настроить подбор'}<Icon name="chevron" size={15} /></button>
   </div>;
 }

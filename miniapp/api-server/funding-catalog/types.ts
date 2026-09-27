@@ -48,7 +48,8 @@ export type FundingOpportunity = {
   preparationDays: number | null;
   source: { name: string; url: string | null; type: 'demo' | 'official'; updatedAt: string; verifiedAt?: string };
   version: string;
-  imported?: { provider: 'budget'; startsAt: string; endsAt: string; firstSeenAt?: string;
+  imported?: { provider: string; startsAt: string; endsAt: string; firstSeenAt?: string;
+    checkedAt?: string; ongoing?: boolean; verification?: 'verified' | 'pending'; evidence?: Record<string, string>;
     detail?: { text: string; complete: boolean; version: string; checkedAt: string; startsAt: string; endsAt: string; accepting: boolean; geography: string[] } };
 };
 export const fundingPurposes = ['покупка оборудования', 'оборотные средства', 'разработка продукта',

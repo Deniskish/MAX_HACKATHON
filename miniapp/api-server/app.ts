@@ -21,6 +21,7 @@ import { withAICatalog } from './funding-catalog/ai-runtime';
 import { NotificationStore, notificationRouter } from './funding-catalog/notifications';
 import { untilAborted } from './funding-catalog/abort';
 import { accountRouter } from './account';
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 export type AIClient = { complete(input: unknown): Promise<{ answer: string; mode: string }>; assist?(input: unknown, evidence?: AIEvidence[], signal?: AbortSignal): Promise<AIResult> };
 function isCertificateError(error: unknown): boolean {
@@ -75,6 +76,18 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
     funding: { officialSnapshot: 'ready', opportunities: fundingCatalogStatus().total, verifiedAt: fundingCatalogStatus().verifiedAt }, ai: { gigachat: aiStatus().status } }));
   app.use('/api/company', companyDataRouter(dadata ? new CompanyDataService(dadata) : new OfficialCompanyDataService(options.fnsDir)));
   if (options.catalog) app.get('/api/funding/live-status', (_req, res) => res.json(options.catalog!.status()));
+  if (options.catalog) {
+    app.post('/api/funding/interest', (req, res) => {
+      if (typeof req.body?.region !== 'string' || req.body.region.length > 100) { res.sendStatus(400); return; }
+      options.catalog!.registerInterest(req.body.region); res.sendStatus(204);
+    });
+    app.get('/api/internal/funding/status', (req, res) => {
+      const configured = env.OPORA_MONITOR_TOKEN?.trim();
+      const supplied = req.header('Authorization')?.replace(/^Bearer /, '') ?? '';
+      if (!configured || !timingSafeEqual(createHash('sha256').update(configured).digest(), createHash('sha256').update(supplied).digest())) { res.sendStatus(404); return; }
+      res.json({ ...options.catalog!.monitorStatus(), notifications: options.notifications?.status(), worker: options.notificationStatus?.() });
+    });
+  }
   if (options.notifications) app.use('/api/notifications', notificationRouter(options.notifications, env.BOT_TOKEN ?? '', !!giga, options.notificationStatus));
   if (options.notifications) app.use('/api/account', accountRouter(options.notifications, env.BOT_TOKEN ?? ''));
   app.use('/api/funding', fundingCatalogRouter(new FundingCatalogService(undefined, options.catalog)));
@@ -98,7 +111,7 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
     const disconnect = () => { if (!res.writableEnded) controller.abort(); };
     res.on('close', disconnect); activeAI++;
     try {
-      if (options.catalog && typeof req.body?.context?.programId === 'string' && req.body.context.programId.startsWith('budget-')) {
+      if (options.catalog && typeof req.body?.context?.programId === 'string' && options.catalog.getCatalog().some(o => o.id === req.body.context.programId && o.imported)) {
         try { await untilAborted(options.catalog.enrich(req.body.context.programId), AbortSignal.any([controller.signal, AbortSignal.timeout(12000)])); } catch { /* Unverified details remain explicitly unknown. */ }
       }
       controller.signal.throwIfAborted();
