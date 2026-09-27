@@ -1,0 +1,27 @@
+name: Bot runtime diagnostics
+on:
+  workflow_dispatch:
+  push:
+    branches: [bot-runtime-diagnostics]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect bot without sending messages
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY_B64: ${{ secrets.SERVER_SSH_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s' "$SERVER_SSH_KEY_B64" | base64 -d > ~/.ssh/bot_diagnose_key
+          chmod 600 ~/.ssh/bot_diagnose_key
+          trap 'rm -f ~/.ssh/bot_diagnose_key' EXIT
+          ssh-keyscan -T 10 -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+          scp -i ~/.ssh/bot_diagnose_key ops/bot-diagnose.cjs "$SERVER_USER@$SERVER_HOST:/opt/opora-deploy/bot-diagnose.cjs"
+          ssh -i ~/.ssh/bot_diagnose_key "$SERVER_USER@$SERVER_HOST" 'timeout 90 node /opt/opora-deploy/bot-diagnose.cjs'
