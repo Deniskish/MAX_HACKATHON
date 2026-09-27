@@ -9,23 +9,21 @@ export function BrandWordmark({ className = '' }: { className?: string }) {
   </span>;
 }
 
-export function AppNavigation({ active, onNavigate, supportAvailable = false }: {
-  active: AppPage; onNavigate: (page: AppPage) => void; supportAvailable?: boolean;
+export function AppNavigation({ active, onNavigate }: {
+  active: AppPage; onNavigate: (page: AppPage) => void;
 }) {
-  const tabs = ([
-    ['overview', 'home', 'Главная'], ['programs', 'compass', 'Поддержка'],
-    ['applications', 'file', 'Заявки'], ['profile', 'building', 'Мой бизнес'],
-  ] as const).filter(([page]) => page !== 'programs' || supportAvailable);
-  const current = active === 'funding-results' ? 'programs'
-    : ['calendar', 'assistant', 'settings', 'verification'].includes(active) ? 'profile' : active;
-  const activeIndex = tabs.findIndex(([page]) => page === current);
   return <div className="home-nav-wrap">
-    <nav className="home-nav" data-active={Math.max(0, activeIndex)} data-count={tabs.length} aria-label="Основная навигация">
+    <nav className="home-nav" data-active={active === 'overview' ? 0 : ['programs', 'funding-results'].includes(active) ? 1 : active === 'applications' ? 2 : 3} aria-label="Основная навигация">
       <span className="home-nav-indicator" aria-hidden="true" />
-      {tabs.map(([page, icon, label]) => <button key={page} type="button" className={`nav-${page}`}
-        aria-current={current === page ? 'page' : undefined} onClick={() => onNavigate(page)}>
+      {([
+        ['overview', 'home', 'Главная'], ['programs', 'compass', 'Поддержка'], ['applications', 'file', 'Заявки'],
+      ] as const).map(([page, icon, label]) => <button key={page} type="button" className={`nav-${page}`}
+        aria-current={active === page || page === 'programs' && active === 'funding-results' ? 'page' : undefined} onClick={() => onNavigate(page)}>
         <Icon name={icon} /><span>{label}</span>
       </button>)}
+      <button type="button" aria-current={['calendar', 'profile', 'assistant', 'settings', 'verification'].includes(active) ? 'page' : undefined} onClick={() => onNavigate('profile')}>
+        <Icon name="building" /><span>Мой бизнес</span>
+      </button>
     </nav>
   </div>;
 }

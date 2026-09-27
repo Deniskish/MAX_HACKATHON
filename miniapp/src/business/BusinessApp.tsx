@@ -29,8 +29,6 @@ import { AdaptiveInsight } from './AdaptiveInsight';
 import type { WorkspaceInsight } from '../../api-server/ai/types';
 import { Icon } from './Icon';
 import { ModalSheet } from './ModalSheet';
-import { isCatalogDemo, loadCatalogDemo, saveCatalogDemo } from './catalog-demo';
-import { hasSupportProfile, loadCatalogFilters, saveCatalogFilters, defaultCatalogFilters, catalogRegions, selectCatalog, type CatalogFilters } from './catalog-view';
 import { CatalogStatusFilter } from './CatalogStatusFilter';
 import { HomePage } from './HomePage';
 import { useTabTransition } from './useTabTransition';
@@ -131,38 +129,9 @@ export default function BusinessApp() {
   const businessApps = apps.filter((app) => !detachedApplicationIds.includes(app.id));
   const [deleteDraftId, setDeleteDraftId] = useState<string | null>(null);
   const [saved, setSaved] = useState<string[]>(initial.saved);
-  const [catalogDemoState, setCatalogDemoState] = useState(() => loadCatalogDemo(sessionStorage, location.search));
-  const catalogDemo = isCatalogDemo(catalogDemoState);
-  const supportAccess = hasSupportProfile(companyProfile, projectProfile);
-  const supportAvailable = supportAccess || catalogDemo;
-  useEffect(() => {
-    try { saveCatalogDemo(sessionStorage, catalogDemoState); }
-    catch { setToast('Не удалось сохранить демо-режим в этой вкладке.'); }
-    const url = new URL(location.href); url.searchParams.delete('catalogDemo');
-    if (url.href !== location.href) history.replaceState(history.state, '', url);
-  }, [catalogDemoState]);
-  useEffect(() => {
-    if (page === 'programs' && !supportAvailable) setPage('profile');
-  }, [page, supportAvailable]);
-  const [catalogFilters, setCatalogFilters] = useState<CatalogFilters>(() => catalogDemo
-    ? { ...defaultCatalogFilters(), scope: 'all' } : loadCatalogFilters(localStorage));
-  const { status: availability, scope: catalogScope, kinds, region } = catalogFilters;
-  const setAvailability = (status: string) => setCatalogFilters((current) => ({ ...current, status: status as CatalogFilters['status'] }));
-  const setCatalogScope = (scope: CatalogFilters['scope']) => setCatalogFilters((current) => ({ ...current, scope }));
-  const onlySaved = catalogScope === 'saved';
-  const filterCount = kinds.length + Number(!!region) + Number(!!availability);
-  const regions = catalogRegions(officialFundingCatalog);
-  const resetCatalogFilters = () => setCatalogFilters((current) => ({ ...defaultCatalogFilters(), scope: current.scope }));
-  useEffect(() => {
-    if (catalogDemo) return; // A demo must not overwrite the user's catalogue preferences.
-    try { saveCatalogFilters(localStorage, catalogFilters); }
-    catch { setToast('Фильтры сохранены только до закрытия приложения.'); }
-  }, [catalogFilters, catalogDemo]);
-  function exitCatalogDemo() {
-    setCatalogFilters(loadCatalogFilters(localStorage)); setCatalogDemoState(null);
-    if (!supportAccess) { setSelected(null); setPage('profile'); }
-  }
+  const [availability, setAvailability] = useState('');
   const [homePanel, setHomePanel] = useState<'business' | 'funding' | 'events' | null>(null);
+  const [catalogScope, setCatalogScope] = useState<'personal' | 'all' | 'saved'>('personal');
   const [previousSnapshot] = useState<Record<string, string>>(() => readSaved('opora.snapshot.v2', {}));
   const matches = useMemo(() => rankFundingMatches(officialFundingCatalog.map((o) => matchFundingOpportunity(fundingProfile, need, o, {
     preparedDocuments: Object.keys(businessApps.find((a) => a.programId === o.id)?.documents ?? {}).filter((d) => businessApps.find((a) => a.programId === o.id)?.documents[d]),
@@ -174,9 +143,9 @@ export default function BusinessApp() {
   const calendarPrograms = programs.filter((p) => p.deadline && calendarCatalog.some((o) => o.id === p.id));
   function navigate(next: Page) {
     setHomePanel(null);
-    if (next === 'programs' && !supportAvailable) { setPage('profile'); if (page === 'profile') setHomePanel('business'); return; }
     if (next === 'calendar' && !profile) { setPage('profile'); return; }
     if (next === 'assistant') setAssistantBack(page === 'overview' ? 'overview' : 'profile');
+    if (next === 'programs') { setCatalogScope(profile ? 'personal' : 'all'); setOnlySaved(false); setFilter('Все меры'); setQuery(''); setAvailability(''); }
     if (next === 'calendar') setAllCalendar(false);
     setPage(next); setCatalogLimit(30);
   }
@@ -210,17 +179,18 @@ export default function BusinessApp() {
     return () => { controller.abort(); clearInterval(timer); };
   }, []);
   useEffect(() => { try { localStorage.setItem('opora.snapshot.v2', JSON.stringify(Object.fromEntries(officialFundingCatalog.map((o) => [o.id, o.version])))); } catch { /* Workspace storage warning handles unavailable storage. */ } }, []);
-  const openFunding = (id: string) => { if (!supportAccess && !catalogDemo) { navigate('programs'); return; } const p = programs.find((p) => p.id === id); if (p) { setHomePanel(null); setSelected(p); } };
+  const openFunding = (id: string) => { const p = programs.find((p) => p.id === id); if (p) { setHomePanel(null); setSelected(p); } };
+  const [onlySaved, setOnlySaved] = useState(false);
   const [selected, setSelected] = useState<Program | null>(
     () =>
-      (supportAccess || catalogDemo) && programs.find((p) => p.id === (new URLSearchParams(window.location.search).get('program') || new URLSearchParams(window.location.search).get('WebAppStartParam'))) ||
+      programs.find((p) => p.id === (new URLSearchParams(window.location.search).get('program') || new URLSearchParams(window.location.search).get('WebAppStartParam'))) ||
       null,
   );
   const openedProgramLink = useRef(false);
   useEffect(() => {
     const id = new URLSearchParams(location.search).get('program') || new URLSearchParams(location.search).get('WebAppStartParam') || window.WebApp?.initDataUnsafe?.start_param;
-    if (id && (supportAccess || catalogDemo) && !openedProgramLink.current) { const found = programs.find((p) => p.id === id); if (found) { openedProgramLink.current = true; setSelected((current) => current ?? found); } }
-  }, [programs, supportAccess, catalogDemo]);
+    if (id && !openedProgramLink.current) { const found = programs.find((p) => p.id === id); if (found) { openedProgramLink.current = true; setSelected((current) => current ?? found); } }
+  }, [programs]);
   const [chatProgram, setChatProgram] = useState<Program | null>(null);
   const [applicationDocuments, setApplicationDocuments] = useState<Record<string, AIDocument>>({});
   useEffect(() => setApplicationDocuments({}), [selected?.id]);
@@ -279,6 +249,7 @@ export default function BusinessApp() {
     }
   }
   const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('Все меры');
   const [toast, setToast] = useState('');
   const [messages, setMessages] = useState<Message[]>(() => readAIHistory());
   const chatRequest = useRef<AbortController | null>(null);
@@ -303,12 +274,12 @@ export default function BusinessApp() {
     // Параметр запуска открывает публичную карточку, но не подтверждает личность пользователя.
     const openLaunchProgram = () => {
       const p = programs.find((p) => p.id === window.WebApp?.initDataUnsafe?.start_param);
-      if (p && (supportAccess || catalogDemo) && !openedProgramLink.current) { openedProgramLink.current = true; setSelected(p); }
+      if (p && !openedProgramLink.current) { openedProgramLink.current = true; setSelected(p); }
     };
     openLaunchProgram();
     window.addEventListener('opora:max-ready', openLaunchProgram);
     return () => window.removeEventListener('opora:max-ready', openLaunchProgram);
-  }, [programs, supportAccess, catalogDemo]);
+  }, [programs]);
   useEffect(() => {
     try {
       saveWorkspace(localStorage, { profile: companyProfile, projectProfile, fundingNeed: need, saved, applications: apps, detachedApplicationIds, businessNotice });
@@ -339,18 +310,26 @@ export default function BusinessApp() {
     .sort((a, b) => b.r.score - a.r.score);
   const toggleSaved = (id: string) =>
     setSaved((old) => (old.includes(id) ? old.filter((x) => x !== id) : [...old, id]));
-  const browse = () => navigate('programs');
+  const browse = (type = 'Все меры') => {
+    setFilter(type);
+    setQuery('');
+    setOnlySaved(false);
+    setAvailability('');
+    setCatalogScope('all');
+    setPage('programs');
+  };
   const rankedById = new Map(ranked.map((entry) => [entry.p.id, entry]));
-  const catalogIds = new Set(selectCatalog(officialFundingCatalog, catalogFilters, {
-    hasProfile: supportAccess, demo: catalogDemo, saved,
-    personalIds: personal.candidates.filter((m) => !m.opportunity.id.startsWith('budget-')
-      || aiPriorities.some((a) => a.programId === m.opportunity.id)
-      || supportNotifications.items.some((n) => n.programId === m.opportunity.id)).map((m) => m.opportunity.id),
-  }).map((o) => o.id));
   const visiblePrograms = (profile ? matches.map((m) => rankedById.get(m.opportunity.id)!) : ranked)
-    .sort((a, b) => !catalogDemo && profile && catalogScope === 'personal' ? priorityRank(a.p.id) - priorityRank(b.p.id) : 0)
-    .filter(({ p }) => catalogIds.has(p.id) && `${p.title} ${p.description} ${p.type}`.toLowerCase().includes(query.toLowerCase()));
-  useEffect(() => setCatalogLimit(30), [catalogFilters, query]);
+    .sort((a, b) => profile && catalogScope === 'personal' ? priorityRank(a.p.id) - priorityRank(b.p.id) : 0).filter(
+    ({ p }) =>
+      (filter === 'Все меры' || p.type === filter) &&
+      (!onlySaved || saved.includes(p.id)) &&
+      (!profile || catalogScope !== 'personal' || personal.candidates.some((m) => m.opportunity.id === p.id) && (!p.id.startsWith('budget-') || aiPriorities.some((a) => a.programId === p.id) || supportNotifications.items.some((n) => n.programId === p.id))) &&
+      (availability
+        ? (officialFundingCatalog.find((o) => o.id === p.id)?.status ?? 'unknown') === availability
+        : onlySaved || officialFundingCatalog.find((o) => o.id === p.id)?.status !== 'closed') &&
+      `${p.title} ${p.description} ${p.type}`.toLowerCase().includes(query.toLowerCase()),
+  );
   const activeApp = selected ? apps.find((a) => a.programId === selected.id) : undefined;
   const openProfile = () => {
     setHomePanel(null);
@@ -455,7 +434,7 @@ export default function BusinessApp() {
       setProjectOnboard(false); setAIProjectSeed(null); setFundingResult(null);
       setSelected(null); setHomePanel(null); setApplicationDocuments({});
       setMessages([]); setQuestion(''); setChatProgram(null); setChatFailure(null); setSending(false);
-      setCatalogFilters(defaultCatalogFilters()); setQuery('');
+      setCatalogScope('all'); setOnlySaved(false); setFilter('Все меры'); setQuery(''); setAvailability('');
       setDeleteBusinessOpen(false); setToast('Бизнес удалён. Черновики и сохранённые программы остались на устройстве.');
     } catch {
       setDeleteBusinessError('Не удалось сохранить удаление на устройстве. Бизнес не удалён. Попробуйте ещё раз.');
@@ -516,8 +495,8 @@ export default function BusinessApp() {
   function exportCalendar() { download(calendarICS(calendarCatalog), 'opora-calendar.ics', 'text/calendar;charset=utf-8'); }
   function programCard(p: Program) {
     const match = matches.find((m) => m.opportunity.id === p.id)!;
-    return <FundingOpportunityCard key={p.id} match={match} onOpen={openFunding} onSave={toggleSaved} saved={saved.includes(p.id)} personalized={!!profile && !catalogDemo}
-      aiReason={profile && !catalogDemo ? aiPriorities.find((item) => item.programId === p.id)?.reason : undefined} />;
+    return <FundingOpportunityCard key={p.id} match={match} onOpen={openFunding} onSave={toggleSaved} saved={saved.includes(p.id)} personalized={!!profile}
+      aiReason={profile ? aiPriorities.find((item) => item.programId === p.id)?.reason : undefined} />;
   }
 
   return (
@@ -556,9 +535,6 @@ export default function BusinessApp() {
             showNavigation={false}
             onFindSupport={() => navigate('programs')}
             onAddBusiness={() => profile ? navigate('profile') : setHomePanel('business')}
-            onStartBusiness={openProfile}
-            onAddProject={() => setProjectOnboard(true)}
-            supportReady={supportAccess}
             onAssistant={() => navigate('assistant')}
             onSettings={openSettings}
             onApplications={() => setPage('applications')}
@@ -566,31 +542,27 @@ export default function BusinessApp() {
             analysis={businessAnalysis} onAIAction={followInsight}
             hasNotifications={hasNotifications}
           />}
-          {page === 'programs' && (supportAccess || catalogDemo) && (
+          {page === 'programs' && (
             <>
-              {catalogDemo && <section className="catalog-demo-notice" aria-label="Демонстрационный профиль admin">
-                <h2>Демо-режим · admin</h2><p>Все официальные меры, включая завершённые. Персональный подбор не применяется. Это не профиль компании.</p>
-                <ActionButton className="secondary" onClick={exitCatalogDemo}>Выйти из деморежима</ActionButton>
-              </section>}
-              {profile && !catalogDemo && <div className="catalog-scopes catalog-scope-tabs" role="group" aria-label="Область подбора" data-scope={catalogScope}><span className="catalog-scope-indicator" aria-hidden="true" />{([['personal', 'Для вас'], ['all', 'Все меры'], ['saved', `Сохранённые · ${saved.length}`]] as const).map(([scope, title]) => <button key={scope} aria-pressed={catalogScope === scope} onClick={() => setCatalogScope(scope)}>{title}</button>)}</div>}
-              {profile && !catalogDemo && catalogScope === 'personal' && businessAnalysis.status !== 'ready' && <section className="catalog-guest-context" role="status">
+              {profile && <div className="catalog-scopes catalog-scope-tabs" role="group" aria-label="Область подбора" data-scope={catalogScope}><span className="catalog-scope-indicator" aria-hidden="true" />{([['personal', 'Для вас'], ['all', 'Все меры'], ['saved', `Сохранённые · ${saved.length}`]] as const).map(([scope, title]) => <button key={scope} aria-pressed={catalogScope === scope} onClick={() => { setCatalogScope(scope); setOnlySaved(scope === 'saved'); }}>{title}</button>)}</div>}
+              {profile && catalogScope === 'personal' && businessAnalysis.status !== 'ready' && <section className="catalog-guest-context" role="status">
                 <div><p>{businessAnalysis.status === 'loading' ? 'Подбираем меры для вашего бизнеса…' : 'Персональный AI-подбор временно недоступен.'}</p>
-                  <button onClick={() => setCatalogScope('all')}>Открыть весь каталог · {officialFundingCatalog.length} <Icon name="arrow" size={14} /></button>
+                  <button onClick={() => { setCatalogScope('all'); setOnlySaved(false); setFilter('Все меры'); setQuery(''); setAvailability(''); }}>Открыть весь каталог · {officialFundingCatalog.length} <Icon name="arrow" size={14} /></button>
                 </div>
               </section>}
               <div className="catalog-toolbar">
-                {(!profile || catalogDemo) && <div className="segmented-control" aria-label="Показать программы">
+                {!profile && <div className="segmented-control" aria-label="Показать программы">
                   <button
                     aria-pressed={!onlySaved}
                     className={!onlySaved ? 'selected' : ''}
-                    onClick={() => setCatalogScope('all')}
+                    onClick={() => setOnlySaved(false)}
                   >
                     Все меры
                   </button>
                   <button
                     aria-pressed={onlySaved}
                     className={onlySaved ? 'selected' : ''}
-                    onClick={() => setCatalogScope('saved')}
+                    onClick={() => setOnlySaved(true)}
                   >
                     Сохранённые <span>{saved.length}</span>
                   </button>
@@ -608,39 +580,41 @@ export default function BusinessApp() {
               </div>
               <details className="catalog-tools" open={catalogToolsOpen} onToggle={event => setCatalogToolsOpen(event.currentTarget.open)}>
                 <summary><Icon name="settings" size={18} /><span>Фильтры и подбор</span>
-                  {filterCount > 0 && <span className="catalog-tools-count">{filterCount}</span>}
+                  {(filter !== 'Все меры' || availability) && <span className="catalog-tools-count">{Number(filter !== 'Все меры') + Number(!!availability)}</span>}
                   <Icon name="chevron" size={16} />
                 </summary>
                 <div className="catalog-tools-body">
-                  <label className="field catalog-region">Регион
-                    <select value={region} onChange={(event) => setCatalogFilters((current) => ({ ...current, region: event.target.value }))}>
-                      <option value="">Все регионы</option>
-                      {officialFundingCatalog.some((o) => o.regions === 'all') && <option value="all">Вся Россия</option>}
-                      {regions.map((name) => <option key={name} value={name}>{name}</option>)}
-                    </select>
-                    {region && region !== 'all' && <span className="catalog-filter-hint">Включая меры для всей России</span>}
-                  </label>
-                  <CatalogStatusFilter value={availability} onChange={setAvailability} includeClosedByDefault={catalogDemo || onlySaved} />
-                  <fieldset className="catalog-kind-filter"><legend>Тип поддержки · можно выбрать несколько</legend>
-                    <div className="filter-chips" aria-label="Виды мер поддержки">
-                      {[...new Set(officialFundingCatalog.map((o) => o.kind))].map((kind) => <label key={kind} className="catalog-kind-option">
-                        <input type="checkbox" checked={kinds.includes(kind)} onChange={() => setCatalogFilters((current) => ({ ...current,
-                          kinds: current.kinds.includes(kind) ? current.kinds.filter((item) => item !== kind) : [...current.kinds, kind] }))} />
-                        <span>{fundingKindLabels[kind]}</span>
-                      </label>)}
-                    </div>
-                  </fieldset>
-                  {filterCount > 0 && <button type="button" className="catalog-clear-filters" onClick={resetCatalogFilters}>Сбросить фильтры</button>}
-              {!catalogDemo && (profile ? <><AdaptiveInsight analysis={businessAnalysis} section="programs" onAction={followInsight} /><div className="catalog-glass-context"><div className="catalog-personal-context"><p>{profile.region} · {need.purpose || 'Укажите цель для более точного подбора'}</p><button onClick={() => setHomePanel('funding')}>Изменить цель и параметры подбора <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={88} /></div></>
-                : <section className="catalog-guest-context"><div><button onClick={() => navigate('profile')}>Подобрать поддержку для моего бизнеса <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={104} /></section>)}
+                  <CatalogStatusFilter value={availability} onChange={setAvailability} includeClosedByDefault={onlySaved} />
+                  <h3>Вид поддержки</h3>
+              <div className="filter-chips" aria-label="Виды мер поддержки">
+                {['Все меры', ...new Set(officialFundingCatalog.map((o) => fundingKindLabels[o.kind]))].map((type) => (
+                  <button
+                    key={type}
+                    aria-pressed={filter === type}
+                    className={filter === type ? 'selected' : ''}
+                    onClick={() => setFilter(type)}
+                  >
+                    {type === 'Все меры' ? 'Все виды' : type}
+                  </button>
+                ))}
+              </div>
 
-                  {profile && !catalogDemo && <details className="ai-entry page-ai-composer"><summary>Найти поддержку по описанию задачи</summary><AIPanel title="Умный поиск" task="search" context={aiContext} initialQuestion={query} {...aiHandlers} /></details>}
+                  {(filter !== 'Все меры' || availability) && <button type="button" className="catalog-clear-filters" onClick={() => { setFilter('Все меры'); setAvailability(''); }}>Сбросить фильтры</button>}
+              {profile ? <><AdaptiveInsight analysis={businessAnalysis} section="programs" onAction={followInsight} /><div className="catalog-glass-context"><div className="catalog-personal-context"><p>{profile.region} · {need.purpose || 'Укажите цель для более точного подбора'}</p><button onClick={() => setHomePanel('funding')}>Изменить цель и параметры подбора <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={88} /></div></>
+                : <section className="catalog-guest-context"><div><button onClick={() => navigate('profile')}>Подобрать поддержку для моего бизнеса <Icon name="arrow" size={14} /></button></div><GlassArt shape="ring" size={104} /></section>}
+
+                  {profile && <details className="ai-entry page-ai-composer"><summary>Найти поддержку по описанию задачи</summary><AIPanel title="Умный поиск" task="search" context={aiContext} initialQuestion={query} {...aiHandlers} /></details>}
                   <ActionButton className="secondary" onClick={() => setCatalogToolsOpen(false)}>Показать программы · {visiblePrograms.length}</ActionButton>
                 </div>
               </details>
               <div className="catalog-results-header">
-                <h2>{!catalogDemo && profile && catalogScope === 'personal' ? 'Для вашего бизнеса' : onlySaved ? 'Сохранённые меры' : 'Все возможности'}</h2>
+                <h2>{filter === 'Все меры' ? profile && catalogScope === 'personal' ? 'Для вашего бизнеса' : 'Все возможности' : filter}</h2>
                 <span>{visiblePrograms.length} программ</span>
+                {filter !== 'Все меры' && (
+                  <button onClick={() => setFilter('Все меры')}>
+                    Сбросить <Icon name="close" size={13} />
+                  </button>
+                )}
               </div>
               <div className="program-grid catalog">
                 {visiblePrograms.slice(0, catalogLimit).map(({ p }) => programCard(p))}
@@ -665,16 +639,16 @@ export default function BusinessApp() {
                         ? businessAnalysis.status !== 'ready' ? 'Каталог доступен — откройте все меры или повторите анализ позже.' : 'По текущим параметрам и фильтрам подходящих программ не найдено. Уточните цель или посмотрите все меры.'
                         : 'С выбранными фильтрами нет результатов. Попробуйте изменить категорию или запрос.'}
                   </p>
-                  {profile && !catalogDemo && catalogScope === 'personal' && <div className="catalog-empty-actions">
+                  {profile && catalogScope === 'personal' && <div className="catalog-empty-actions">
                     <ActionButton className="secondary" onClick={() => setHomePanel('funding')}>Изменить цель и сумму</ActionButton>
                     <ActionButton className="text-button" onClick={openProfile}>Изменить сведения о бизнесе</ActionButton>
                   </div>}
                   <ActionButton
                     className="secondary"
                     onClick={() => {
-                      resetCatalogFilters();
+                      setFilter('Все меры');
                       setQuery('');
-                      setCatalogScope('all');
+                      setOnlySaved(false); setCatalogScope('all');
                       setAvailability('');
                     }}
                   >
@@ -787,7 +761,7 @@ export default function BusinessApp() {
             confirmed={personal.confirmed.length} pending={personal.pending.length} applications={apps.length} saved={saved.length} purpose={need.purpose}
             onAdd={() => setHomePanel('business')} onEdit={openProfile} onSupport={() => navigate('programs')}
             onNeed={() => setHomePanel('funding')} onAssistant={() => navigate('assistant')} onCalendar={() => navigate('calendar')}
-            onApplications={() => navigate('applications')} onSaved={() => { navigate('programs'); setCatalogScope('saved'); }} />}
+            onApplications={() => navigate('applications')} onSaved={() => { navigate('programs'); setCatalogScope('saved'); setOnlySaved(true); }} />}
           {page === 'profile' && companyProfile && !demoConfirmed(demo.state, companyProfile.inn) && <section className="profile-panel"><h3>Подтверждение компании</h3><p>Подтвердите полномочия, чтобы перейти к подаче заявок.</p><ActionButton className="secondary" onClick={() => openVerification()}>Подтвердить через Госуслуги</ActionButton></section>}
           {page === 'profile' && profile && <details className="ai-entry page-ai-composer"><summary>Проанализировать бизнес и следующий шаг</summary><AIPanel title="План развития" task="analysis" context={aiContext} initialQuestion="Проанализируй мой бизнес: какие возможности рассмотреть, чего не хватает и какой следующий шаг?" {...aiHandlers} /></details>}
           {page === 'profile' && profile && <details className="ai-entry source-updates">
@@ -914,7 +888,7 @@ export default function BusinessApp() {
             }}
           />}
       </main>
-      {page !== 'assistant' && <AppNavigation active={page} supportAvailable={supportAvailable} onNavigate={(next) => {
+      {page !== 'assistant' && <AppNavigation active={page} onNavigate={(next) => {
         if (next === 'overview' && page === 'overview') mainRef.current?.querySelector('.home-scroll')?.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
         else navigate(next);
       }} />}
