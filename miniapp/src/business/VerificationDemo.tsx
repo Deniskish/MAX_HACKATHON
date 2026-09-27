@@ -18,21 +18,23 @@ export function useVerificationDemo() {
 }
 export type DemoController = ReturnType<typeof useVerificationDemo>;
 
-export function DemoSettings({ demo, onOpen }: { demo: DemoController; onOpen: () => void }) {
-  return <section className="profile-panel demo-settings">
-    <h3>Госуслуги</h3>
-    <p>{demo.state.signedIn ? 'Аккаунт подключён. Подтвердите полномочия для выбранной компании.' : 'Войдите, чтобы подтвердить компанию и перейти к подаче заявки.'}</p>
-    {demo.state.enabled ? <>
-      <ActionButton className="secondary" onClick={onOpen}>{demo.state.signedIn ? 'Проверить компанию' : 'Продолжить вход'}</ActionButton>
-      <button className="text-button" onClick={demo.reset}>Отключить Госуслуги</button>
-    </> : <ActionButton className="secondary" onClick={() => { if (demo.update({ ...emptyDemo, enabled: true, receipts: [] })) onOpen(); }}>Войти через Госуслуги</ActionButton>}
+export function CompanyVerificationCard({ demo, inn, onOpen }: { demo: DemoController; inn: string; onOpen: () => void }) {
+  const confirmed = demoConfirmed(demo.state, inn);
+  return <section className={`company-verification-card${confirmed ? ' is-confirmed' : ''}`} aria-label="Подтверждение компании через Госуслуги">
+    <div className="company-verification-heading">
+      <span className="company-verification-mark"><img src="/brand/gosuslugi.svg" width={36} height={36} alt="Госуслуги" /></span>
+      <div><h3>{confirmed ? 'Компания подтверждена' : 'Подтвердите компанию'}</h3><p>{confirmed ? 'Через Госуслуги' : 'Через Госуслуги — для подачи заявок'}</p></div>
+      {confirmed && <span className="company-verification-check"><Icon name="check" size={20} /></span>}
+    </div>
+    {confirmed ? <button className="text-button" onClick={demo.reset}>Отключить Госуслуги</button>
+      : <ActionButton className="primary" onClick={onOpen}>Подтвердить через Госуслуги<Icon name="arrow" size={18} /></ActionButton>}
   </section>;
 }
 
 export function VerificationPage({ demo, company, onAdd, onDone }: { demo: DemoController; company: Profile | null; onAdd: () => void; onDone: () => void }) {
   const [consent, setConsent] = useState(false), [role, setRole] = useState('director');
   const confirmed = demoConfirmed(demo.state, company?.inn);
-  if (!demo.state.enabled) return <section className="profile-panel"><h2>Вход не выполнен</h2><ActionButton onClick={onDone}>К настройкам</ActionButton></section>;
+  if (!demo.state.enabled) return <section className="profile-panel"><h2>Вход не выполнен</h2><ActionButton onClick={onDone}>В мой бизнес</ActionButton></section>;
   return <section className="verification-page">
     <ol className="verification-steps" aria-label="Этапы проверки">
       {['Вход', 'Компания', 'Готово'].map((text, i) => <li key={text} aria-current={(confirmed ? 2 : demo.state.signedIn ? 1 : 0) === i ? 'step' : undefined}><span>{i + 1}</span>{text}</li>)}

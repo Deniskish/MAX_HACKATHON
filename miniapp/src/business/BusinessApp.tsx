@@ -13,8 +13,7 @@ import { useLiveCatalog } from './live-catalog';
 import { toLegacyPrograms } from '../../api-server/funding-catalog/legacy-adapter';
 import { useSupportNotifications, SupportNotificationSettings, SupportNotificationList } from './SupportNotifications';
 import { AccountPanel, useAccount } from './AccountPanel';
-import { DemoSettings, DemoSubmission, VerificationPage, useVerificationDemo } from './VerificationDemo';
-import { demoConfirmed } from './verification-demo';
+import { CompanyVerificationCard, DemoSubmission, VerificationPage, useVerificationDemo } from './VerificationDemo';
 import { matchFundingOpportunity, rankFundingMatches } from '../../api-server/funding-catalog/matching';
 import { toFundingProfile } from '../../api-server/funding-catalog/input';
 import { fundingKindLabels } from '../../api-server/funding-catalog/presentation';
@@ -107,7 +106,7 @@ export default function BusinessApp() {
   useEffect(() => { if (demo.state.inn && demo.state.inn !== companyProfile?.inn) demo.update({ ...demo.state, inn: null, role: null }); }, [companyProfile?.inn]);
   function finishVerification() {
     const application = apps.find(a => a.id === verificationReturn);
-    navigate(application ? 'applications' : 'settings');
+    navigate(application ? 'applications' : 'profile');
     if (application) setSelected(programs.find(p => p.id === application.programId) ?? null);
     setVerificationReturn(null);
   }
@@ -518,7 +517,6 @@ export default function BusinessApp() {
             <ThemeSettings />
             <AccountPanel state={account} esiaSignedIn={demo.state.enabled && demo.state.signedIn} hasCompany={!!companyProfile} onRestore={(p) => { setProfile({ ...emptyProfile, ...p }); setProjectProfile(null); setToast('Компания загружена из аккаунта'); }} onSave={() => { if (companyProfile) void account.save(companyProfile).then(() => setToast('Компания сохранена в аккаунте')).catch(() => {}); }} />
             {profile && <SupportNotificationSettings notifications={supportNotifications} />}
-            <DemoSettings demo={demo} onOpen={() => openVerification()} />
             {profile && <div className="business-removal"><button type="button" className="remove-business" onClick={() => { setDeleteBusinessError(''); setDeleteBusinessOpen(true); }}>Удалить бизнес</button></div>}
           </div>}
           {page === 'funding-results' && profile && <section className="funding-results-page">
@@ -751,14 +749,13 @@ export default function BusinessApp() {
               </div>
             </>
           )}
-          {page === 'profile' && demoConfirmed(demo.state, companyProfile?.inn) && <p className="demo-company-status">Компания подтверждена</p>}
           {page === 'profile' && <BusinessHub profile={profile} project={!!projectProfile && !companyProfile}
+            verification={companyProfile ? <CompanyVerificationCard demo={demo} inn={companyProfile.inn} onOpen={() => openVerification()} /> : undefined}
             insight={businessAnalysis.data?.personalization?.sections.home} onInsight={followInsight}
             confirmed={personal.confirmed.length} pending={personal.pending.length} applications={apps.length} saved={saved.length} purpose={need.purpose}
             onAdd={() => setHomePanel('business')} onEdit={openProfile} onSupport={() => navigate('programs')}
             onNeed={() => setHomePanel('funding')} onAssistant={() => navigate('assistant')} onCalendar={() => navigate('calendar')}
             onApplications={() => navigate('applications')} onSaved={() => { navigate('programs'); setCatalogScope('saved'); setOnlySaved(true); }} />}
-          {page === 'profile' && companyProfile && !demoConfirmed(demo.state, companyProfile.inn) && <section className="profile-panel"><h3>Подтверждение компании</h3><p>Подтвердите полномочия, чтобы перейти к подаче заявок.</p><ActionButton className="secondary" onClick={() => openVerification()}>Подтвердить через Госуслуги</ActionButton></section>}
           {page === 'profile' && profile && <button type="button" className="business-details-link" onClick={() => navigate('business-details')}>
             <span className="business-details-link-icon"><Icon name="file" size={22} /></span><span>Анализ и сведения</span><Icon name="chevron" size={18} />
           </button>}
