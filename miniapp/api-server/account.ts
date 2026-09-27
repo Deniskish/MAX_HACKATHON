@@ -10,7 +10,7 @@ export function accountRouter(store: NotificationStore, token: string) {
   const router = Router();
   router.use((req, res, next) => {
     if (!token.trim()) { res.status(503).json({ error: 'Вход через MAX временно не настроен на сервере.', code: 'MAX_NOT_CONFIGURED' }); return; }
-    try { res.locals.user = verifyMaxUser(req.header('X-Max-Init-Data') ?? '', token); }
+    try { res.locals.user = res.locals.botUser ?? verifyMaxUser(req.header('X-Max-Init-Data') ?? '', token); }
     catch { res.status(401).json({ error: 'Откройте приложение заново через MAX.', code: 'MAX_AUTH_REQUIRED' }); return; }
     db.prepare('INSERT OR IGNORE INTO accounts(user_id,id,created_at) VALUES(?,?,?)').run(res.locals.user, randomUUID(), Date.now());
     next();
@@ -38,6 +38,8 @@ export function accountRouter(store: NotificationStore, token: string) {
     try {
       for (const table of ['subscriptions', 'assessments', 'notifications']) db.prepare(`DELETE FROM ${table} WHERE user_id=?`).run(res.locals.user);
       db.prepare('UPDATE accounts SET company=NULL,revision=revision+1 WHERE user_id=?').run(res.locals.user);
+      if (db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bot_workspaces'").get())
+        db.prepare("UPDATE bot_workspaces SET data='{}',revision=revision+1 WHERE user_id=?").run(res.locals.user);
       db.exec('COMMIT'); res.json(state(res.locals.user));
     } catch (error) { db.exec('ROLLBACK'); throw error; }
   });

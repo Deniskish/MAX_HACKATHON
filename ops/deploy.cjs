@@ -82,6 +82,7 @@ async function main(root, sha) {
     run(process.execPath, ['--test', 'ops/deploy.test.cjs'], { cwd: stage });
     run('npm', ['run', 'test:production', '--prefix', 'miniapp'], { cwd: stage });
     run('npm', ['test', '--prefix', 'miniapp'], { cwd: stage });
+    run('npm', ['test', '--prefix', 'chatbot'], { cwd: stage });
     run('npm', ['test', '--prefix', 'miniapp/api-server'], { cwd: stage });
     for (const prefix of ['miniapp', 'miniapp/api-server', 'chatbot']) {
       run('npm', ['run', 'build', '--prefix', prefix], { cwd: stage });

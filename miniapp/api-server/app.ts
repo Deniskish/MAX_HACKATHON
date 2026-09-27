@@ -21,6 +21,7 @@ import { withAICatalog } from './funding-catalog/ai-runtime';
 import { NotificationStore, notificationRouter } from './funding-catalog/notifications';
 import { untilAborted } from './funding-catalog/abort';
 import { accountRouter } from './account';
+import { botAccess, botWorkspaceRouter } from './bot-access';
 import { createHash, timingSafeEqual } from 'node:crypto';
 
 export type AIClient = { complete(input: unknown): Promise<{ answer: string; mode: string }>; assist?(input: unknown, evidence?: AIEvidence[], signal?: AbortSignal): Promise<AIResult> };
@@ -59,13 +60,15 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
   app.use((_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff'); next(); });
   app.use(cors({ origin: (env.APP_ORIGIN || 'http://localhost:3000').split(',').map((s) => s.trim()) }));
   app.use('/api/ai/assist', express.json({ limit: '384kb' }));
+  app.use('/api/bot/workspace', express.json({ limit: '256kb' }));
   app.use(express.json({ limit: '48kb' }));
+  app.use('/api', botAccess(env.BOT_TOKEN ?? ''));
   const requests = new Map<string, { count: number; reset: number }>();
   app.use('/api', (req, res, next) => {
     const now = Date.now();
     for (const [key, value] of requests) if (value.reset < now) requests.delete(key);
     const isAI = req.path === '/assistant' || req.path === '/ai/assist';
-    const key = `${req.ip}:${isAI ? 'ai' : 'api'}`;
+    const key = `${res.locals.botUser ? `bot:${res.locals.botUser}` : req.ip}:${isAI ? 'ai' : 'api'}`;
     const usage = requests.get(key) ?? { count: 0, reset: now + 60000 };
     if (++usage.count > (isAI ? 15 : 120)) { res.setHeader('Retry-After', '60'); res.status(429).json({ error: 'Слишком много запросов. Повторите через минуту.', code: 'RATE_LIMITED' }); return; }
     requests.set(key, usage); next();
@@ -90,6 +93,7 @@ export function createApp(options: { giga?: AIClient | null; fnsDir?: string; en
   }
   if (options.notifications) app.use('/api/notifications', notificationRouter(options.notifications, env.BOT_TOKEN ?? '', !!giga, options.notificationStatus));
   if (options.notifications) app.use('/api/account', accountRouter(options.notifications, env.BOT_TOKEN ?? ''));
+  if (options.notifications) app.use('/api/bot', botWorkspaceRouter(options.notifications.db));
   app.use('/api/funding', fundingCatalogRouter(new FundingCatalogService(undefined, options.catalog)));
   if (options.catalog) app.use('/api/ai', (_req, _res, next) => withAICatalog(options.catalog!.getCatalog(), next));
   app.get('/api/funding/updates', async (_req, res, next) => { try { res.json(await sources.status()); } catch (e) { next(e); } });

@@ -27,7 +27,7 @@ MAX / браузер → React/Vite miniapp → Express API
                                     ├─ OfficialSnapshotProvider → FundingCatalogService
                                     │                            → deterministic matching → strategy
                                     └─ privacy boundary → OAuth/token cache → GigaChat
-MAX bot → кнопка /start, /help → miniapp
+MAX bot → быстрый диалог без пароля → тот же Express API
 ```
 
 Код: `miniapp/api-server/company-data`, `miniapp/api-server/funding-catalog`, `miniapp/src/business`. `support-model.ts` сохранён для документов и совместимости; старые правила покрыты тестами. Legacy adapter берёт факты из официального каталога. Synthetic XML, компании и программы существуют только в `miniapp/api-server/tests/fixtures`.
@@ -141,7 +141,8 @@ curl -H 'Content-Type: application/json' -d '{"profile":{},"need":{"purpose":"п
 | `GIGACHAT_SCOPE` | По аккаунту; по умолчанию `GIGACHAT_API_PERS` |
 | `GIGACHAT_MODEL` | По умолчанию `GigaChat-2-Pro`; модель должна быть доступна аккаунту |
 | `NODE_EXTRA_CA_CERTS` | Необязательный путь к доверенному PEM, **до запуска Node** |
-| `BOT_TOKEN` | Токен MAX, нужен только для бота |
+| `BOT_TOKEN` | Общий токен MAX для бота и проверки подписи на API |
+| `BOT_API_URL` | Адрес API для чат-бота; по умолчанию `http://127.0.0.1:3002` |
 | `MINIAPP_URL` | Публичный HTTPS URL вашего frontend |
 | `MAX_BOT_USERNAME` | Имя зарегистрированного бота для `https://max.ru/<bot>?startapp` |
 
@@ -149,7 +150,7 @@ GigaChat: OAuth, кеш токена, объединение параллель�
 
 В окружении текущей проверки ключи отсутствовали, а Node TLS без дополнительного CA вернул `SELF_SIGNED_CERT_IN_CHAIN` для OAuth и `UNABLE_TO_GET_ISSUER_CERT_LOCALLY` для API GigaChat. Получите доверенную цепочку из [официальной инструкции GigaChat о сертификатах](https://developers.sber.ru/docs/ru/gigachat/certificates) и настройте PEM; не отключайте TLS. Например, `NODE_EXTRA_CA_CERTS=/absolute/path/trusted.pem npm run api:dev`. Запись пути только в dotenv недостаточна: Node читает эту переменную до исполнения JS.
 
-MAX: `npm run build:chatbot && npm run start:chatbot`. `/start`, `/help`, кнопка открытия; `/demo` удалена. Используются [документированные deep links](https://dev.max.ru/docs/webapps/introduction) и `platform-api2.max.ru`. `program`/`WebAppStartParam`/`start_param` открывают реальные IDs каталога; они не аутентифицируют пользователя. Binding, персональные push и их планировщик не реализованы. Фоновый мониторинг публичных источников работает на API-сервере. Публичный календарь скачивается через MAX `downloadFile` по HTTPS; локальные черновики в MAX экспортируются копированием текста. В обычном браузере доступны TXT и ICS downloads.
+MAX: `npm run build:chatbot && npm run start:chatbot`. Бот предоставляет подбор, компанию по ИНН, AI, сохранённые меры, сроки, черновики с TXT и управление подпиской без отдельного пароля. Компания и подписка общие с мини-приложением; черновики и история чата хранятся отдельно. [Сценарии, настройка и границы чат-бота](docs/chatbot.md). Используются `platform-api2.max.ru` и [документированные deep links](https://dev.max.ru/docs/webapps/introduction). Параметры открытия меры не аутентифицируют пользователя. Проверенные новые меры доставляются существующим планировщиком API; отображение push зависит от настроек MAX и телефона.
 
 ## Docker
 

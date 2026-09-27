@@ -55,7 +55,7 @@ export function notificationRouter(store: NotificationStore, token: string, aiCo
   const router = Router();
   router.use((req, res, next) => {
     if (!token.trim()) { res.status(503).json({ error: 'Вход через MAX временно не настроен на сервере.', code: 'MAX_NOT_CONFIGURED' }); return; }
-    try { res.locals.user = verifyMaxUser(req.header('X-Max-Init-Data') ?? '', token); next(); }
+    try { res.locals.user = res.locals.botUser ?? verifyMaxUser(req.header('X-Max-Init-Data') ?? '', token); next(); }
     catch { res.status(401).json({ error: 'Откройте приложение заново через MAX.', code: 'MAX_AUTH_REQUIRED' }); }
   });
   router.get('/', (_req, res) => { const sub = store.get(res.locals.user); res.json({ enabled: !!sub, bot: !!sub?.bot, aiConfigured, monitor: monitor?.(), items: store.list(res.locals.user) }); });

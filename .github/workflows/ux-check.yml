@@ -18,6 +18,13 @@ jobs:
           cache-dependency-path: miniapp/package-lock.json
       - run: npm ci --prefix miniapp
       - run: npm ci --prefix miniapp/api-server
+      - run: npm ci --prefix chatbot
+      - name: Bot conversations and authenticated API
+        run: |
+          npm run build --prefix chatbot
+          npm test --prefix chatbot
+          cd miniapp/api-server
+          npx tsx --test bot-access.test.ts
       - run: npm run build --prefix miniapp && npm test --prefix miniapp
       - run: npx --prefix miniapp playwright install --with-deps chromium webkit
       - name: Browser journeys in both themes and engines

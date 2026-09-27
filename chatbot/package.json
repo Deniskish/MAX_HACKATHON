@@ -2,6 +2,7 @@
   "name": "opora-max-bot",
   "scripts": {
     "build": "tsc",
+    "test": "tsx --test src/*.test.ts",
     "start": "node dist/bot.js",
     "dev": "tsx src/bot.ts"
   },
