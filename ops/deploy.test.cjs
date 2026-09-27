@@ -3,7 +3,34 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { artifacts, switchArtifacts, restoreArtifacts, activateRelease, shouldSkip } = require('./deploy.cjs');
+const { artifacts, switchArtifacts, restoreArtifacts, activateRelease, shouldSkip, restartBot, botReady } = require('./deploy.cjs');
+
+test('deployment creates a missing bot and replaces stale entrypoints; rollback removes a newly introduced bot', () => {
+  for (const existing of [false, true]) {
+    const calls = [];
+    const run = (cmd, args, options) => { calls.push({ cmd, args, options }); return JSON.stringify(existing ? [{ name: 'opora-bot' }] : []); };
+    restartBot(run, '/opt/app', true, { BOT_TOKEN: 'test' });
+    assert.equal(calls.some(c => c.args[0] === 'delete'), existing);
+    const start = calls.find(c => c.args[0] === 'start');
+    assert.equal(start.args[1], path.join('/opt/app', 'chatbot/dist/bot.js'));
+    assert.equal(start.args[start.args.indexOf('--cwd') + 1], path.join('/opt/app', 'chatbot'));
+    assert.equal(start.options.env.BOT_TOKEN, 'test');
+    calls.length = 0;
+    restartBot(run, '/opt/app', false, {});
+    assert.equal(calls.some(c => c.args[0] === 'start'), false);
+  }
+});
+
+test('bot readiness requires the current process, revision and a recent successful MAX poll', () => {
+  const processes = [{ name: 'opora-bot', pid: 42, pm2_env: { status: 'online' } }];
+  const health = { pid: 42, revision: 'new', polledAt: 1000 };
+  assert.equal(botReady(processes, health, 'new', 2000), true);
+  assert.equal(botReady([], health, 'new', 2000), false);
+  assert.equal(botReady(processes, { ...health, pid: 41 }, 'new', 2000), false);
+  assert.equal(botReady(processes, health, 'other', 2000), false);
+  assert.equal(botReady(processes, health, 'new', 100000), false);
+  assert.equal(botReady(processes, undefined, 'new', 2000), false);
+});
 
 test('older queued commits never replace a newer release; reruns of the same commit are allowed', () => {
   assert.equal(shouldSkip('new', 'old', (a, b) => a === 'old' && b === 'new'), true);

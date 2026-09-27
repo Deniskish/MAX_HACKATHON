@@ -7,6 +7,20 @@ const artifacts = ['miniapp/node_modules', 'miniapp/dist', 'miniapp/api-server/n
   'miniapp/api-server/dist', 'chatbot/node_modules', 'chatbot/dist'];
 const names = ['opora-frontend', 'opora-api', 'opora-bot'];
 
+function restartBot(run, root, enabled, env) {
+  const list = JSON.parse(run('pm2', ['jlist'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+  // Recreate with the current entrypoint and cwd, including the first deployment.
+  if (list.some(p => p.name === 'opora-bot')) run('pm2', ['delete', 'opora-bot']);
+  if (enabled) run('pm2', ['start', path.join(root, 'chatbot/dist/bot.js'), '--name', 'opora-bot',
+    '--cwd', path.join(root, 'chatbot'), '--interpreter', process.execPath, '--time'], { env });
+}
+
+function botReady(processes, health, revision, now = Date.now()) {
+  const bot = processes.find(p => p.name === 'opora-bot');
+  return Boolean(bot?.pm2_env?.status === 'online' && health?.pid === bot.pid && health?.revision === revision &&
+    Number.isFinite(health.polledAt) && now - health.polledAt >= 0 && now - health.polledAt < 90000);
+}
+
 function switchArtifacts(root, stage, backup, state) {
   for (const relative of artifacts) {
     const target = path.join(root, relative), saved = path.join(backup, relative);
@@ -108,16 +122,24 @@ async function main(root, sha) {
       if (typeof value === 'string') retainedEnv[key] = value;
     }
     const hasBot = snapshot.some(p => p.name === 'opora-bot');
-    const restart = revision => {
+    const botEnv = snapshot.find(p => p.name === 'opora-bot')?.pm2_env;
+    const retainedBotEnv = {};
+    for (const key of ['BOT_TOKEN', 'MINIAPP_URL', 'BOT_API_URL', 'NODE_EXTRA_CA_CERTS', 'NODE_OPTIONS']) {
+      const value = botEnv?.[key] ?? botEnv?.env?.[key] ?? retainedEnv[key];
+      if (typeof value === 'string') retainedBotEnv[key] = value;
+    }
+    const botHealthFile = '/opt/opora-deploy/bot-health.json';
+    const restart = (revision, enableBot) => {
       const list = JSON.parse(run('pm2', ['jlist'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
       if (list.some(p => p.name === 'opora-frontend')) run('pm2', ['delete', 'opora-frontend']);
       run('pm2', ['start', 'ecosystem.config.cjs', '--only', 'opora-frontend']);
       run(process.execPath, ['miniapp/scripts/restart-api.cjs'], {
         env: { ...process.env, ...retainedEnv, OPORA_RELEASE_SHA: revision || '' },
       });
-      if (hasBot) run('pm2', ['restart', 'opora-bot']);
+      restartBot(run, root, enableBot, { ...process.env, MINIAPP_URL: 'https://business-opora.ru', ...retainedBotEnv,
+        OPORA_RELEASE_SHA: revision || '', OPORA_BOT_HEALTH_FILE: botHealthFile });
     };
-    const verify = async revision => {
+    const verify = async (revision, enableBot, checkPolling = true) => {
       let ready = false;
       for (let attempt = 0; attempt < 20; attempt++) {
         try {
@@ -131,10 +153,22 @@ async function main(root, sha) {
       run(process.execPath, ['miniapp/scripts/check-production.cjs'], {
         env: { ...process.env, EXPECTED_RELEASE_SHA: revision || '' }, timeout: 90000,
       });
+      if (enableBot && checkPolling) {
+        let pollingReady = false;
+        for (let attempt = 0; attempt < 30; attempt++) {
+          const processes = JSON.parse(run('pm2', ['jlist'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+          let health;
+          try { health = JSON.parse(fs.readFileSync(botHealthFile, 'utf8')); } catch { /* startup */ }
+          if (botReady(processes, health, revision)) { pollingReady = true; break; }
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+        if (!pollingReady) throw new Error('BOT_POLLING_NOT_READY');
+        console.log('Bot readiness: API authenticated, MAX polling active.');
+      }
       // Catch crash loops, including an already configured bot that fails after restart.
       await new Promise(resolve => setTimeout(resolve, 5000));
       const list = JSON.parse(run('pm2', ['jlist'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
-      for (const name of names.filter(n => n !== 'opora-bot' || hasBot)) {
+      for (const name of names.filter(n => n !== 'opora-bot' || enableBot)) {
         const p = list.find(p => p.name === name)?.pm2_env;
         if (p?.status !== 'online' || Date.now() - p.pm_uptime < 4500) throw new Error(`PROCESS_UNSTABLE: ${name}`);
       }
@@ -144,10 +178,10 @@ async function main(root, sha) {
     await activateRelease({
       switchCode: () => run('git', ['reset', '--hard', sha]),
       switchFiles: () => switchArtifacts(root, stage, backup, state),
-      restart: () => restart(sha), verify: () => verify(sha), save: () => run('pm2', ['save']),
+      restart: () => restart(sha, true), verify: () => verify(sha, true), save: () => run('pm2', ['save']),
       restoreFiles: () => restoreArtifacts(root, backup, state),
       restoreCode: () => run('git', ['reset', '--hard', previous]),
-      restartPrevious: () => restart(previousRevision), verifyPrevious: () => verify(previousRevision),
+      restartPrevious: () => restart(previousRevision, hasBot), verifyPrevious: () => verify(previousRevision, hasBot, false),
     });
     retainBackup = false;
     console.log(`DEPLOYED: ${sha}. Application checks passed.`);
@@ -157,7 +191,7 @@ async function main(root, sha) {
   }
 }
 
-module.exports = { artifacts, switchArtifacts, restoreArtifacts, activateRelease, shouldSkip };
+module.exports = { artifacts, switchArtifacts, restoreArtifacts, activateRelease, shouldSkip, restartBot, botReady };
 if (require.main === module) main(process.argv[2], process.argv[3]).catch(error => {
   // exec errors can contain environment values: emit only our error code, never the PM2 snapshot.
   console.error(/^[A-Z_]+(?:[: ].*)?$/.test(error.message) ? error.message : 'DEPLOY_COMMAND_FAILED (see the preceding step)');
