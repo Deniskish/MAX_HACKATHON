@@ -6,8 +6,9 @@ import '@maxhub/max-ui/dist/styles.css';
 import '@fontsource-variable/manrope';
 import App from './App';
 import { installViewportSizing } from './viewport';
-import { useSystemTheme } from './theme';
+import { installTheme, useSystemTheme } from './theme';
 import './index.css';
+installTheme();
 const bridgeScript = document.createElement('script');
 bridgeScript.src = 'https://st.max.ru/js/max-web-app.js';
 bridgeScript.onload = () => {

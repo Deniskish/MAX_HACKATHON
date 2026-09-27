@@ -68,7 +68,7 @@
 .delete-business-confirmation { display: grid; gap: 20px; }
 .delete-business-confirmation h2, .delete-business-confirmation p { margin: 0; }
 .delete-business-confirmation .modal-actions { margin: 0; }
-@media (prefers-color-scheme: light) { .remove-business { color: #a33640; } }
+:where(html[data-theme="light"]) .remove-business { color: #a33640; }
 @media (max-width: 359px) { .opora-theme .page-profile :is(.source-updates, .profile-panel) { padding-inline: 18px; } }
 
 .opora-theme .page-profile .hub-identity { padding: 20px; }

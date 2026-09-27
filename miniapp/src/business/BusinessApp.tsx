@@ -1,4 +1,6 @@
 import { AssistantPage } from './AssistantPage';
+import { ThemeSettings } from './ThemeSettings';
+import { BusinessDetailsPage } from './BusinessDetailsPage';
 import { AIDataHelp, ContextHelp, GuideLink } from './ContextHelp';
 import { GlassArt } from './GlassArt';
 // Общее состояние экранов, профиля и заявок. Условия программ считаются в domain.
@@ -502,9 +504,9 @@ export default function BusinessApp() {
   return (
     <div ref={shell} className={`app-shell shared-navigation page-${page}`}>
       {page !== 'overview' && page !== 'assistant' && <AppHeader
-        title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', 'funding-results': 'Варианты поддержки', settings: 'Настройки', verification: 'Подтверждение компании' }[page]}
-        backLabel={page === 'settings' ? 'Назад' : page === 'funding-results' ? 'К параметрам подбора' : page === 'calendar' ? 'В мой бизнес' : page === 'verification' ? 'Назад к сценарию' : 'На главную'}
-        onBack={() => page === 'settings' ? setPage(settingsReturn) : page === 'verification' ? finishVerification() : page === 'funding-results' ? setHomePanel('funding') : navigate(page === 'calendar' ? 'profile' : 'overview')}
+        title={{ programs: 'Меры поддержки', applications: 'Мои заявки', calendar: 'Календарь', profile: 'Мой бизнес', 'funding-results': 'Варианты поддержки', settings: 'Настройки', verification: 'Подтверждение компании', 'business-details': 'Анализ и сведения' }[page]}
+        backLabel={page === 'settings' ? 'Назад' : page === 'funding-results' ? 'К параметрам подбора' : ['calendar', 'business-details'].includes(page) ? 'В мой бизнес' : page === 'verification' ? 'Назад к сценарию' : 'На главную'}
+        onBack={() => page === 'settings' ? setPage(settingsReturn) : page === 'verification' ? finishVerification() : page === 'funding-results' ? setHomePanel('funding') : navigate(['calendar', 'business-details'].includes(page) ? 'profile' : 'overview')}
         onSettings={page === 'settings' ? undefined : openSettings} hasNotifications={hasNotifications}
       />}
       <main ref={mainRef} className="app-content">
@@ -515,9 +517,9 @@ export default function BusinessApp() {
               {hasNotifications && <span className="settings-unread" aria-label="Есть новые уведомления" />}
               <Icon name="chevron" size={18} />
             </button>
+            <ThemeSettings />
             <AccountPanel state={account} presentation={demo.state.enabled} esiaSignedIn={demo.state.enabled && demo.state.signedIn} hasCompany={!!companyProfile} onRestore={(p) => { setProfile({ ...emptyProfile, ...p }); setProjectProfile(null); setToast('Компания загружена из аккаунта'); }} onSave={() => { if (companyProfile) void account.save(companyProfile).then(() => setToast('Компания сохранена в аккаунте')).catch(e => setToast(e.message)); }} />
             {profile && <SupportNotificationSettings notifications={supportNotifications} />}
-            <section className="profile-panel"><h3>Оформление</h3><p>Тема автоматически повторяет настройки телефона.</p></section>
             <DemoSettings demo={demo} onOpen={() => openVerification()} />
             {profile && <div className="business-removal"><button type="button" className="remove-business" onClick={() => { setDeleteBusinessError(''); setDeleteBusinessOpen(true); }}>Удалить бизнес</button></div>}
           </div>}
@@ -764,21 +766,23 @@ export default function BusinessApp() {
             onNeed={() => setHomePanel('funding')} onAssistant={() => navigate('assistant')} onCalendar={() => navigate('calendar')}
             onApplications={() => navigate('applications')} onSaved={() => { navigate('programs'); setCatalogScope('saved'); setOnlySaved(true); }} />}
           {page === 'profile' && companyProfile && !demoConfirmed(demo.state, companyProfile.inn) && <section className="profile-panel"><h3>Подтверждение компании</h3><p>Подтвердите полномочия, чтобы перейти к подаче заявок.</p><ActionButton className="secondary" onClick={() => openVerification()}>Подтвердить через Госуслуги</ActionButton></section>}
-          {page === 'profile' && profile && <details className="ai-entry page-ai-composer"><summary>Проанализировать бизнес и следующий шаг</summary><AIPanel title="План развития" task="analysis" context={aiContext} initialQuestion="Проанализируй мой бизнес: какие возможности рассмотреть, чего не хватает и какой следующий шаг?" {...aiHandlers} /></details>}
-          {page === 'profile' && profile && <details className="ai-entry source-updates">
-            <summary>Изменения в поддержке · разбор с AI</summary>
-            <p>{sourcesCheckedAt ? `Последняя проверка: ${new Date(sourcesCheckedAt).toLocaleString('ru-RU')}.` : 'Первая проверка источников ещё не завершена.'} Изменение страницы требует сверки условий программы.</p>
+          {page === 'profile' && profile && <button type="button" className="business-details-link" onClick={() => navigate('business-details')}>
+            <span className="business-details-link-icon"><Icon name="file" size={22} /></span><span>Анализ и сведения</span><Icon name="chevron" size={18} />
+          </button>}
+          {page === 'business-details' && profile && <BusinessDetailsPage name={profile.name}
+            analysis={<AIPanel title="План развития" task="analysis" context={aiContext} initialQuestion="Проанализируй мой бизнес: какие возможности рассмотреть, чего не хватает и какой следующий шаг?" {...aiHandlers} />}
+            updates={<div className="business-updates"><h2>Изменения в поддержке</h2>
+            <ContextHelp title="Об источниках"><p>{sourcesCheckedAt ? `Последняя проверка: ${new Date(sourcesCheckedAt).toLocaleString('ru-RU')}.` : 'Первая проверка источников ещё не завершена.'} Изменение страницы требует сверки условий программы.</p></ContextHelp>
             {sourceUpdates.length ? sourceUpdates.map((update) => <article className="ai-proposal" key={update.id}>
               <span className="tag">{update.kind === 'discovered' ? 'Найден новый материал' : saved.includes(update.opportunityId ?? '') ? 'По сохранённой программе' : 'Изменилась страница'}</span>
               <p><a href={update.url} target="_blank" rel="noreferrer">{update.title} ↗</a></p>
               <ActionButton className="secondary" disabled={sending} onClick={() => {
                 void ask(`Оцени, как актуальные материалы по теме «${update.title}» влияют на мой бизнес. Укажи, что подтверждено и что требует проверки.`, programs.find((program) => program.id === update.opportunityId) ?? null, 'strategy');
               }}>Объяснить влияние с AI</ActionButton>
-            </article>) : <p>Новых материалов для разбора пока нет.</p>}
-          </details>}
-          {page === 'profile' &&
-            (profile ? (
-              <details className="profile-panel"><summary>Сведения о бизнесе</summary>
+            </article>) : <div className="business-updates-empty"><Icon name="bell" size={32} /><h3>Пока без изменений</h3><p>Новые материалы появятся здесь.</p></div>}
+          </div>}
+            details={
+              <section className="profile-panel business-information">
                 <div className="section-title">
                   <div>
                     <span className="tag">{companyProfile ? 'Профиль бизнеса' : 'Проект без компании'}</span>
@@ -851,8 +855,8 @@ export default function BusinessApp() {
                 <div className="data-note">
                   {account.account?.company ? 'Компания сохранена в аккаунте MAX. Черновики и документы остаются на этом устройстве.' : 'Профиль и черновики сохранены на этом устройстве. Подключение аккаунта — в настройках.'}
                 </div>
-              </details>
-            ) : null)}
+              </section>
+            } />}
           {page === 'assistant' && <AssistantPage
   businessName={profile?.name ?? 'Вопросы о бизнесе'}
   guest={!profile}

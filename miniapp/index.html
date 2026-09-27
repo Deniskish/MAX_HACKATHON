@@ -8,8 +8,20 @@
     <meta name="theme-color" content="#F7F7F8" media="(prefers-color-scheme: light)" />
     <style>
       html { background: #191a1f; color-scheme: dark; }
-      @media (prefers-color-scheme: light) { html { background: #f7f7f8; color-scheme: light; } }
+      html[data-theme="light"] { background: #f7f7f8; color-scheme: light; }
     </style>
+    <script>
+      (function () {
+        var preference;
+        try { preference = localStorage.getItem('opora.theme'); } catch (_) {}
+        var theme = preference === 'light' || preference === 'dark' ? preference : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = theme;
+        document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) {
+          meta.removeAttribute('media');
+          meta.content = theme === 'dark' ? '#191A1F' : '#F7F7F8';
+        });
+      })();
+    </script>
     <meta name="description" content="Персональный помощник по поддержке бизнеса" />
     <title>Опора — поддержка вашего бизнеса</title>
   </head>

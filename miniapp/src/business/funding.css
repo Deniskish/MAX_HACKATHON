@@ -46,9 +46,7 @@
 .opora-theme .page-programs .funding-card .widget-footnote { font-size: 14px; line-height: 1.5; color: var(--muted); }
 .opora-theme .page-programs .funding-card > a { font-size: 14px; line-height: 1.5; color: var(--accent); }
 .opora-theme .page-programs .funding-card > .opora-action { min-height: 48px; font-size: 15px; box-shadow: none; }
-@media (prefers-color-scheme: dark) {
-  .opora-theme .page-programs { --canvas: #14151a; --surface: #1e1f26; --muted: #b0adbd; }
-}
+:where(html[data-theme="dark"]) .opora-theme .page-programs { --canvas: #14151a; --surface: #1e1f26; --muted: #b0adbd; }
 
 .opora-theme .page-programs .catalog-personal-context { min-width: 0; margin: 0; padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
 .opora-theme .page-programs .catalog-personal-context p { margin: 0 0 8px; font-size: 15px; line-height: 1.6; color: var(--ink); }
