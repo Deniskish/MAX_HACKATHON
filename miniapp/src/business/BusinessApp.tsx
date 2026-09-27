@@ -23,17 +23,18 @@ import {
   DocumentChecklist,
   DraftComposer,
 } from './AgentExperience';
-import { DetailSteps } from './VisualWidgets';
+import { DetailSteps, preparationProgress, PreparationRequirements } from './VisualWidgets';
 import { BusinessHub } from './BusinessHub';
 import { useBusinessAnalysis } from './useBusinessAnalysis';
 import { AdaptiveInsight } from './AdaptiveInsight';
 import type { WorkspaceInsight } from '../../api-server/ai/types';
 import { Icon } from './Icon';
+import { InfoDisclosureRow } from './InfoDisclosureRow';
 import { ModalSheet } from './ModalSheet';
 import { CatalogStatusFilter } from './CatalogStatusFilter';
 import { HomePage } from './HomePage';
 import { useTabTransition } from './useTabTransition';
-import { AppHeader, AppNavigation, type AppPage as Page } from './AppChrome';
+import { AppHeader, AppNavigation, navigationTab, type MainTab, type AppPage as Page } from './AppChrome';
 import { AIPanel, AIResultView, AIIntakeDisclosure } from './AIExperience';
 import { aiErrorMessage, requestAI, readAIHistory, saveAIHistory, type AIResult, type AIDocument } from './ai-client';
 import { ActionButton, BusinessInput, BusinessTextarea } from './MaxControls';
@@ -91,11 +92,12 @@ export default function BusinessApp() {
     } else browserDownload(text, name, type);
   }
   const [page, setPageState] = useState<Page>('overview');
+  const [activeTab, setActiveTab] = useState<MainTab>('overview');
   const [settingsReturn, setSettingsReturn] = useState<Page>('overview');
   const [catalogToolsOpen, setCatalogToolsOpen] = useState(false);
   function openSettings() { setSettingsReturn(page); navigate('settings'); }
   const { shell, prepare } = useTabTransition(page);
-  const setPage = (next: Page) => { prepare(next); setPageState(next); };
+  const setPage = (next: Page) => { prepare(next); const tab = navigationTab(next); if (tab) setActiveTab(tab); setPageState(next); };
   const [initial] = useState(() => loadWorkspace(localStorage, programs.map((p) => p.id)));
   const [companyProfile, setProfile] = useState<Profile | null>(initial.profile);
   useEffect(() => {
@@ -300,7 +302,10 @@ export default function BusinessApp() {
     }
   }, [toast]);
   useEffect(() => {
-    if (selected || onboard) dialogRef.current?.showModal();
+    if (selected || onboard) {
+      dialogRef.current?.showModal();
+      if (selected && !onboard) dialogRef.current?.querySelector<HTMLElement>('.modal')?.focus({ preventScroll: true });
+    }
     else dialogRef.current?.close();
   }, [selected, onboard]);
 
@@ -892,13 +897,14 @@ export default function BusinessApp() {
             }}
           />}
       </main>
-      {page !== 'assistant' && <AppNavigation active={page === 'settings' ? settingsReturn : page} onNavigate={(next) => {
+      {page !== 'assistant' && <AppNavigation active={activeTab} onNavigate={(next) => {
         if (next === 'overview' && page === 'overview') mainRef.current?.querySelector('.home-scroll')?.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
         else navigate(next);
       }} />}
       <dialog
         aria-label={onboard ? 'Профиль бизнеса' : selected?.title || 'Программа'}
         ref={dialogRef}
+        className={selected && !onboard ? 'opportunity-dialog' : undefined}
         onCancel={close}
         onClick={(e) => {
           if (e.target === e.currentTarget) close();
@@ -916,7 +922,7 @@ export default function BusinessApp() {
             onClick={() => toggleSaved(selected.id)}
           ><Icon name="bookmark" /></button>}
         </div>
-        <div className="modal">
+        <div className="modal" tabIndex={selected && !onboard ? -1 : undefined}>
           {onboard && (
             <form className="company-profile-form" onSubmit={saveProfile} onInvalid={(e) => { const details = (e.target as HTMLElement).closest('details'); if (details) details.open = true; }}>
               <header className="company-profile-heading">
@@ -940,8 +946,8 @@ export default function BusinessApp() {
                 ) : (
                   <>
                     {autoFilledCompany && <section className="company-loaded-summary"><span className="tag">Загружено по ИНН</span><h3>{form.name}</h3><p>ИНН {form.inn} · {form.region}</p><p>ОКВЭД {form.okved}</p></section>}
-                    <details className="company-fields-section" open={!autoFilledCompany}>
-                    <summary>Реквизиты компании</summary>
+                    <details className="company-fields-section info-disclosure" open={!autoFilledCompany}>
+                    <InfoDisclosureRow as="summary" label="Реквизиты компании" icon="building" />
                     <div className="form-grid">
                       <label className="field">
                         Название
@@ -1009,7 +1015,7 @@ export default function BusinessApp() {
                         />
                       </label>
                     </div></details>
-                    <details className="company-fields-section"><summary>Дополнительные параметры</summary>
+                    <details className="company-fields-section info-disclosure"><InfoDisclosureRow as="summary" label="Дополнительные параметры" />
                     <p className="muted">Можно пропустить. Неизвестные значения не считаются нулевыми.</p>
                     <div className="form-grid">
                       {(['ageMonths', 'employees', 'revenue'] as const).map((key, i) => (
@@ -1117,8 +1123,8 @@ export default function BusinessApp() {
               </div>
               <span className="tag">{selected.type}</span>
               <h2>{selected.title}</h2>
-              <details key={selected.id} className="application-conditions">
-              <summary>Условия программы</summary>
+              <details key={selected.id} className="application-conditions info-disclosure">
+              <InfoDisclosureRow as="summary" label="Условия программы" />
               <p className="muted">{selected.description}</p>
               <OfficialDetails personalized={!!profile} match={matches.find((m) => m.opportunity.id === selected.id)!} onAsk={() => { const program = selected; close(); void ask('Объясни следующий шаг', program, 'strategy'); }} />
               </details>
@@ -1138,12 +1144,7 @@ export default function BusinessApp() {
               </section>}
               {activeApp && profile && !detachedApplicationIds.includes(activeApp.id) ? (
                 <>
-                  <DetailSteps
-                    prepared={selected.documents.filter((d) => activeApp.documents[d]).length}
-                    total={selected.documents.length}
-                    hasProject={!!activeApp.project.trim()}
-                    hasBudget={Number(activeApp.budget) > 0}
-                  />
+                  <DetailSteps {...preparationProgress(activeApp, selected.documents)} />
                   <h3 id="application-documents">Подготовка документов</h3>
                   {!selected.documents.length && <p>Точный перечень документов не подтвержден. Сверьте комплект с официальным оператором.</p>}
                   <DocumentChecklist
@@ -1187,7 +1188,7 @@ export default function BusinessApp() {
                       onDownload={(text) => download(text, `opora-${selected.id}-document.txt`)}
                     />
                   )}
-                  <label className="checklist-title"><input type="checkbox" checked={!!activeApp.reviewConfirmed} onChange={(e) => updateApp(activeApp.id, { reviewConfirmed: e.target.checked })} />Я сверил перечень и комплект с условиями оператора</label>
+                  <label className="checklist-title application-review"><input type="checkbox" checked={!!activeApp.reviewConfirmed} onChange={(e) => updateApp(activeApp.id, { reviewConfirmed: e.target.checked })} />Я сверил перечень и комплект с условиями оператора</label>
                   <p role="status">{applicationLabels[applicationStatus(activeApp, officialFundingCatalog.find((o) => o.id === selected.id)!)]}</p>
                   {companyProfile && <DemoSubmission key={activeApp.id} demo={demo} company={companyProfile} applicationId={activeApp.id} title={selected.title} ready={applicationStatus(activeApp, officialFundingCatalog.find((o) => o.id === selected.id)!) === 'ready_for_review'} onVerify={() => openVerification(activeApp.id)} />}
                   <div className="modal-actions">
@@ -1209,13 +1210,7 @@ export default function BusinessApp() {
                 </>
               ) : (
                 <>
-                  <h3>Что нужно подготовить</h3>
-                  {!selected.documents.length && <p>Перечень документов уточните в <a href={selected.source} target="_blank" rel="noreferrer">объявлении отбора</a>.</p>}
-                  <ul className="plain-list">
-                    {selected.documents.map((d) => (
-                      <li key={d}>{d}</li>
-                    ))}
-                  </ul>
+                  <PreparationRequirements documents={selected.documents} source={selected.source} />
                   <div className="modal-actions">
                     <ActionButton
                       className="secondary"

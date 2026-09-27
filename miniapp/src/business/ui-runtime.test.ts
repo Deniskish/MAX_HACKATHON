@@ -11,6 +11,9 @@ import { AIResultView } from './AIExperience';
 import { AccountPanel } from './AccountPanel';
 import { SupportNotificationSettings } from './SupportNotifications';
 import { AdaptiveInsight } from './AdaptiveInsight';
+import { DetailSteps, preparationProgress, PreparationRequirements } from './VisualWidgets';
+import { InfoDisclosureRow } from './InfoDisclosureRow';
+import { AppNavigation, navigationTab } from './AppChrome';
 import { DemoSubmission } from './VerificationDemo';
 
 const request: AIRequest = { task: 'intake', question: 'Мастерская мебели', context: {} };
@@ -138,4 +141,60 @@ test('every interactive task pauses background work and releases activity after 
     assert.equal(getAIActivity(), 0);
   }
   unsubscribe();
+});
+
+// UI progress must describe saved facts, never the selected/next step.
+
+const emptyDraftProgress = { documents: {}, project: '', budget: '' };
+function completedSteps(app: typeof emptyDraftProgress, documents: string[]) {
+  const html = renderToStaticMarkup(createElement(DetailSteps, preparationProgress(app, documents)));
+  assert.doesNotMatch(html, /class="current"|<i>/);
+  return [...html.matchAll(/data-completed="(true|false)"/g)].map((match) => match[1] === 'true');
+}
+test('an empty draft has no completed steps, including an unpublished document list', () => {
+  assert.deepEqual(completedSteps(emptyDraftProgress, []), [false, false, false]);
+  assert.deepEqual(completedSteps(emptyDraftProgress, ['Смета']), [false, false, false]);
+});
+test('only an actual project description completes the project step', () => {
+  assert.deepEqual(completedSteps({ ...emptyDraftProgress, project: '   ' }, []), [false, false, false]);
+  assert.deepEqual(completedSteps({ ...emptyDraftProgress, project: 'Оборудование мастерской' }, []), [false, true, false]);
+});
+test('only a valid positive ruble budget completes the budget step', () => {
+  for (const budget of ['', ' ', '0', '-1', 'NaN', 'Infinity', '1e999', '0.5']) {
+    assert.deepEqual(completedSteps({ ...emptyDraftProgress, budget }, []), [false, false, false]);
+  }
+  assert.deepEqual(completedSteps({ ...emptyDraftProgress, budget: '150000' }, []), [false, false, true]);
+});
+test('documents complete only after every published item is marked, and undo clears completion', () => {
+  const documents = ['Смета', 'Заявление'];
+  assert.deepEqual(completedSteps({ ...emptyDraftProgress, documents: { Смета: 'Готово' } }, documents), [false, false, false]);
+  assert.deepEqual(completedSteps({ ...emptyDraftProgress, documents: { Смета: 'Готово', Заявление: 'Готово' } }, documents), [true, false, false]);
+  assert.deepEqual(completedSteps({ ...emptyDraftProgress, documents: { Смета: '', Заявление: 'Готово' } }, documents), [false, false, false]);
+  assert.deepEqual(completedSteps({ ...emptyDraftProgress, documents: { Смета: 'Готово' } }, []), [false, false, false]);
+});
+test('missing preparation documents render no empty list and keep the official source', () => {
+  const source = 'https://example.org/official';
+  const empty = renderToStaticMarkup(createElement(PreparationRequirements, { documents: [], source }));
+  assert.doesNotMatch(empty, /<ul|plain-list/);
+  assert.match(empty, /Что нужно подготовить/); assert.ok(empty.includes(source));
+  const filled = renderToStaticMarkup(createElement(PreparationRequirements, { documents: ['Смета'], source }));
+  assert.match(filled, /<ul class="plain-list"><li>Смета<\/li><\/ul>/);
+});
+test('settings and verification are auxiliary screens, never implicitly My Business', () => {
+  assert.equal(navigationTab('settings'), null); assert.equal(navigationTab('verification'), null);
+  for (const active of ['overview', 'programs', 'applications', 'profile'] as const) {
+    assert.equal(navigationTab(active), active);
+    const html = renderToStaticMarkup(createElement(AppNavigation, { active, onNavigate() {} }));
+    assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
+    assert.match(html, /Поддержка/);
+  }
+  const settings = renderToStaticMarkup(createElement(AppNavigation, { active: 'settings', onNavigate() {} }));
+  assert.doesNotMatch(settings, /aria-current="page"|home-nav-indicator/);
+});
+test('shared disclosure row provides native summary and button semantics without changing its label', () => {
+  const summary = renderToStaticMarkup(createElement(InfoDisclosureRow, { as: 'summary', label: 'Реквизиты компании', icon: 'building' }));
+  assert.match(summary, /<summary class="info-disclosure-row"/);
+  assert.match(summary, /Реквизиты компании/); assert.equal((summary.match(/<svg/g) ?? []).length, 2);
+  const button = renderToStaticMarkup(createElement(InfoDisclosureRow, { label: 'Условия программы', onClick() {}, expanded: false, controls: 'conditions' }));
+  assert.match(button, /type="button"/); assert.match(button, /aria-expanded="false"/); assert.match(button, /aria-controls="conditions"/);
 });

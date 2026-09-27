@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Icon } from './Icon';
 import { ActionButton } from './MaxControls';
 import { BrandWordmark } from './AppChrome';
-import { type Profile } from './domain';
+import { type Profile, type Application } from './domain';
 
 export const supportCategories = [
   { label: 'Гранты', filter: 'Грант', icon: 'spark', tone: 'violet' },
@@ -110,6 +110,20 @@ export function BusinessCard({ profile, onEdit }: { profile: Profile | null; onE
     </section>
   );
 }
+/** Display state only; this does not change draft readiness or submission rules. */
+export function preparationProgress(app: Pick<Application, 'documents' | 'project' | 'budget'>, documents: string[]) {
+  const budget = Number(app.budget);
+  return { prepared: documents.filter((name) => !!app.documents[name]).length, total: documents.length,
+    hasProject: !!app.project.trim(), hasBudget: !!app.budget.trim() && Number.isSafeInteger(budget) && budget > 0 };
+}
+
+export function PreparationRequirements({ documents, source }: { documents: string[]; source: string }) {
+  return <><h3>Что нужно подготовить</h3>
+    {documents.length ? <ul className="plain-list">{documents.map((name) => <li key={name}>{name}</li>)}</ul>
+      : <p>Перечень документов уточните в <a href={source} target="_blank" rel="noreferrer">объявлении отбора</a>.</p>}
+  </>;
+}
+
 export function DetailSteps({
   prepared,
   total,
@@ -121,12 +135,11 @@ export function DetailSteps({
   hasProject: boolean;
   hasBudget: boolean;
 }) {
-  const selected = prepared < total ? 0 : !hasProject ? 1 : !hasBudget ? 2 : -1;
   const steps = [
     {
       title: 'Документы',
       description: `${prepared} из ${total}`,
-      done: prepared === total,
+      done: total > 0 && prepared === total,
       target: 'application-documents',
     },
     {
@@ -146,18 +159,20 @@ export function DetailSteps({
     <section className="widget preparation-widget">
       <PanelHeading title="Подготовим заявку" />
       <div className="preparation-options">
-        {steps.map((s, i) => (
+        {steps.map((s) => (
           <button
             key={s.title}
-            className={i === selected ? 'current' : ''}
+            type="button"
+            data-completed={s.done}
+            aria-label={`${s.title}: ${s.done ? 'выполнено' : 'не выполнено'}`}
             onClick={() =>
               document
                 .getElementById(s.target)
-                ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                ?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' })
             }
           >
-            <span className={'step-radio ' + (s.done ? 'complete' : '')}>
-              {s.done ? <Icon name="check" size={13} /> : i === selected ? <i /> : null}
+            <span className={'step-radio ' + (s.done ? 'complete' : '')} aria-hidden="true">
+              {s.done ? <Icon name="check" size={13} /> : null}
             </span>
             <b>{s.title}</b>
             <small>{s.description}</small>

@@ -1,3 +1,4 @@
+import { InfoDisclosureRow } from './InfoDisclosureRow';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActionButton, BusinessTextarea } from './MaxControls';
 import { aiErrorMessage, requestAI, type AIRequest, type AIResult } from './ai-client';
@@ -69,9 +70,9 @@ export function AIResultView({ result, onOpen, onPrepare, onFunding, onNeed, onP
       <ActionButton className="secondary" disabled={applied.includes('need')} onClick={() => { onNeed(result.proposedNeed!); setApplied((v) => [...v, 'need']); }}>{applied.includes('need') ? 'Потребность заполнена' : 'Заполнить потребность'}</ActionButton></section>}
     {result.proposedProfile && onProfile && <section className="ai-proposal"><h3>Предложенные сведения о бизнесе</h3><Facts data={result.proposedProfile} />
       <ActionButton className="secondary" onClick={() => onProfile(result.proposedProfile!)}>Проверить в профиле</ActionButton></section>}
-    {!!result.scenarios.length && <details><summary>Сравнение сценариев</summary>{result.scenarios.map((s, i) => <section className="ai-proposal" key={i}><h3>{s.label}</h3><Facts data={s.need} />
+    {!!result.scenarios.length && <details className="info-disclosure"><InfoDisclosureRow as="summary" label="Сравнение сценариев" />{result.scenarios.map((s, i) => <section className="ai-proposal" key={i}><h3>{s.label}</h3><Facts data={s.need} />
       {s.matches.map((m) => <p key={m.id}>{m.title}: {fundingStatusLabels[m.status as keyof typeof fundingStatusLabels] ?? m.status}</p>)}</section>)}</details>}
-    {!!result.citations.length && <details className="ai-sources"><summary>Источники и основания · {result.citations.length}</summary>{result.citations.map((s) => <div key={s.id}>
+    {!!result.citations.length && <details className="ai-sources info-disclosure"><InfoDisclosureRow as="summary" label={`Источники и основания · ${result.citations.length}`} />{result.citations.map((s) => <div key={s.id}>
       {s.url?.startsWith('https://') ? <a href={s.url} target="_blank" rel="noreferrer">{s.title} ↗</a> : <b>{s.title}{s.page ? ` · стр. ${s.page}` : ''}</b>}
       {s.checkedAt && <small>Проверен {s.checkedAt}</small>}<p>{s.text}</p></div>)}</details>}
     <div className="ai-actions">{result.actions.map((a, i) => {

@@ -163,7 +163,7 @@ dialog .modal, .modal-sheet .project-dialog { min-height: 0; max-height: none; h
 .requirements, .plain-list, .document-list { background: #1c1d23; border-color: var(--line); }
 .preparation-options > button { background: #242229; border: 1px solid var(--line); color: var(--ink); }
 .preparation-options > button.current { background: #604dca26; border-color: #8064ff40; }
-.current .step-radio, .step-radio.complete { background: #604dca; color: #ebebf3; }
+.step-radio.complete { background: #604dca; color: #ebebf3; }
 .step-radio i { background: #8064ff; }
 .checklist-title, .checklist-title b { color: #ddd9e8; }
 .checklist-title small, .checklist-item dd { color: var(--muted); }

@@ -507,7 +507,6 @@
   background: transparent;
   color: white;
 }
-.current .step-radio,
 .step-radio.complete {
   background: #2401fe;
   border-color: #2401fe;

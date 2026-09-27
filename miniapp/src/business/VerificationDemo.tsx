@@ -39,12 +39,12 @@ export function VerificationPage({ demo, company, onAdd, onDone }: { demo: DemoC
     <ol className="verification-steps" aria-label="Этапы проверки">
       {['Вход', 'Компания', 'Готово'].map((text, i) => <li key={text} aria-current={(confirmed ? 2 : demo.state.signedIn ? 1 : 0) === i ? 'step' : undefined}><span>{i + 1}</span>{text}</li>)}
     </ol>
-    {!demo.state.signedIn ? <section className="profile-panel">
+    {!demo.state.signedIn ? <section className="profile-panel verification-sign-in">
       <Icon name="building" size={34} /><h2>Вход через Госуслуги</h2>
       <p>Разрешите доступ к профилю и сведениям об организациях.</p>
-      <label className="checklist-title"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />Разрешить доступ</label>
-      <ActionButton className="primary" disabled={!consent} onClick={() => demo.update({ ...demo.state, signedIn: true })}>Продолжить</ActionButton>
-      <button className="text-button" onClick={onDone}>Отмена</button>
+      <label className="checklist-title verification-consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />Разрешить доступ</label>
+      <div className="verification-actions"><ActionButton className="primary" disabled={!consent} onClick={() => demo.update({ ...demo.state, signedIn: true })}>Продолжить</ActionButton>
+      <ActionButton className="secondary" onClick={onDone}>Отмена</ActionButton></div>
     </section> : !company ? <section className="profile-panel"><h2>Выберите компанию</h2><p>Загрузите её по ИНН, затем подтвердите полномочия.</p><ActionButton className="primary" onClick={onAdd}>Добавить компанию по ИНН</ActionButton></section>
       : !confirmed ? <section className="profile-panel">
         <h2>Подтверждение компании</h2><p>{company.name}<br />ИНН {company.inn}</p>

@@ -49,7 +49,7 @@ export function AssistantPage({ businessName, guest = false, backLabel = 'В м�
     pinned.current = true;
     onSend(text);
   }
-  return <section className="assistant-page" aria-label="Чат с AI-помощником">
+  return <section className={`assistant-page${program ? ' assistant-explanation' : ''}`} aria-label="Чат с AI-помощником">
     <header className="assistant-header">
       <button className="assistant-icon-button assistant-back" aria-label={backLabel} onClick={onBack}><Icon name="chevron" /></button>
       <div className="assistant-heading"><h1>Опора AI</h1><span>{businessName}</span></div>

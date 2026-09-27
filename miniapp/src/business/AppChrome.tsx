@@ -2,6 +2,13 @@ import { Icon } from './Icon';
 import { ThemedImage } from './ThemedImage';
 
 export type AppPage = 'overview' | 'programs' | 'applications' | 'calendar' | 'profile' | 'assistant' | 'funding-results' | 'settings' | 'verification' | 'business-details';
+export type MainTab = 'overview' | 'programs' | 'applications' | 'profile';
+export function navigationTab(page: AppPage): MainTab | null {
+  if (page === 'settings' || page === 'verification' || page === 'assistant') return null;
+  if (page === 'funding-results') return 'programs';
+  if (page === 'calendar' || page === 'business-details') return 'profile';
+  return page;
+}
 
 export function BrandWordmark({ className = '' }: { className?: string }) {
   return <span className={`home-wordmark ${className}`}>
@@ -12,16 +19,17 @@ export function BrandWordmark({ className = '' }: { className?: string }) {
 export function AppNavigation({ active, onNavigate }: {
   active: AppPage; onNavigate: (page: AppPage) => void;
 }) {
+  const tab = navigationTab(active);
   return <div className="home-nav-wrap">
-    <nav className="home-nav" data-active={active === 'overview' ? 0 : ['programs', 'funding-results'].includes(active) ? 1 : active === 'applications' ? 2 : 3} aria-label="Основная навигация">
-      <span className="home-nav-indicator" aria-hidden="true" />
+    <nav className="home-nav" data-active={tab === 'overview' ? 0 : tab === 'programs' ? 1 : tab === 'applications' ? 2 : tab === 'profile' ? 3 : undefined} aria-label="Основная навигация">
+      {tab && <span className="home-nav-indicator" aria-hidden="true" />}
       {([
         ['overview', 'home', 'Главная'], ['programs', 'compass', 'Поддержка'], ['applications', 'file', 'Заявки'],
       ] as const).map(([page, icon, label]) => <button key={page} type="button" className={`nav-${page}`}
-        aria-current={active === page || page === 'programs' && active === 'funding-results' ? 'page' : undefined} onClick={() => onNavigate(page)}>
+        aria-current={tab === page ? 'page' : undefined} onClick={() => onNavigate(page)}>
         <Icon name={icon} /><span>{label}</span>
       </button>)}
-      <button type="button" aria-current={['calendar', 'profile', 'assistant', 'settings', 'verification', 'business-details'].includes(active) ? 'page' : undefined} onClick={() => onNavigate('profile')}>
+      <button type="button" aria-current={tab === 'profile' ? 'page' : undefined} onClick={() => onNavigate('profile')}>
         <Icon name="building" /><span>Мой бизнес</span>
       </button>
     </nav>
