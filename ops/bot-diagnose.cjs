@@ -5,6 +5,17 @@ const os = require('node:os');
 const { execFileSync } = require('node:child_process');
 const root = '/opt/app';
 const processes = JSON.parse(execFileSync('pm2', ['jlist'], { encoding: 'utf8' }));
+if (!process.env.OPORA_BOT_DIAG_CHILD) {
+  const api = processes.find(p => p.name === 'opora-api')?.pm2_env;
+  const runtime = { ...process.env, OPORA_BOT_DIAG_CHILD: '1' };
+  for (const key of ['NODE_EXTRA_CA_CERTS', 'NODE_OPTIONS']) {
+    const value = api?.[key] ?? api?.env?.[key];
+    if (typeof value === 'string') runtime[key] = value;
+  }
+  console.log('TLS configuration:', JSON.stringify({ extraCerts: !!runtime.NODE_EXTRA_CA_CERTS, relativeCertPath: runtime.NODE_EXTRA_CA_CERTS ? !path.isAbsolute(runtime.NODE_EXTRA_CA_CERTS) : false }));
+  const child = require('node:child_process').spawnSync(process.execPath, [__filename], { cwd: path.join(root, 'chatbot'), env: runtime, stdio: 'inherit', timeout: 60000 });
+  process.exit(child.status ?? 1);
+}
 console.log('Processes:', JSON.stringify(processes.filter(p => /^opora-/.test(p.name)).map(p => ({ name: p.name, status: p.pm2_env.status, pid: p.pid, restarts: p.pm2_env.restart_time }))));
 try {
   const h = JSON.parse(fs.readFileSync('/opt/opora-deploy/bot-health.json', 'utf8'));
