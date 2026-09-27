@@ -119,11 +119,9 @@
   font-size: 24px;
   line-height: 1.3;
   letter-spacing: -0.5px;
-  text-align: center;
+  text-align: left;
   width: 100%;
-  -webkit-hyphens: auto;
-  hyphens: auto;
-  overflow-wrap: break-word;
+  overflow-wrap: normal;
 }
 .opora-theme .page-programs .funding-card > p.muted {
   font-size: 14px;

@@ -264,7 +264,7 @@ async function snapshot(page, name) {
             });
             // Unknown checklist remains incomplete even with a historical confirmation.
             await load(page, withoutDocs.id);
-            assert.equal(await page.locator('.modal > h2').evaluate(e => getComputedStyle(e).textAlign), 'center');
+            assert.equal(await page.locator('.modal > h2').evaluate(e => getComputedStyle(e).textAlign), 'left');
             await disclosure(page, '.application-conditions', true);
             await snapshot(page, name + '-conditions');
             await disclosure(page, '.application-conditions', false);
@@ -390,7 +390,7 @@ async function snapshot(page, name) {
             await nav(page, 1);
             assert.ok((await page.locator(".funding-card").count()) > 0);
             assert.ok(await page.locator('.funding-card > h3').evaluateAll(nodes => nodes.every(e =>
-              getComputedStyle(e).textAlign === 'center' && e.scrollWidth <= e.clientWidth + 1)));
+              getComputedStyle(e).textAlign === 'left' && e.scrollWidth <= e.clientWidth + 1)));
             assert.ok(['left', 'start'].includes(await page.locator('.funding-card > p.muted').first().evaluate(e => getComputedStyle(e).textAlign)));
             await disclosure(page, '.catalog-tools', true);
             await snapshot(page, name + '-filters');
