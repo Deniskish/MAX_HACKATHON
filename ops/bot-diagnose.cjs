@@ -40,4 +40,8 @@ dotenv.config({ path: path.join(root, '.env.bot'), processEnv: env, override: tr
     await new OporaAPI(env.BOT_API_URL || 'http://127.0.0.1:3002', env.BOT_TOKEN, String(user)).request('GET', '/api/bot/workspace');
     console.log('Signed bot API: success');
   }
-})().catch(error => { console.log('Diagnostic failure:', JSON.stringify({ type: error.name, status: error.status, code: /^[A-Z_]{1,40}$/.test(error.code || '') ? error.code : undefined })); process.exitCode = 1; });
+})().catch(error => {
+  const code = v => /^[A-Z_]{1,50}$/.test(v || '') ? v : undefined;
+  console.log('Diagnostic failure:', JSON.stringify({ type: error.name, status: error.status, code: code(error.code), cause: code(error.cause?.code), causes: error.cause?.errors?.map(e => code(e.code)), messageCategory: ['fetch failed','Invalid character in header content','bad port'].find(v => error.message?.includes(v)) }));
+  process.exitCode = 1;
+});
