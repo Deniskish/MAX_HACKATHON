@@ -86,7 +86,37 @@ async function load(page, id) {
 }
 async function nav(page, index) {
   await page.locator(".home-nav button").nth(index).click();
-  await page.waitForFunction(() => !document.querySelector(".tab-snapshot"));
+  const destination = ["overview", "programs", "applications", "profile"][index];
+  await page.waitForFunction(
+    (destination) =>
+      document.querySelector(`.app-shell.page-${destination}`) &&
+      !document.querySelector(".tab-snapshot"),
+    destination,
+  );
+}
+async function waitForScroll(page, expected) {
+  try {
+    // Require the original position across frames, rather than sampling once.
+    await page.waitForFunction(async (expected) => {
+      for (let frame = 0; frame < 3; frame++) {
+        await new Promise(requestAnimationFrame);
+        const content = document.querySelector(".app-shell > .app-content");
+        if (!content || Math.abs(content.scrollTop - expected) >= 2) return false;
+      }
+      return true;
+    }, expected);
+  } catch (error) {
+    const actual = await page
+      .locator(".app-shell > .app-content")
+      .evaluate((e) => ({
+        top: e.scrollTop,
+        max: e.scrollHeight - e.clientHeight,
+      }));
+    throw new Error(
+      `Catalogue scroll: expected ${expected}, actual ${JSON.stringify(actual)}`,
+      { cause: error },
+    );
+  }
 }
 async function tab(page, name) {
   await page.getByRole("tab", { name: new RegExp(name) }).click();
@@ -340,12 +370,25 @@ async function snapshot(page, name) {
             await page
               .getByRole("textbox", { name: "Поиск мер поддержки" })
               .fill("ФРП");
+            // A focused search field schedules its own scroll in Linux/WebKit.
+            // Finish editing before setting the position we intend to preserve.
             await page
-              .locator(".app-content")
-              .evaluate((e) => (e.scrollTop = 300));
+              .getByRole("textbox", { name: "Поиск мер поддержки" })
+              .blur();
             const scroll = await page
-              .locator(".app-content")
-              .evaluate((e) => e.scrollTop);
+              .locator(".app-shell > .app-content")
+              .evaluate(async (e) => {
+                await new Promise(requestAnimationFrame);
+                await new Promise(requestAnimationFrame);
+                const target = Math.min(300, e.scrollHeight - e.clientHeight);
+                e.scrollTo({ top: target, behavior: "instant" });
+                return target;
+              });
+            assert.ok(
+              scroll > 0,
+              "Catalogue must be scrolled for the return check",
+            );
+            await waitForScroll(page, scroll);
             await nav(page, 3);
             await nav(page, 1);
             assert.equal(
@@ -360,13 +403,13 @@ async function snapshot(page, name) {
                 .getAttribute("aria-pressed"),
               "true",
             );
-            assert.ok(
-              Math.abs(
-                (await page
-                  .locator(".app-content")
-                  .evaluate((e) => e.scrollTop)) - scroll,
-              ) < 2,
-            );
+            await waitForScroll(page, scroll);
+            // The same position must survive when tab animations are disabled.
+            await page.emulateMedia({ reducedMotion: "reduce" });
+            await nav(page, 3);
+            await nav(page, 1);
+            await waitForScroll(page, scroll);
+            await page.emulateMedia({ reducedMotion: "no-preference" });
             await snapshot(page, name + "-catalogue");
             assert.equal(
               await page
