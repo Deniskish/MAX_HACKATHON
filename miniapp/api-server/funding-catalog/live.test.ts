@@ -37,6 +37,56 @@ test('pagination is bounded and rejects a changed provider schema', async () => 
   assert.equal((await source.page(2)).rows.length, 1); assert.equal(body.entryCount, 100); assert.equal(body.currentPage, 2);
   await assert.rejects(new BudgetSource(async () => Response.json({ items: [] })).page(1), /SCHEMA/);
 });
+
+test('source recovers after a transient 500 and stops after one retry on a persistent outage', async () => {
+  let calls = 0;
+  const source = new BudgetSource(async () => ++calls === 1 ? new Response('', { status: 500 })
+    : Response.json({ item1: { currentPage: 1, totalPages: 1, totalEntries: 1, items: [card()] } }));
+  assert.equal((await source.page(1)).rows.length, 1); assert.equal(calls, 2);
+  calls = 0;
+  await assert.rejects(new BudgetSource(async () => { calls++; return new Response('', { status: 503 }); }).page(1), /BUDGET_HTTP_503/);
+  assert.equal(calls, 2);
+});
+
+test('source never retries restrictions or invalid JSON, and abort interrupts the retry delay', async () => {
+  for (const status of [403, 429, 200]) {
+    let calls = 0;
+    await assert.rejects(new BudgetSource(async () => { calls++; return new Response('invalid', { status }); }).page(1));
+    assert.equal(calls, 1);
+  }
+  const controller = new AbortController(); let calls = 0;
+  const request = new BudgetSource(async () => { calls++; controller.abort(); return new Response('', { status: 500 }); }).page(1, controller.signal);
+  await assert.rejects(request, { name: 'AbortError' }); assert.equal(calls, 1);
+});
+
+test('partial sync persists good pages without losing old programmes or marking a full refresh', async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'opora-partial-'));
+  let stage = 0;
+  const old = card(); const added = card({ competitionId: '6f564f52-ac51-4496-9db7-bd7b282f7b64' });
+  class Source extends BudgetSource { async page(currentPage: number) {
+    if (stage === 0) return { rows: [old], totalPages: 1, total: 1 };
+    if (currentPage === 1) return { rows: [added], totalPages: 2, total: 2 };
+    if (stage === 1) throw new Error('BUDGET_HTTP_500');
+    if (stage === 2) return { rows: [card({ title: 'Must not be saved' }), card({ competitionId: 'invalid' })], totalPages: 2, total: 2 };
+    return { rows: [old], totalPages: 2, total: 2 };
+  } }
+  try {
+    const catalog = new LiveCatalog(dir, new Source()); await catalog.sync(1);
+    const checkedAt = catalog.status().checkedAt;
+    for (stage = 1; stage <= 2; stage++) {
+      await catalog.sync(2);
+      const saved = new LiveCatalog(dir);
+      assert.equal(saved.status().checkedAt, checkedAt);
+      assert.equal(saved.status().imported, 2); assert.equal(saved.status().refreshedPages, 1);
+      assert.equal(saved.status().failedPage, 2);
+      assert.equal(saved.status().errorCode, stage === 1 ? 'BUDGET_HTTP_500' : 'BUDGET_SCHEMA_CHANGED');
+      assert.equal(saved.getCatalog().find(o => o.id === `budget-${old.competitionId}`)?.title, old.title);
+    }
+    await catalog.sync(2);
+    assert.equal(catalog.status().error, null); assert.equal(catalog.status().errorCode, null);
+    assert.equal(catalog.status().failedPage, null); assert.equal(catalog.status().refreshedPages, 2);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
 test('sync survives restarts; unchanged records keep versions; failed page keeps the previous complete snapshot', async () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'opora-live-'));
   let broken = false; const row = card();

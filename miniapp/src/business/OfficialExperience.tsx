@@ -41,6 +41,6 @@ export function ProjectOnboarding({ initial, onSave, onCancel }: { initial: Proj
       <label className="field">Команда, человек<BusinessInput type="number" min="1" max="10000" step="1" value={form.teamSize ?? ''} onChange={(e) => setForm({ ...form, teamSize: e.target.value ? Number(e.target.value) : null })} /></label>
       <label className="field">Цель<select value={form.fundingPurpose} onChange={(e) => setForm({ ...form, fundingPurpose: e.target.value })}><option value="">Укажу позже</option>{fundingPurposes.map((p) => <option key={p}>{p}</option>)}</select></label>
       <label className="field">Сумма финансирования, ₽<BusinessInput type="number" min="1" step="1" value={form.fundingNeed ?? ''} onChange={(e) => setForm({ ...form, fundingNeed: e.target.value ? Number(e.target.value) : null })} /></label>
-    </div>{error && <p className="error" role="alert">{error}</p>}<div className="modal-actions"><ActionButton type="button" className="secondary" onClick={onCancel}>Отмена</ActionButton><ActionButton className="primary" type="submit">Сохранить проект</ActionButton></div></form>
+    </div>{error && <p className="muted">Заполните название, регион и направление проекта.</p>}<div className="modal-actions"><ActionButton type="button" className="secondary" onClick={onCancel}>Отмена</ActionButton><ActionButton className="primary" type="submit">Сохранить проект</ActionButton></div></form>
   </ModalSheet>;
 }

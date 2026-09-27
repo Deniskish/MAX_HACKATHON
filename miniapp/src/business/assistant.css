@@ -68,7 +68,6 @@
 .opora-theme .assistant-page .ai-result .widget-footnote { font-size: 14px; }
 .opora-theme .assistant-page .ai-result .tag { background: transparent; border: 0; padding: 0; box-shadow: none; font-size: 12px; color: var(--muted); }
 .opora-theme .assistant-page .ai-followups button { background: transparent; box-shadow: none; font-size: 14px; }
-.assistant-error { padding: 16px 0; border-top: 1px solid var(--line); }
-.assistant-error p { margin: 0 0 12px; font-size: 15px; line-height: 1.6; color: var(--ink); }
-.assistant-error button { min-height: 44px; padding: 10px 16px; color: var(--ink); font: inherit; font-size: 14px; background: var(--glass-selected); border: 1px solid var(--line); border-radius: 16px; }
+.assistant-retry { padding: 16px 0; }
+.assistant-retry button { min-height: 44px; padding: 10px 16px; color: var(--ink); font: inherit; font-size: 14px; background: var(--glass-selected); border: 1px solid var(--line); border-radius: 16px; }
 @media (max-width: 359px) { .opora-theme .assistant-page .assistant-messages { padding-inline: 16px; } }

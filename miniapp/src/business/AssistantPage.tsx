@@ -5,7 +5,7 @@ import { GlassArt } from './GlassArt';
 
 type ChatMessage = { role: 'user' | 'assistant'; text: string };
 
-export function AssistantPage({ businessName, guest = false, backLabel = 'В мой бизнес', status, messages, renderMessage, question, onQuestion, sending, onSend, onStop, onBack, onClear, context, program, error, onRetry }: {
+export function AssistantPage({ businessName, guest = false, backLabel = 'В мой бизнес', messages, renderMessage, question, onQuestion, sending, onSend, onStop, onBack, onClear, context, program, error, onRetry }: {
   guest?: boolean; backLabel?: string;
   businessName: string; status: string; messages: ChatMessage[]; renderMessage: (index: number) => ReactNode;
   question: string; onQuestion: (text: string) => void; sending: boolean; onSend: (text: string) => void;
@@ -73,7 +73,7 @@ export function AssistantPage({ businessName, guest = false, backLabel = 'В м�
         </div>}
         {messages.map((message, index) => <article key={index} className={`message ${message.role}`} aria-label={message.role === 'user' ? 'Вы' : 'Опора AI'}>{renderMessage(index)}</article>)}
         {sending && <div className="assistant-typing" role="status"><span />Готовлю ответ…</div>}
-        {error && <div className="assistant-error"><p role="alert">{error}</p><button type="button" disabled={sending} onClick={onRetry}>Повторить запрос</button></div>}
+        {error && <div className="assistant-retry"><button type="button" className="secondary" disabled={sending} onClick={onRetry}>Повторить запрос</button></div>}
       </div>
       {awayFromBottom && <button className="assistant-latest" onClick={latest}>К последним сообщениям ↓</button>}
     </div>
@@ -88,7 +88,7 @@ export function AssistantPage({ businessName, guest = false, backLabel = 'В м�
       </div>
     </form>
     {infoOpen && <ModalSheet title="Параметры чата" onClose={() => setInfoOpen(false)}>
-      <div className="assistant-info"><p>{status}</p>{context(() => setInfoOpen(false))}
+      <div className="assistant-info">{context(() => setInfoOpen(false))}
         <button className="assistant-clear" onClick={() => { onClear(); setInfoOpen(false); pinned.current = true; }}>Очистить историю чата</button>
       </div>
     </ModalSheet>}

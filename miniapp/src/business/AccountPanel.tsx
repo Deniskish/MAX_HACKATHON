@@ -30,7 +30,8 @@ export function useAccount() {
     try {
       const next = await request('/company', method, company ? { company, revision: account?.revision } : undefined);
       setAccount(next); setError(''); return next;
-    } finally { mutation.current = false; setLoading(false); }
+    } catch (error) { setError(error instanceof Error ? error.message : 'ACCOUNT_UPDATE_FAILED'); throw error; }
+    finally { mutation.current = false; setLoading(false); }
   };
   return { account, error, available, loading, refresh,
     save: (company: Profile) => update('PUT', company),
@@ -39,10 +40,9 @@ export function useAccount() {
 export function AccountPanel({ state, onRestore, onSave, hasCompany, esiaSignedIn = false }: { state: ReturnType<typeof useAccount>; onRestore: (profile: Profile) => void; onSave: () => void; hasCompany: boolean; esiaSignedIn?: boolean }) {
   return <section className="profile-panel account-panel">
     <h3>{state.account ? 'Аккаунт MAX' : esiaSignedIn ? 'Аккаунт' : state.available ? 'Подключение аккаунта' : 'Гостевой режим'}</h3>
-    <p>{state.account ? 'Вход подтверждён через MAX.' : esiaSignedIn ? 'Вход через Госуслуги.' : state.available ? 'Проверяем данные входа.' : 'Профиль хранится на этом устройстве. Для аккаунта откройте «Опору» через MAX.'}</p>
-    {state.error && <p className="error" role="alert">{state.error}</p>}
-    {state.error && <button className="secondary" onClick={() => void state.refresh()}>Повторить вход</button>}
-    {state.account && hasCompany && !state.account.company && <button className="secondary" disabled={state.loading} onClick={onSave}>Сохранить компанию в аккаунте</button>}
+    <p>{state.account ? 'Вход подтверждён через MAX.' : esiaSignedIn ? 'Вход через Госуслуги.' : state.available ? state.loading ? 'Проверяем данные входа.' : 'Вход через MAX' : 'Профиль хранится на этом устройстве. Для аккаунта откройте «Опору» через MAX.'}</p>
+    {state.error && !state.account && <button className="secondary" disabled={state.loading} onClick={() => void state.refresh()}>Повторить вход</button>}
+    {state.account && hasCompany && !state.account.company && <button className="secondary" disabled={state.loading} onClick={onSave}>{state.error ? 'Повторить сохранение' : 'Сохранить компанию в аккаунте'}</button>}
     {state.account?.company && !hasCompany && <button className="secondary" onClick={() => onRestore(state.account!.company!)}>Загрузить компанию из аккаунта</button>}
   </section>;
 }

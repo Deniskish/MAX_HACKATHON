@@ -5,7 +5,7 @@ import { Icon } from './Icon';
 import { AIPanel } from './AIExperience';
 
 import { readDocument } from './document-reader';
-import { aiErrorMessage, requestAI, type AIDocument } from './ai-client';
+import { requestAI, type AIDocument } from './ai-client';
 import { toFundingProfile } from '../../api-server/funding-catalog/input';
 import { type Profile, type Program, type Application, type DraftKind,
   documentGuide, inspectDocumentText, generateDraft, draftKinds } from './domain';
@@ -50,7 +50,7 @@ export function DocumentChecklist({
       setDocuments((old) => ({ ...old, [name]: document })); setTexts((old) => ({ ...old, [name]: text }));
       setReviews((old) => ({ ...old, [name]: inspectDocumentText(name, text) }));
       setErrors((old) => ({ ...old, [name]: `Прочитано страниц: ${document.pages.length}. Проверьте текст перед AI-анализом.` }));
-    } catch (e) { if (!controller.signal.aborted) setErrors((old) => ({ ...old, [name]: e instanceof Error ? e.message : 'Не удалось прочитать документ.' })); }
+    } catch { if (!controller.signal.aborted) setErrors((old) => ({ ...old, [name]: 'Выберите другой файл или вставьте текст документа.' })); }
     finally { if (reader.current === controller) { reader.current = null; setReading(''); } }
   }
   return (
@@ -207,9 +207,9 @@ export function DraftComposer({
         data.draft +
         '\n\nПроверьте факты, заполните пропуски и сверяйте текст с формой оператора. Заявка не отправлена.';
       origin = 'GigaChat · по описанию проекта';
-    } catch (error) {
+    } catch {
       if (controller.signal.aborted || pending.current !== controller) return;
-      setNotice(`${aiErrorMessage(error)} Подготовлен локальный шаблон с вашими данными.`);
+      setNotice('Подготовлен шаблон с вашими данными.');
     }
     if (controller.signal.aborted) return;
     onUpdate({ generatedDraft: text, draftOrigin: origin });

@@ -75,7 +75,7 @@ function browserDownload(text: string, name: string, type = 'text/plain;charset=
 }
 
 export default function BusinessApp() {
-  const { catalog: officialFundingCatalog, status: liveStatus } = useLiveCatalog();
+  const { catalog: officialFundingCatalog } = useLiveCatalog();
   const programs = useMemo(() => toLegacyPrograms(officialFundingCatalog), [officialFundingCatalog]);
   const [catalogLimit, setCatalogLimit] = useState(30);
   const [exportText, setExportText] = useState('');
@@ -86,8 +86,8 @@ export default function BusinessApp() {
           const calendarUrl = new URL('/api/funding/calendar.ics', location.origin);
           if (!allCalendar) calendarUrl.searchParams.set('ids', calendarCatalog.map((o) => o.id).join(','));
           Promise.resolve(window.WebApp.downloadFile(calendarUrl.href, name))
-            .catch(() => setToast('MAX не смог скачать календарь. Повторите попытку или откройте приложение в браузере.'));
-        } catch { setToast('MAX не смог скачать календарь. Откройте приложение в браузере.'); }
+            .catch(() => setToast('Откройте приложение в браузере, чтобы скачать календарь.'));
+        } catch { setToast('Откройте приложение в браузере, чтобы скачать календарь.'); }
       } else { setSelected(null); setExportText(text); }
     } else browserDownload(text, name, type);
   }
@@ -253,7 +253,7 @@ export default function BusinessApp() {
   const [toast, setToast] = useState('');
   const [messages, setMessages] = useState<Message[]>(() => readAIHistory());
   const chatRequest = useRef<AbortController | null>(null);
-  useEffect(() => { if (!saveAIHistory(messages)) setToast('История чата не сохранилась на устройстве.'); }, [messages]);
+  useEffect(() => { saveAIHistory(messages); }, [messages]);
   useEffect(() => () => chatRequest.current?.abort(), []);
   useEffect(() => {
     if (chatRequest.current) { chatRequest.current.abort(); chatRequest.current = null; setSending(false); }
@@ -284,7 +284,7 @@ export default function BusinessApp() {
     try {
       saveWorkspace(localStorage, { profile: companyProfile, projectProfile, fundingNeed: need, saved, applications: apps, detachedApplicationIds, businessNotice });
     } catch {
-      setToast('Не удалось сохранить данные в браузере. Скачайте важные черновики.');
+      setToast('Скачайте черновики, чтобы сохранить их на устройстве.');
     }
   }, [companyProfile, projectProfile, need, apps, saved, detachedApplicationIds, businessNotice]);
   useEffect(() => {
@@ -480,6 +480,7 @@ export default function BusinessApp() {
           budget: application?.budget.trim() ? Number(application.budget) : null } },
         controller.signal);
       if (controller.signal.aborted || chatRequest.current !== controller) return;
+      if (data.providerFailure) { setChatFailure({ message: aiErrorMessage(data.providerFailure), text, program, task }); return; }
       setMessages((m) => [...m.slice(-29), { role: 'assistant', text: data.answer, result: !profile && data.mode === 'local' ? undefined : data }]);
       setAssistantMode(data.mode === 'llm' ? 'GigaChat · контекстный помощник' : 'Ответ по правилам');
       if (data.providerFailure) setChatFailure({ message: aiErrorMessage(data.providerFailure), text, program, task });
@@ -515,7 +516,7 @@ export default function BusinessApp() {
               <Icon name="chevron" size={18} />
             </button>
             <ThemeSettings />
-            <AccountPanel state={account} esiaSignedIn={demo.state.enabled && demo.state.signedIn} hasCompany={!!companyProfile} onRestore={(p) => { setProfile({ ...emptyProfile, ...p }); setProjectProfile(null); setToast('Компания загружена из аккаунта'); }} onSave={() => { if (companyProfile) void account.save(companyProfile).then(() => setToast('Компания сохранена в аккаунте')).catch(e => setToast(e.message)); }} />
+            <AccountPanel state={account} esiaSignedIn={demo.state.enabled && demo.state.signedIn} hasCompany={!!companyProfile} onRestore={(p) => { setProfile({ ...emptyProfile, ...p }); setProjectProfile(null); setToast('Компания загружена из аккаунта'); }} onSave={() => { if (companyProfile) void account.save(companyProfile).then(() => setToast('Компания сохранена в аккаунте')).catch(() => {}); }} />
             {profile && <SupportNotificationSettings notifications={supportNotifications} />}
             <DemoSettings demo={demo} onOpen={() => openVerification()} />
             {profile && <div className="business-removal"><button type="button" className="remove-business" onClick={() => { setDeleteBusinessError(''); setDeleteBusinessOpen(true); }}>Удалить бизнес</button></div>}
@@ -545,7 +546,7 @@ export default function BusinessApp() {
             <>
               {profile && <div className="catalog-scopes catalog-scope-tabs" role="group" aria-label="Область подбора" data-scope={catalogScope}><span className="catalog-scope-indicator" aria-hidden="true" />{([['personal', 'Для вас'], ['all', 'Все меры'], ['saved', `Сохранённые · ${saved.length}`]] as const).map(([scope, title]) => <button key={scope} aria-pressed={catalogScope === scope} onClick={() => { setCatalogScope(scope); setOnlySaved(scope === 'saved'); }}>{title}</button>)}</div>}
               {profile && catalogScope === 'personal' && businessAnalysis.status !== 'ready' && <div className="catalog-ai-status" role="status">
-                <p>{businessAnalysis.status === 'loading' ? 'Сравниваем меры с данными бизнеса.' : businessAnalysis.error}</p>
+                {businessAnalysis.status === 'loading' && <p>Сравниваем меры с данными бизнеса.</p>}
                 {businessAnalysis.status === 'unavailable' && <button onClick={businessAnalysis.refresh}>Повторить анализ</button>}
                   <button onClick={() => { setCatalogScope('all'); setOnlySaved(false); setFilter('Все меры'); setQuery(''); setAvailability(''); }}>Открыть весь каталог · {officialFundingCatalog.length} <Icon name="arrow" size={14} /></button>
               </div>}
@@ -619,7 +620,6 @@ export default function BusinessApp() {
                 {visiblePrograms.slice(0, catalogLimit).map(({ p }) => programCard(p))}
               </div>
               {visiblePrograms.length > catalogLimit && <ActionButton className="secondary" onClick={() => setCatalogLimit((n) => n + 30)}>Показать ещё</ActionButton>}
-              {liveStatus?.error && <p role="status">Не удалось обновить каталог. Показана сохранённая версия.</p>}
               {!visiblePrograms.length && (
                 <div className="empty-state">
                   <span className="empty-symbol">
@@ -877,6 +877,10 @@ export default function BusinessApp() {
             </>}
             renderMessage={(index) => {
               const message = messages[index];
+              if (message.result?.providerFailure) {
+                const previous = messages.slice(0, index).reverse().find((item) => item.role === 'user');
+                return previous ? <ActionButton className="secondary" disabled={sending} onClick={() => void ask(previous.text)}>Повторить запрос</ActionButton> : null;
+              }
               return <>{message.text}
                 {message.result && <AIResultView result={message.result} {...aiHandlers} showAnswer={false} onQuestion={setQuestion} />}
                 {!!message.opportunityIds?.length && <div className="message-links">{message.opportunityIds.map((id) => <ActionButton className="secondary" key={id} onClick={() => openFunding(id)}>Открыть: {programs.find((program) => program.id === id)?.title ?? 'Программа'}</ActionButton>)}</div>}
@@ -1085,11 +1089,8 @@ export default function BusinessApp() {
                     </div>
                   </>
                 )}
-                {error && (
-                  <p className="error" role="alert">
-                    {error}
-                  </p>
-                )}
+                {error && !validInn(form.inn) && <p className="muted">Введите ИНН — 10 или 12 цифр.</p>}
+                {error === 'Укажите название, регион и ОКВЭД (например, 62.01).' && <p className="muted">Заполните название, регион и ОКВЭД.</p>}
                 <div className="modal-actions">
                   {step === 1 && (
                     <ActionButton type="button" className="secondary" onClick={() => setStep(0)}>
@@ -1097,7 +1098,7 @@ export default function BusinessApp() {
                     </ActionButton>
                   )}
                   <ActionButton className="primary" type="submit">
-                    {step === 0 ? companyLoading ? 'Загружаем сведения…' : 'Загрузить по ИНН' : savingCompany ? 'Сохраняем…' : 'Сохранить бизнес'}
+                    {step === 0 ? companyLoading ? 'Загружаем сведения…' : error ? 'Повторить загрузку' : 'Загрузить по ИНН' : savingCompany ? 'Сохраняем…' : error ? 'Повторить сохранение' : 'Сохранить бизнес'}
                     <Icon name="arrow" size={17} />
                   </ActionButton>
                   {step === 0 && <button type="button" className="company-manual-fallback" onClick={() => { if (!validInn(form.inn)) { setError('Введите корректный ИНН.'); return; } setError(''); setStep(1); }}>Заполнить вручную</button>}
@@ -1269,10 +1270,9 @@ export default function BusinessApp() {
           <p>Удалим профиль бизнеса, параметры подбора и историю AI с этого устройства{account.available ? ' и компанию из аккаунта MAX' : ''}.</p>
           {supportNotifications.available && <p>Подписка на новые меры и ожидающие сообщения MAX также будут удалены.</p>}
           <p>Черновики, документы и сохранённые программы останутся. Для нового бизнеса потребуется заново проверить реквизиты.</p>
-          {deleteBusinessError && <p className="error" role="alert">{deleteBusinessError}</p>}
           <div className="modal-actions">
             <ActionButton className="secondary" disabled={deletingBusiness} onClick={() => setDeleteBusinessOpen(false)}>Отмена</ActionButton>
-            <ActionButton className="secondary danger-button" disabled={deletingBusiness} onClick={() => void confirmBusinessRemoval()}>{deletingBusiness ? 'Удаляем…' : 'Удалить'}</ActionButton>
+            <ActionButton className="secondary danger-button" disabled={deletingBusiness} onClick={() => void confirmBusinessRemoval()}>{deletingBusiness ? 'Удаляем…' : deleteBusinessError ? 'Повторить удаление' : 'Удалить'}</ActionButton>
           </div>
         </div>
       </ModalSheet>}

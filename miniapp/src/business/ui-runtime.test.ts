@@ -7,9 +7,53 @@ import { ThemedImage } from './ThemedImage';
 import { aiErrorMessage, requestAI, type AIRequest } from './ai-client';
 import { getAIActivity, subscribeAIActivity } from './ai-activity';
 import { analysisDigest, analysisMaxAge, reusableAnalysis } from './workspace-analysis-cache';
+import { AIResultView } from './AIExperience';
+import { AccountPanel } from './AccountPanel';
+import { SupportNotificationSettings } from './SupportNotifications';
+import { AdaptiveInsight } from './AdaptiveInsight';
+import { DemoSubmission } from './VerificationDemo';
 
 const request: AIRequest = { task: 'intake', question: 'Мастерская мебели', context: {} };
 const answer = { mode: 'llm', answer: 'Ответ', actions: [], citations: [], matches: [], findings: [], scenarios: [], followups: [], tools: [] };
+
+test('service diagnostics stay out of settings and analysis while recovery actions remain available', () => {
+  const error = 'PRIVATE_PROVIDER_DIAGNOSTIC HTTP 500';
+  const noop = () => {};
+  const account = renderToStaticMarkup(createElement(AccountPanel, { state: {
+    account: null, error, available: true, loading: false, refresh: async () => {},
+    save: async () => { throw new Error(error); }, remove: async () => { throw new Error(error); },
+  }, onRestore: noop, onSave: noop, hasCompany: false }));
+  assert.doesNotMatch(account, /PRIVATE_PROVIDER|HTTP 500|role="alert"/);
+  assert.match(account, /Повторить вход/);
+  const notifications = renderToStaticMarkup(createElement(SupportNotificationSettings, { notifications: {
+    enabled: true, bot: false, aiConfigured: false, items: [], available: true, busy: false, error,
+    monitor: {lastRun: null, lastError: error}, subscribe: async () => false, read: async () => {},
+  } }));
+  assert.doesNotMatch(notifications, /PRIVATE_PROVIDER|HTTP 500|недоступ|role="alert"/);
+  assert.match(notifications, /type="checkbox"/);
+  const analysis = renderToStaticMarkup(createElement(AdaptiveInsight, { section: 'profile', onAction: noop,
+    analysis: { status: 'unavailable', error, refresh: noop } as Parameters<typeof AdaptiveInsight>[0]['analysis'] }));
+  assert.doesNotMatch(analysis, /PRIVATE_PROVIDER|HTTP 500|role="alert"/);
+  assert.match(analysis, /Повторить анализ/);
+});
+
+test('a cached provider failure cannot reappear as an AI answer or successful analysis', () => {
+  const result = { ...answer, mode: 'local' as const, answer: 'PRIVATE_PROVIDER_DIAGNOSTIC',
+    notice: 'PRIVATE_PROVIDER_DIAGNOSTIC', providerFailure: 'PROVIDER_UNAVAILABLE' as const };
+  assert.equal(renderToStaticMarkup(createElement(AIResultView, { result })), '');
+});
+
+test('unsaved submission offers retry without claiming acceptance or exposing the storage failure', () => {
+  const html = renderToStaticMarkup(createElement(DemoSubmission, {
+    demo: { state: { enabled: true, signedIn: true, inn: '7707083893', role: 'director', receipts: [] },
+      error: 'PRIVATE_STORAGE_DIAGNOSTIC', update: () => false, reset: () => false, submit: () => false,
+    } as Parameters<typeof DemoSubmission>[0]['demo'],
+    company: { inn: '7707083893', name: 'Компания' } as Parameters<typeof DemoSubmission>[0]['company'],
+    applicationId: 'test', title: 'Программа', ready: true, onVerify: () => {},
+  }));
+  assert.doesNotMatch(html, /PRIVATE_STORAGE|Заявка принята|role="alert"/);
+  assert.match(html, /Повторить отправку/);
+});
 
 test('theme and themed artwork can render in Node without a browser or image loader', () => {
   function Theme() { return createElement('span', null, useSystemTheme()); }

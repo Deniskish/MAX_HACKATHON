@@ -84,7 +84,6 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onResu
     catch { return { ...emptyFundingNeed }; }
   });
   const [error, setError] = useState('');
-  const [storageNotice, setStorageNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const pending = React.useRef<AbortController | null>(null);
   const panel = React.useRef<HTMLElement | null>(null);
@@ -102,8 +101,8 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onResu
   }, [fingerprint]);
   useEffect(() => {
     onNeed?.(need);
-    try { if (!onNeed) localStorage.setItem(storageKey, JSON.stringify(need)); setStorageNotice(''); }
-    catch { setStorageNotice('Не удалось сохранить потребность в браузере.'); }
+    try { if (!onNeed) localStorage.setItem(storageKey, JSON.stringify(need)); }
+    catch { /* Keep the entered need in this session. */ }
   }, [need, storageKey]);
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -155,10 +154,8 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onResu
         </label>
       </div>
       <ActionButton type="submit" className="primary" disabled={loading}>
-        {loading ? 'Подбираем варианты…' : 'Найти варианты'}
+        {loading ? 'Подбираем варианты…' : error ? 'Повторить подбор' : 'Найти варианты'}
       </ActionButton>
-      {error && <p className="error" role="alert">{error}</p>}
-      {storageNotice && <p role="status">{storageNotice}</p>}
     </form>
   </section>;
 }

@@ -33,14 +33,27 @@ export function useLiveCatalog() {
         const response = await fetch('/api/funding/catalog', { headers: etag ? { 'If-None-Match': etag } : {}, signal });
         if (response.ok) {
           const data = await response.json();
-          if (valid(data.opportunities) && !controller.signal.aborted) {
+          if (!valid(data.opportunities)) throw new Error('INVALID_CATALOG');
+          if (!controller.signal.aborted) {
             setCatalog(data.opportunities); etag = response.headers.get('ETag') ?? '';
             try { localStorage.setItem(key, JSON.stringify(data.opportunities)); } catch { /* Low storage: keep the current session. */ }
           }
+        } else if (response.status !== 304) throw new Error('CATALOG_UNAVAILABLE');
+        // A status failure must not mislabel a successfully received catalogue as offline.
+        try {
+          const health = await fetch('/api/funding/live-status', { signal });
+          if (!health.ok) throw new Error('STATUS_UNAVAILABLE');
+          const data = await health.json();
+          if (!data || !(data.error === null || typeof data.error === 'string')
+            || !(data.checkedAt === null || typeof data.checkedAt === 'string')) throw new Error('INVALID_STATUS');
+          if (!controller.signal.aborted) setStatus(data);
+        } catch {
+          if (!controller.signal.aborted) setStatus((previous) => ({ checkedAt: previous?.checkedAt ?? null, error: 'status_unavailable' }));
         }
-        const health = await fetch('/api/funding/live-status', { signal });
-        if (health.ok && !controller.signal.aborted) setStatus(await health.json());
-      } catch { /* Keep the last successfully received catalogue. */ }
+      } catch {
+        // Retain the catalogue, but distinguish our server/network from the external source.
+        if (!controller.signal.aborted) setStatus((previous) => ({ checkedAt: previous?.checkedAt ?? null, error: 'connection_failed' }));
+      }
       finally { clearTimeout(timer); controller.signal.removeEventListener('abort', cancel); busy = false; }
     };
     void refresh(); const timer = setInterval(() => void refresh(), 60000);

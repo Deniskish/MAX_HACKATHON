@@ -62,13 +62,11 @@ export default function App() {
               value={password}
               onFocus={() => { void loadWorkspace().catch(() => {}); }}
               aria-invalid={Boolean(error)}
-              aria-describedby={error ? 'access-error' : undefined}
               onChange={(event) => { setPassword(event.target.value); setError(''); }}
             />
           </label>
-          {error && <p className="error" id="access-error" role="alert">{error}</p>}
           <ActionButton className="primary" type="submit" disabled={opening} aria-busy={opening}>
-            {opening ? 'Открываем…' : 'Войти'}
+            {opening ? 'Открываем…' : error ? 'Повторить вход' : 'Войти'}
           </ActionButton>
           {loadFailed && <ActionButton className="secondary" onClick={() => window.location.reload()}>
             Обновить страницу

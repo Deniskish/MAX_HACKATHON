@@ -9,7 +9,7 @@ export function AdaptiveInsight({ analysis, section, onAction, compact = false }
   const insight = analysis.data?.personalization?.sections[section];
   return <section className={`adaptive-insight${compact ? ' compact' : ''}`} aria-label="Анализ вашего бизнеса" aria-live="polite">
     {insight ? <><h2>{insight.title}</h2>{!(section === 'applications' && insight.action === 'applications') && <button onClick={() => onAction(insight.action)}>{labels[insight.action]} <Icon name="arrow" size={15} /></button>}
-      {analysis.error && <p role="status">{analysis.error} Сохранён предыдущий анализ для этих же данных.</p>}<button onClick={analysis.refresh} disabled={analysis.refreshing}>{analysis.refreshing ? 'Обновляем анализ…' : 'Обновить анализ'}</button></>
-      : <><h2>{analysis.status === 'loading' ? 'Анализируем ваш бизнес…' : 'Анализ не завершён'}</h2>{analysis.status === 'unavailable' && <>{analysis.error && <p role="status">{analysis.error}</p>}<button onClick={analysis.refresh}>Повторить анализ</button></>}</>}
+      <button onClick={analysis.refresh} disabled={analysis.refreshing}>{analysis.refreshing ? 'Обновляем анализ…' : 'Обновить анализ'}</button></>
+      : <><h2>{analysis.status === 'loading' ? 'Анализируем ваш бизнес…' : 'Анализ бизнеса'}</h2>{analysis.status === 'unavailable' && <button onClick={analysis.refresh}>Повторить анализ</button>}</>}
   </section>;
 }

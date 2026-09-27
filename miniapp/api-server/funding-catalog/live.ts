@@ -5,6 +5,7 @@ import { officialFundingCatalog, type FundingProvider } from './official-catalog
 import type { ApplicantType, FundingOpportunity } from './types';
 import { providerJson } from '../provider-json';
 import { budgetTransport } from './budget-transport';
+import { setTimeout as delay } from 'node:timers/promises';
 
 const origin = 'https://promote.budget.gov.ru';
 const guid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
@@ -39,19 +40,38 @@ export function normalizeBudgetCard(row: BudgetCard, now = new Date()): FundingO
 export class BudgetSource {
   constructor(private transport: typeof fetch = budgetTransport) {}
   private async json(route: string, body?: unknown, signal?: AbortSignal) {
-    const response = await this.transport(origin + route, { method: body ? 'POST' : 'GET', redirect: 'error',
-      headers: { Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
-      body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]) });
-    if (!response.ok) { await response.body?.cancel(); throw new Error(`BUDGET_HTTP_${response.status}`); }
-    return await providerJson(response, 2_000_000) as any;
+    // These POSTs only read the public catalogue. Retry once within the same deadline;
+    // never retry access restrictions, invalid data or an aborted request.
+    const deadline = AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]);
+    for (let attempt = 0; ; attempt++) {
+      deadline.throwIfAborted();
+      let response: Response;
+      try {
+        response = await this.transport(origin + route, { method: body ? 'POST' : 'GET', redirect: 'error',
+          headers: { Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+          body: body ? JSON.stringify(body) : undefined, signal: deadline });
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException)?.code;
+        if (attempt === 0 && !deadline.aborted && ['ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN'].includes(code ?? '')) {
+          await delay(600, undefined, { signal: deadline }); continue;
+        }
+        throw error;
+      }
+      if (response.ok) return await providerJson(response, 2_000_000) as any;
+      await response.body?.cancel();
+      if (attempt === 0 && [500, 502, 503, 504].includes(response.status)) {
+        await delay(600, undefined, { signal: deadline }); continue;
+      }
+      throw new Error(`BUDGET_HTTP_${response.status}`);
+    }
   }
-  async page(currentPage: number) {
+  async page(currentPage: number, signal?: AbortSignal) {
     const data = await this.json('/m-data/api/v1/activity/public-view/list-activity-card', {
       currentPage, entryCount: 100, recipientCategory: [], recipientSelectionWayId: [], minActivityAmountForPerson: null,
       maxActivityAmountForPerson: null, coFinancing: [], activityYear: [], subsidyTypeId: [], budgetType: [], activityCategory: [],
       directionId: [], okvedId: [], textTerms: [], realizationPlace: [], pppCode: [], activityType: [], maxAmountType: [],
       distributionType: [], sortDirection: 0, sortMember: 'Default', isSelection: true, geography: [], tags: [],
-      selectionLicenseRequired: [], accreditationRequired: [], selectionType: 1, soOktmos: [] });
+      selectionLicenseRequired: [], accreditationRequired: [], selectionType: 1, soOktmos: [] }, signal);
     if (!Array.isArray(data?.item1?.items) || !Number.isInteger(data.item1.totalPages) || data.item1.currentPage !== currentPage
       || data.item1.items.length > 100 || !Number.isInteger(data.item1.totalEntries)) throw new Error('BUDGET_SCHEMA_CHANGED');
     return { rows: data.item1.items as BudgetCard[], totalPages: data.item1.totalPages as number, total: data.item1.totalEntries as number };
@@ -85,7 +105,8 @@ export class BudgetSource {
       startsAt: basic.beginDateCompetition as string, endsAt: basic.endDateCompetition as string };
   }
 }
-type CatalogState = { entries: FundingOpportunity[]; checkedAt: string | null; total: number; cursor: number; error: string | null };
+type CatalogState = { entries: FundingOpportunity[]; checkedAt: string | null; total: number; cursor: number; error: string | null;
+  attemptedAt?: string; refreshedAt?: string; errorCode?: string | null; failedPage?: number | null; refreshedPages?: number };
 export class LiveCatalog implements FundingProvider {
   private state: CatalogState = { entries: [], checkedAt: null, total: 0, cursor: 11, error: null };
   private syncing = false;
@@ -102,7 +123,9 @@ export class LiveCatalog implements FundingProvider {
       ? { ...o, status: 'closed' as const } : o)];
   }
   status() { return { checkedAt: this.state.checkedAt, imported: this.state.entries.length, totalAtSource: this.state.total,
-    nextPage: this.state.cursor, error: this.state.error, syncing: this.syncing, intervalMinutes: 15 }; }
+    nextPage: this.state.cursor, error: this.state.error, syncing: this.syncing, intervalMinutes: 15,
+    attemptedAt: this.state.attemptedAt ?? null, refreshedAt: this.state.refreshedAt ?? this.state.checkedAt,
+    errorCode: this.state.errorCode ?? null, failedPage: this.state.failedPage ?? null, refreshedPages: this.state.refreshedPages ?? 0 }; }
   private save() {
     const file = path.join(this.directory, 'catalog.json');
     writeFileSync(file + '.tmp', JSON.stringify(this.state), { mode: 0o600 }); renameSync(file + '.tmp', file);
@@ -110,19 +133,22 @@ export class LiveCatalog implements FundingProvider {
   async sync(pages = 10) {
     if (this.syncing) return;
     this.syncing = true;
+    this.state.attemptedAt = new Date().toISOString(); this.state.refreshedPages = 0;
+    let currentPage: number | null = null;
     try {
       const entries = new Map(this.state.entries.map((o) => [o.id, o]));
       let cursor = this.state.cursor, total = this.state.total;
       // Refresh the first pages (the portal puts current selections first), then walk the remaining catalogue.
-      // Cursor persists across restarts; each pass is bounded and failures retain the last good snapshot.
+      // Cursor persists across restarts; failures retain saved records and validated pages.
       const requested = new Set([...Array.from({ length: pages }, (_, i) => i + 1), this.state.cursor]);
       let mainTail = pages;
       for (const page of requested) {
+        currentPage = page;
         const result = await this.source.page(page);
         total = result.total;
-        for (const row of result.rows) {
-          if (row.competitionType !== 0) continue;
-          const item = normalizeBudgetCard(row);
+        // Validate the entire page before accepting any changes from it.
+        const items = result.rows.filter((row) => row.competitionType === 0).map((row) => normalizeBudgetCard(row));
+        for (const item of items) {
           const previous = entries.get(item.id);
           if (item.status !== 'closed' || previous) entries.set(item.id, { ...item,
             source: previous?.version === item.version ? previous.source : item.source,
@@ -130,16 +156,29 @@ export class LiveCatalog implements FundingProvider {
               detail: previous?.version === item.version ? previous.imported?.detail : undefined } });
         }
         // Continue through the current-selection block when it grows beyond the first 1,000 cards.
-        if (page === mainTail && page < Math.min(50, result.totalPages) && result.rows.some((row) => row.competitionType === 0 && normalizeBudgetCard(row).status === 'active')) {
+        if (page === mainTail && page < Math.min(50, result.totalPages) && items.some((item) => item.status === 'active')) {
           mainTail++; requested.add(mainTail);
         }
         if (page === this.state.cursor) cursor = page >= result.totalPages ? pages + 1 : page + 1;
+        // Keep validated pages even if a later one fails. Do not mark a partial
+        // pass as a complete refresh or drop previously saved programmes.
+        this.state.entries = [...entries.values()]; this.state.total = total;
+        this.state.refreshedAt = new Date().toISOString(); this.state.refreshedPages!++;
         if (page >= result.totalPages) break;
         await new Promise((resolve) => setTimeout(resolve, 350));
       }
       this.state.entries = [...entries.values()]; this.state.cursor = cursor; this.state.total = total;
-      this.state.checkedAt = new Date().toISOString(); this.state.error = null; this.save();
-    } catch { this.state.error = 'source_unavailable'; this.save(); }
+      this.state.checkedAt = new Date().toISOString(); this.state.error = null;
+      this.state.errorCode = null; this.state.failedPage = null; this.save();
+    } catch (error) {
+      this.state.error = 'source_unavailable'; this.state.failedPage = currentPage;
+      const message = error instanceof Error ? error.message : '';
+      // Only bounded diagnostic codes are public, never raw provider responses.
+      this.state.errorCode = /^BUDGET_HTTP_\d{3}$/.test(message) ? message
+        : message === 'BUDGET_SCHEMA_CHANGED' || message === 'INVALID_PROVIDER_RESPONSE' ? 'BUDGET_SCHEMA_CHANGED'
+        : error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name) ? 'BUDGET_TIMEOUT' : 'BUDGET_CONNECTION_FAILED';
+      this.save();
+    }
     finally { this.syncing = false; }
   }
   enrich(id: string) {

@@ -26,12 +26,11 @@ export function DemoSettings({ demo, onOpen }: { demo: DemoController; onOpen: (
       <ActionButton className="secondary" onClick={onOpen}>{demo.state.signedIn ? 'Проверить компанию' : 'Продолжить вход'}</ActionButton>
       <button className="text-button" onClick={demo.reset}>Отключить Госуслуги</button>
     </> : <ActionButton className="secondary" onClick={() => { if (demo.update({ ...emptyDemo, enabled: true, receipts: [] })) onOpen(); }}>Войти через Госуслуги</ActionButton>}
-    {demo.error && <p className="error" role="alert">{demo.error}</p>}
   </section>;
 }
 
 export function VerificationPage({ demo, company, onAdd, onDone }: { demo: DemoController; company: Profile | null; onAdd: () => void; onDone: () => void }) {
-  const [consent, setConsent] = useState(false), [role, setRole] = useState('director'), [error, setError] = useState('');
+  const [consent, setConsent] = useState(false), [role, setRole] = useState('director');
   const confirmed = demoConfirmed(demo.state, company?.inn);
   if (!demo.state.enabled) return <section className="profile-panel"><h2>Вход не выполнен</h2><ActionButton onClick={onDone}>К настройкам</ActionButton></section>;
   return <section className="verification-page">
@@ -47,14 +46,12 @@ export function VerificationPage({ demo, company, onAdd, onDone }: { demo: DemoC
     </section> : !company ? <section className="profile-panel"><h2>Выберите компанию</h2><p>Загрузите её по ИНН, затем подтвердите полномочия.</p><ActionButton className="primary" onClick={onAdd}>Добавить компанию по ИНН</ActionButton></section>
       : !confirmed ? <section className="profile-panel">
         <h2>Подтверждение компании</h2><p>{company.name}<br />ИНН {company.inn}</p>
-        <label className="field">Ваша роль<select value={role} onChange={e => { setRole(e.target.value); setError(''); }}><option value="director">Руководитель</option><option value="representative">Представитель с полномочиями</option><option value="none">Нет полномочий</option></select></label>
-        <ActionButton className="primary" onClick={() => {
-          if (role === 'none') { setError('Полномочия не подтверждены. Подбор доступен, подача заблокирована.'); return; }
+        <label className="field">Ваша роль<select value={role} onChange={e => setRole(e.target.value)}><option value="director">Руководитель</option><option value="representative">Представитель с полномочиями</option><option value="none">Нет полномочий</option></select></label>
+        <ActionButton className="primary" disabled={role === 'none'} onClick={() => {
+          if (role === 'none') return;
           demo.update({ ...demo.state, inn: company.inn, role: role as 'director' | 'representative' });
         }}>Подтвердить компанию</ActionButton>
-        {error && <p className="error" role="alert">{error}</p>}
       </section> : <section className="profile-panel"><Icon name="check" size={34} /><h2>Компания подтверждена</h2><p>{company.name}</p><p>Подготовьте комплект документов и перейдите к подаче.</p><ActionButton className="primary" onClick={onDone}>Продолжить</ActionButton></section>}
-    {demo.error && <p role="alert" className="error">{demo.error}</p>}
   </section>;
 }
 
@@ -69,7 +66,6 @@ export function DemoSubmission({ demo, company, applicationId, title, ready, onV
         <label className="checklist-title"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />Подтверждаю отправку заявки</label>
         <ActionButton className="primary" disabled={!ready || !consent} onClick={() => {
           try { if (demo.submit({ applicationId, inn: company.inn, title, ready })) setError(''); } catch (e) { setError((e as Error).message); }
-        }}>Отправить заявку</ActionButton></>}
-    {(error || demo.error) && <p className="error" role="alert">{error || demo.error}</p>}
+        }}>{error || demo.error ? 'Повторить отправку' : 'Отправить заявку'}</ActionButton></>}
   </section>;
 }

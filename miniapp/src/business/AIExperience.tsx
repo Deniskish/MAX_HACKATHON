@@ -54,9 +54,9 @@ function Facts({ data }: { data: object }) {
 export function AIResultView({ result, onOpen, onPrepare, onFunding, onNeed, onProfile, onQuestion, onDraft, showAnswer = true }: Handlers & { result: AIResult; showAnswer?: boolean }) {
   const [applied, setApplied] = useState<string[]>([]);
   useEffect(() => setApplied([]), [result]);
+  if (result.providerFailure) return null;
   return <div className="ai-result">
     <span className="tag">{result.mode === 'llm' ? 'AI-анализ' : 'Проверка по правилам'}</span>
-    {result.notice && <p className="widget-footnote" role="status">{result.notice}</p>}
     {showAnswer && <p className="ai-answer">{result.answer}</p>}
     {result.draft && <section className="ai-proposal"><h3>Предложенный текст</h3><BusinessTextarea aria-label="Предложенный AI-черновик" rows={10} readOnly value={result.draft} />
       {onDraft && <ActionButton className="secondary" onClick={() => onDraft(result.draft!)}>Использовать этот текст</ActionButton>}</section>}
@@ -100,7 +100,7 @@ export function AIPanel({ title, task, context, initialQuestion = '', button = '
     try {
       const answer = await requestAI({ task, question: text, context }, controller.signal);
       if (pending.current === controller && !controller.signal.aborted) {
-        if (task === 'review' && answer.mode === 'local') setError(aiErrorMessage(answer.providerFailure ?? 'PROVIDER_UNAVAILABLE'));
+        if (answer.providerFailure || task === 'review' && answer.mode === 'local') setError(aiErrorMessage(answer.providerFailure ?? 'PROVIDER_UNAVAILABLE'));
         else { setResult(answer); if (answer.providerFailure) setError(aiErrorMessage(answer.providerFailure)); onResult?.(answer); }
       }
     } catch (e) { if (pending.current === controller && !controller.signal.aborted) setError(aiErrorMessage(e)); }
@@ -110,7 +110,6 @@ export function AIPanel({ title, task, context, initialQuestion = '', button = '
     <label className="field">Задача для помощника<BusinessTextarea rows={3} maxLength={2000} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Опишите задачу своими словами" /></label>
     <ActionButton className="primary" disabled={busy || !question.trim()} onClick={() => void run()}>{busy ? 'Анализируем…' : error ? 'Повторить запрос' : button}</ActionButton>
     {busy && <ActionButton className="text-button" onClick={() => { pending.current?.abort(); pending.current = null; setBusy(false); }}>Отменить</ActionButton>}
-    {error && <p className="error" role="alert">{error}</p>}
     {result && <AIResultView result={result} {...handlers} onNeed={handlers.onNeed ? (need) => { applying.current = JSON.stringify(context.need) !== JSON.stringify(need); handlers.onNeed!(need); } : undefined} onQuestion={(q) => { setQuestion(q); }} />}
   </section>;
 }

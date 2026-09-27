@@ -81,9 +81,6 @@ export function SupportNotificationSettings({ notifications: n }: { notification
     {n.available ? <>
       <label className="notification-toggle"><span>Уведомления в приложении</span><input type="checkbox" checked={n.enabled} disabled={n.busy} onChange={(e) => void n.subscribe(e.target.checked, e.target.checked && n.bot)} /></label>
       <label className="notification-toggle"><span>Сообщения от бота MAX</span><input type="checkbox" checked={n.bot} disabled={n.busy || !n.enabled} onChange={(e) => void n.subscribe(true, e.target.checked)} /></label>
-      {!n.aiConfigured && <p role="status">AI-проверка временно недоступна. Подписка сохранится.</p>}
-      {n.aiConfigured && n.monitor?.lastError && <p role="status">Проверка или доставка задерживается. Повторим автоматически.</p>}
-      {n.error && <p className="error" role="alert">{n.error}</p>}
     </> : <p>Откройте «Опору» в MAX, чтобы подключить уведомления.</p>}
   </section>;
 }
