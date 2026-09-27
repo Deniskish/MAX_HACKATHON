@@ -1,57 +1,70 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { getAIActivity, subscribeAIActivity } from './ai-activity';
 import { aiErrorMessage, requestAI, type AIRequest, type AIResult } from './ai-client';
-import { workspaceActions, workspacePages, type AIPersonalization } from '../../api-server/ai/types';
+import { analysisDigest, reusableAnalysis, validPersonalization } from './workspace-analysis-cache';
 
 const cacheKey = 'opora.ai.workspace.v1';
-export function validPersonalization(value: unknown): value is AIPersonalization {
-  const data = value as AIPersonalization | null;
-  return !!data && typeof data.summary === 'string' && data.summary.length <= 700 && !!data.sections
-    && workspacePages.every((p) => { const s = data.sections[p]; return s && typeof s.title === 'string' && s.title.length <= 60
-      && typeof s.text === 'string' && s.text.length <= 300 && workspaceActions.includes(s.action); })
-    && Array.isArray(data.priorities) && data.priorities.length <= 6
-    && data.priorities.every((p) => p && typeof p.programId === 'string' && typeof p.reason === 'string' && p.reason.length <= 300);
-}
+type AnalysisState = { fingerprint: string; status: 'loading' | 'ready' | 'unavailable'; data?: AIResult; at?: number; error?: string; refreshing?: boolean };
 export function useBusinessAnalysis(context: AIRequest['context'] | null, sourceVersion: string, paused = false) {
   const fingerprint = JSON.stringify({ version: 1, context, sourceVersion });
-  const [state, setState] = useState<{ fingerprint: string; status: 'loading' | 'ready' | 'unavailable'; data?: AIResult; at?: number; error?: string }>({ fingerprint: '', status: 'loading' });
+  const [state, setState] = useState<AnalysisState>({ fingerprint: '', status: 'loading' });
+  const currentState = useRef(state);
+  const publish = (next: AnalysisState) => { currentState.current = next; setState(next); };
   const [retry, setRetry] = useState(0);
   const completedRetry = useRef(0);
-  const declinedAttempt = useRef('');
+  const failedAttempt = useRef('');
   const interactive = useSyncExternalStore(subscribeAIActivity, getAIActivity, () => 0);
   useEffect(() => {
     // An interactive conversation must not wait behind this tab's background job.
     // Effect cleanup cancels the HTTP request and the provider generation upstream.
-    if (!context || paused || interactive > 0) return;
+    if (!context) {
+      failedAttempt.current = '';
+      completedRetry.current = retry;
+      if (currentState.current.fingerprint) publish({ fingerprint: '', status: 'loading' });
+      return;
+    }
+    if (paused || interactive > 0) return;
     const attempt = `${fingerprint}:${retry}`;
-    // Navigating away and back must not automatically repeat a provider refusal.
+    // Navigation must not repeat a failed request or discard the visible failure.
     // Changed business facts or an explicit retry start a new attempt.
-    if (declinedAttempt.current === attempt) return;
+    if (failedAttempt.current === attempt) return;
     const controller = new AbortController();
     const unsubscribe = subscribeAIActivity(() => { if (getAIActivity() > 0) controller.abort(); });
     const timer = setTimeout(() => {
       void (async () => {
-        setState({ fingerprint, status: 'loading' });
+        let previous = currentState.current.fingerprint === fingerprint && reusableAnalysis(currentState.current)
+          ? { data: currentState.current.data!, at: currentState.current.at! } : undefined;
+        const loading = () => publish({ fingerprint, status: previous ? 'ready' : 'loading', ...previous, refreshing: true });
+        const failed = (error: unknown) => {
+          failedAttempt.current = attempt;
+          // Never carry recommendations across changed facts/catalogue or beyond their expiry.
+          if (!reusableAnalysis(previous)) previous = undefined;
+          publish({ fingerprint, status: previous ? 'ready' : 'unavailable', ...previous, error: aiErrorMessage(error) });
+        };
+        loading();
         try {
-          const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(fingerprint)))].map((n) => n.toString(16).padStart(2, '0')).join('');
+          const digest = await analysisDigest(fingerprint);
+          controller.signal.throwIfAborted();
           try {
-            const saved = JSON.parse(localStorage.getItem(cacheKey) ?? 'null');
-            if (retry === completedRetry.current && saved?.digest === digest && Date.now() - saved.at < 4 * 60 * 60 * 1000 && saved.data?.mode === 'llm' && validPersonalization(saved.data.personalization)) {
-              if (!controller.signal.aborted) setState({ fingerprint, status: 'ready', data: saved.data, at: saved.at });
-              return;
+            const saved = digest ? JSON.parse(localStorage.getItem(cacheKey) ?? 'null') : null;
+            if (saved?.digest === digest && reusableAnalysis(saved) && (!previous || saved.at > previous.at)) {
+              previous = { data: saved.data, at: saved.at };
             }
           } catch { /* Storage is optional. */ }
+          if (previous && retry === completedRetry.current) {
+            publish({ fingerprint, status: 'ready', ...previous }); return;
+          }
+          loading();
           controller.signal.throwIfAborted();
           const data = await requestAI({ task: 'workspace', question: 'Проанализируй бизнес и адаптируй все разделы приложения под его ситуацию: главную, каталог поддержки, заявки, календарь и помощника. Учитывай текущие цели и подготовку заявок.', context }, controller.signal);
           if (controller.signal.aborted) return;
           if (data.mode !== 'llm' || !validPersonalization(data.personalization)) {
-            if (data.providerFailure === 'PROVIDER_CONTENT_BLOCKED') declinedAttempt.current = attempt;
-            setState({ fingerprint, status: 'unavailable', error: aiErrorMessage(data.providerFailure ?? 'INVALID_RESPONSE') }); return;
+            failed(data.providerFailure ?? 'INVALID_RESPONSE'); return;
           }
           completedRetry.current = retry;
-          const at = Date.now(); setState({ fingerprint, status: 'ready', data, at });
-          try { localStorage.setItem(cacheKey, JSON.stringify({ digest, data, at })); } catch { /* Keep the analysis in memory. */ }
-        } catch (error) { if (!controller.signal.aborted) setState({ fingerprint, status: 'unavailable', error: aiErrorMessage(error) }); }
+          const at = Date.now(); publish({ fingerprint, status: 'ready', data, at });
+          try { if (digest) localStorage.setItem(cacheKey, JSON.stringify({ digest, data, at })); } catch { /* Keep the analysis in memory. */ }
+        } catch (error) { if (!controller.signal.aborted) failed(error); }
       })();
     }, 1800);
     return () => { clearTimeout(timer); unsubscribe(); controller.abort(); };
@@ -60,6 +73,7 @@ export function useBusinessAnalysis(context: AIRequest['context'] | null, source
     data: state.fingerprint === fingerprint ? state.data : undefined,
     at: state.fingerprint === fingerprint ? state.at : undefined,
     error: state.fingerprint === fingerprint ? state.error : undefined,
+    refreshing: state.fingerprint === fingerprint && !!state.refreshing,
     refresh: () => setRetry((n) => n + 1) };
 }
 export type BusinessAnalysis = ReturnType<typeof useBusinessAnalysis>;

@@ -6,6 +6,7 @@ import { useSystemTheme } from '../theme';
 import { ThemedImage } from './ThemedImage';
 import { aiErrorMessage, requestAI, type AIRequest } from './ai-client';
 import { getAIActivity, subscribeAIActivity } from './ai-activity';
+import { analysisDigest, analysisMaxAge, reusableAnalysis } from './workspace-analysis-cache';
 
 const request: AIRequest = { task: 'intake', question: 'Мастерская мебели', context: {} };
 const answer = { mode: 'llm', answer: 'Ответ', actions: [], citations: [], matches: [], findings: [], scenarios: [], followups: [], tools: [] };
@@ -39,10 +40,29 @@ test('non-JSON responses and machine error codes become readable UI errors', asy
   await assert.rejects(requestAI(request, new AbortController().signal), /некорректный ответ/);
   mock.mock.restore();
   assert.match(aiErrorMessage('PROVIDER_UNAVAILABLE'), /временно недоступен/);
-  assert.match(aiErrorMessage('PROVIDER_CONTENT_BLOCKED'), /формулировку/);
+  assert.match(aiErrorMessage('PROVIDER_CONTENT_BLOCKED'), /отклонил запрос/);
   assert.match(aiErrorMessage('PROVIDER_RATE_LIMITED'), /через минуту/);
   assert.match(aiErrorMessage('PROVIDER_HTTP_503'), /временно недоступен/);
   assert.match(aiErrorMessage('GIGACHAT_AUTH_FAILED'), /временно недоступен/);
+});
+
+test('workspace cache rejects expired, future, local and incomplete results', () => {
+  const now = Date.now();
+  const data = { ...answer, personalization: { summary: 'План', priorities: [], sections: Object.fromEntries(
+    ['home', 'programs', 'applications', 'calendar', 'assistant'].map(page => [page, { title: 'Проверить условия', text: 'Уточните цель', action: 'funding' }])) } };
+  assert.equal(reusableAnalysis({ data, at: now }, now), true);
+  for (const at of [now + 1, now - analysisMaxAge, NaN, Infinity, 'today', undefined]) {
+    assert.equal(reusableAnalysis({ data, at }, now), false);
+  }
+  for (const invalid of [{ ...data, mode: 'local' }, { ...data, citations: undefined },
+    { ...data, personalization: { ...data.personalization, sections: {} } }, { ...data, personalization: { ...data.personalization, summary: '' } }]) {
+    assert.equal(reusableAnalysis({ data: invalid, at: now }, now), false);
+  }
+});
+
+test('unavailable Web Crypto disables only persistent caching', async (t) => {
+  t.mock.method(crypto.subtle, 'digest', async () => { throw new Error('Web Crypto unavailable'); });
+  assert.equal(await analysisDigest('business fingerprint'), undefined);
 });
 
 test('AI deadline ends a stalled request and caller cancellation remains distinguishable', async (t) => {

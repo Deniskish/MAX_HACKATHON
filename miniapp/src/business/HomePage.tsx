@@ -59,17 +59,19 @@ export function HomePage({ showNavigation = true, onFindSupport, onAddBusiness, 
           </button>
         </div>
         <button type="button" className="home-opportunities home-adaptive" disabled={analyzing} aria-busy={analyzing}
-          onClick={() => !personalized ? onAssistant() : insight ? onAIAction(insight.action) : analysis.refresh()}>
+          onClick={() => insight ? onAIAction(insight.action) : onAssistant()}>
           <ThemedImage className="home-orb" src="/assets/orb.png" width={1254} height={1254} alt="" draggable={false} />
           <span className="home-opportunities-copy">
-            {personalized && <span className="home-ai-label">{insight ? 'AI · следующий шаг' : 'AI · анализ бизнеса'}</span>}
-            <span className="home-action-title">{!personalized ? 'AI-помощник' : insight?.title ?? (analyzing ? 'Определяем следующий шаг…' : 'Повторить анализ')}</span>
+            {personalized && <span className="home-ai-label">{insight ? 'AI · следующий шаг' : analyzing ? 'AI · анализ бизнеса' : 'Помощь с бизнесом'}</span>}
+            <span className="home-action-title">{insight?.title ?? (analyzing ? 'Определяем следующий шаг…' : 'AI-помощник')}</span>
           </span>
           {!analyzing && <Arrow />}
         </button>
-        {personalized && <ContextHelp title="Как выбран следующий шаг">
-          <p>{insight ? 'Рекомендация AI на основе профиля бизнеса, вашей цели и текущих заявок.' : analyzing ? 'AI анализирует профиль бизнеса, вашу цель и текущие заявки.' : 'Не удалось получить AI-рекомендацию. Повторите анализ или задайте вопрос помощнику в разделе «Мой бизнес».'}</p>
+        {personalized && <ContextHelp title={insight || analyzing ? 'Как выбран следующий шаг' : 'Почему нет следующего шага'}>
+          <p>{insight ? 'Рекомендация AI на основе профиля бизнеса, вашей цели и текущих заявок.' : analyzing ? 'AI анализирует профиль бизнеса, вашу цель и текущие заявки.' : 'AI-анализ не завершён. Кнопка открывает чат, где можно задать отдельный вопрос.'}</p>
           {insight && <p>{insight.text}</p>}
+          {analysis.error && <p role="status">{analysis.error}{insight ? ' Сохранён предыдущий анализ для этих же данных.' : ''}</p>}
+          {analysis.error && <button type="button" onClick={analysis.refresh} disabled={analysis.refreshing}>{analysis.refreshing ? 'Обновляем анализ…' : 'Повторить анализ'}</button>}
         </ContextHelp>}
       </section>
     </div>

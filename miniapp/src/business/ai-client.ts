@@ -10,8 +10,8 @@ const errorLabels: Record<string, string> = {
   PROVIDER_TIMEOUT: 'Анализ занял слишком много времени. Повторите запрос — ваши данные сохранены.',
   PROVIDER_RATE_LIMITED: 'Слишком много запросов. Повторите через минуту.',
   RATE_LIMITED: 'Слишком много запросов. Повторите через минуту.',
-  PROVIDER_CONTENT_BLOCKED: 'GigaChat не смог обработать этот вопрос. Попробуйте изменить формулировку.',
-  blacklist: 'GigaChat не смог обработать этот вопрос. Попробуйте изменить формулировку.',
+  PROVIDER_CONTENT_BLOCKED: 'GigaChat отклонил запрос. AI-анализ по нему не выполнен.',
+  blacklist: 'GigaChat отклонил запрос. AI-анализ по нему не выполнен.',
 };
 export function aiErrorMessage(error: unknown): string {
   if (error instanceof Error && error.name === 'TimeoutError') return 'Время ожидания ответа истекло. Попробуйте ещё раз.';
@@ -24,7 +24,7 @@ const textFields = (value: unknown, required: string[], optional: string[] = [])
   && required.every((key) => typeof value[key] === 'string')
   && optional.every((key) => value[key] == null || typeof value[key] === 'string');
 const facts = (value: unknown) => record(value) && Object.values(value).every((item) => item == null || ['string', 'number', 'boolean'].includes(typeof item));
-function renderableResult(data: unknown): data is AIResult {
+export function renderableResult(data: unknown): data is AIResult {
   return record(data) && ['llm', 'local'].includes(String(data.mode)) && typeof data.answer === 'string'
     && ['notice', 'draft', 'providerFailure'].every((key) => data[key] == null || typeof data[key] === 'string')
     && ['proposedNeed', 'proposedProfile'].every((key) => data[key] == null || facts(data[key]))

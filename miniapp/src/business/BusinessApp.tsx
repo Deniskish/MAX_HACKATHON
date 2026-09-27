@@ -545,11 +545,12 @@ export default function BusinessApp() {
           {page === 'programs' && (
             <>
               {profile && <div className="catalog-scopes catalog-scope-tabs" role="group" aria-label="Область подбора" data-scope={catalogScope}><span className="catalog-scope-indicator" aria-hidden="true" />{([['personal', 'Для вас'], ['all', 'Все меры'], ['saved', `Сохранённые · ${saved.length}`]] as const).map(([scope, title]) => <button key={scope} aria-pressed={catalogScope === scope} onClick={() => { setCatalogScope(scope); setOnlySaved(scope === 'saved'); }}>{title}</button>)}</div>}
-              {profile && catalogScope === 'personal' && businessAnalysis.status !== 'ready' && <section className="catalog-guest-context" role="status">
-                <div><p>{businessAnalysis.status === 'loading' ? 'Подбираем меры для вашего бизнеса…' : 'Персональный AI-подбор временно недоступен.'}</p>
+              {profile && catalogScope === 'personal' && businessAnalysis.status !== 'ready' && <ContextHelp title={businessAnalysis.status === 'loading' ? 'AI уточняет подбор…' : 'AI-подбор не завершён'}>
+                <p>{businessAnalysis.status === 'loading' ? 'Сравниваем меры с данными бизнеса.' : businessAnalysis.error}</p>
+                {personal.candidates.length > 0 && <p>Ниже — варианты по условиям каталога. Соответствие указано в каждой карточке; это не AI-рекомендации.</p>}
+                {businessAnalysis.status === 'unavailable' && <button onClick={businessAnalysis.refresh}>Повторить анализ</button>}
                   <button onClick={() => { setCatalogScope('all'); setOnlySaved(false); setFilter('Все меры'); setQuery(''); setAvailability(''); }}>Открыть весь каталог · {officialFundingCatalog.length} <Icon name="arrow" size={14} /></button>
-                </div>
-              </section>}
+              </ContextHelp>}
               <div className="catalog-toolbar">
                 {!profile && <div className="segmented-control" aria-label="Показать программы">
                   <button
