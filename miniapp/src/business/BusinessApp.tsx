@@ -884,7 +884,7 @@ export default function BusinessApp() {
             }}
           />}
       </main>
-      {page !== 'assistant' && <AppNavigation active={page} onNavigate={(next) => {
+      {page !== 'assistant' && <AppNavigation active={page === 'settings' ? settingsReturn : page} onNavigate={(next) => {
         if (next === 'overview' && page === 'overview') mainRef.current?.querySelector('.home-scroll')?.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
         else navigate(next);
       }} />}
