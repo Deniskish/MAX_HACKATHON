@@ -1,22 +1,18 @@
 // Граница передачи данных в LLM: разрешённые факты проходят, исходный свободный текст — нет.
 import { randomBytes } from 'node:crypto';
 import {
-  programs as defaultPrograms,
-  type Program,
   goals,
   emptyProfile,
-  shortlist,
-  analyzeOpportunity,
-  draftKinds,
   type Profile,
   type Application,
-  type DraftKind,
-} from './support-model';
+} from './business-model';
+import { draftKinds, type DraftKind } from './documents';
+import type { FundingOpportunity } from './funding-catalog/types';
+import { parseFundingNeed } from './funding-catalog/input';
 import { officialFundingCatalog } from './funding-catalog/official-catalog';
 import { matchFundingOpportunity, rankFundingMatches } from './funding-catalog/matching';
 import { buildFundingStrategy } from './funding-catalog/strategy';
 import { emptyFundingNeed } from './funding-catalog/types';
-import { FundingCatalogService } from './funding-catalog/service';
 import { type FundingProfile } from './funding-catalog/types';
 import { providerJson } from './provider-json';
 
@@ -58,7 +54,7 @@ export function detectSensitiveText(value: string): string {
     .replace(/(?<!\d)\d{10,20}(?!\d)/g, '[РЕКВИЗИТЫ СКРЫТЫ]');
 }
 
-export function preparePrivateRequest(input: unknown, programs: Program[] = defaultPrograms) {
+export function preparePrivateRequest(input: unknown, programs: FundingOpportunity[] = officialFundingCatalog) {
   const body = record(input);
   if (typeof body.question !== 'string' || !body.question.trim() || body.question.length > 2000)
     throw new PrivacyError('INVALID_QUESTION');
@@ -159,7 +155,7 @@ export function preparePrivateRequest(input: unknown, programs: Program[] = defa
       project: '',
       budget: typeof budget === 'number' ? String(budget) : '',
       documents: Object.fromEntries(
-        program.documents
+        program.requiredDocuments
           .filter((d) => checked.includes(d))
           .map((d) => [d, 'Отмечен пользователем']),
       ),
@@ -175,28 +171,21 @@ export function preparePrivateRequest(input: unknown, programs: Program[] = defa
     return raw ? [cleanApplication(raw, program)] : [];
   });
   const application = selected ? cleanApplication(context.application, selected) : undefined;
-  const candidates = selected
-    ? [{ p: selected, r: analyzeOpportunity(selected, normalizedProfile, application) }]
-    : shortlist(normalizedProfile, applications, programs);
-  const requestedDocument =
-    typeof body.draftKind === 'string' && Object.hasOwn(draftKinds, body.draftKind)
-      ? draftKinds[body.draftKind as DraftKind]
-      : draftKinds.project;
-  let official: ReturnType<FundingCatalogService['match']> | undefined;
-  if (context.need !== undefined) {
-    const fundingProfile: FundingProfile = { ...normalizedProfile };
-    if (['legal_entity', 'individual_entrepreneur', 'individual', 'team', 'project'].includes(String(profile.applicantType)))
-      fundingProfile.applicantType = profile.applicantType as FundingProfile['applicantType'];
-    if (['active', 'terminated', 'restricted'].includes(String(profile.companyStatus))) fundingProfile.companyStatus = String(profile.companyStatus);
-    try { official = new FundingCatalogService().match({ profile: fundingProfile, need: context.need }); }
-    catch { throw new PrivacyError('INVALID_FUNDING_NEED'); }
-  }
-  if (!official && programs === defaultPrograms) {
-    const need = { ...emptyFundingNeed };
-    const matches = rankFundingMatches(officialFundingCatalog.map((o) => matchFundingOpportunity(normalizedProfile, need, o)));
-    official = { mode: 'official', need, matches, strategy: buildFundingStrategy(normalizedProfile, need, matches) };
-  }
-  const officialMatches = official?.matches.filter((m) => !selected || m.opportunity.id === selected.id);
+  const requestedDocument = typeof body.draftKind === 'string' && Object.hasOwn(draftKinds, body.draftKind)
+    ? draftKinds[body.draftKind as DraftKind] : draftKinds.project;
+  let need = { ...emptyFundingNeed };
+  try { if (context.need !== undefined) need = parseFundingNeed(context.need); }
+  catch { throw new PrivacyError('INVALID_FUNDING_NEED'); }
+  const fundingProfile: FundingProfile = { ...normalizedProfile };
+  if (['legal_entity', 'individual_entrepreneur', 'individual', 'team', 'project'].includes(String(profile.applicantType)))
+    fundingProfile.applicantType = profile.applicantType as FundingProfile['applicantType'];
+  if (['active', 'terminated', 'restricted'].includes(String(profile.companyStatus)))
+    fundingProfile.companyStatus = String(profile.companyStatus);
+  const matches = rankFundingMatches(programs.map(opportunity => {
+    const app = selected?.id === opportunity.id ? application : applications.find(a => a.programId === opportunity.id);
+    return matchFundingOpportunity(fundingProfile, need, opportunity, { preparedDocuments: Object.keys(app?.documents ?? {}) });
+  }));
+  const officialMatches = matches.filter(m => !selected || m.opportunity.id === selected.id);
   const safe = {
     policy: 'strict-v1',
     intent,
@@ -204,9 +193,9 @@ export function preparePrivateRequest(input: unknown, programs: Program[] = defa
     questionToken: token(question),
     identifiers,
     facts,
-    trustedPrograms: officialMatches?.map((m) => m.opportunity) ?? candidates.map((x) => x.p),
-    assessments: officialMatches ?? candidates.map((x) => ({ programId: x.p.id, ...x.r })),
-    fundingNeed: official?.need, strategy: official?.strategy,
+    trustedPrograms: officialMatches.map(m => m.opportunity),
+    assessments: officialMatches,
+    fundingNeed: need, strategy: buildFundingStrategy(fundingProfile, need, matches),
   };
   const payload = {
     temperature: 0.2,
@@ -242,7 +231,7 @@ export async function privateCompletion(
   input: unknown,
   config: { endpoint: string; token: string | (() => Promise<string>); model: string },
   transport: typeof fetch = fetch,
-  trustedCatalog: Program[] = defaultPrograms,
+  trustedCatalog: FundingOpportunity[] = officialFundingCatalog,
 ) {
   const endpoint = new URL(config.endpoint);
   if (

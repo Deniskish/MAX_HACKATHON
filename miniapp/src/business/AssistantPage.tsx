@@ -73,7 +73,7 @@ export function AssistantPage({ businessName, guest = false, backLabel = 'В м�
         </div>}
         {messages.map((message, index) => <article key={index} className={`message ${message.role}`} aria-label={message.role === 'user' ? 'Вы' : 'Опора AI'}>{renderMessage(index)}</article>)}
         {sending && <div className="assistant-typing" role="status"><span />Готовлю ответ…</div>}
-        {error && <div className="assistant-retry"><button type="button" className="secondary" disabled={sending} onClick={onRetry}>Повторить запрос</button></div>}
+        {error && <div className="assistant-retry" role="status"><p>Ответ пока не получен. Ваш вопрос сохранён.</p><button type="button" className="secondary" disabled={sending} onClick={onRetry}>Повторить запрос</button></div>}
       </div>
       {awayFromBottom && <button className="assistant-latest" onClick={latest}>К последним сообщениям ↓</button>}
     </div>

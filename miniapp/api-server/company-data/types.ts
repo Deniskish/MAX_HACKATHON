@@ -1,4 +1,4 @@
-import type { Profile } from '../support-model';
+import type { Profile } from '../business-model';
 
 export type CompanyDataMode = 'demo' | 'official' | 'aggregator';
 export type CompanySource = {

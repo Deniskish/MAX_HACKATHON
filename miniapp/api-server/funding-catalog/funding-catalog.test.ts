@@ -42,7 +42,7 @@ test('demo IT company receives technology grant and young technology support', a
   const profile = await techProfile();
   for (const o of [grant, opportunity('demo-young-tech')]) {
     const pending = matchFundingOpportunity(profile, techNeed, o, options);
-    assert.equal(pending.status, 'almost_eligible');
+    assert.equal(pending.status, 'eligible');
     assert.ok(pending.missingDocuments.length > 0);
     const ready = matchFundingOpportunity(profile, techNeed, o, { now, preparedDocuments: o.requiredDocuments });
     assert.equal(ready.status, 'eligible');
@@ -136,7 +136,10 @@ test('optional unknown criterion is not a mandatory blocker, explicit unmet opti
 });
 test('documents are separate from criteria and only named documents count', async () => {
   const pending = matchFundingOpportunity(await techProfile(), techNeed, grant, { now, preparedDocuments: ['attacker-document'] });
-  assert.equal(pending.status, 'almost_eligible');
+  assert.equal(pending.status, 'eligible');
+  const prepared = matchFundingOpportunity(await techProfile(), techNeed, grant, { now, preparedDocuments: grant.requiredDocuments });
+  assert.equal(prepared.status, pending.status);
+  assert.equal(prepared.score, pending.score);
   assert.deepEqual(pending.missingDocuments, grant.requiredDocuments);
 });
 test('term fit handles minimum, maximum, partial and unknown; grants do not require a repayment term', async () => {

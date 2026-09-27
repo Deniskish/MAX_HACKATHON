@@ -1,4 +1,4 @@
-import { emptyProfile, type Profile, type ProfileValues } from '../support-model';
+import { emptyProfile, type Profile, type ProfileValues } from '../business-model';
 import { innEntityType } from './inn';
 import type { CompanyDataProvider, CompanyRecord, CompanyResponse, CompanyField } from './types';
 

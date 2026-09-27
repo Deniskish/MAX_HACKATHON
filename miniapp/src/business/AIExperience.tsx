@@ -66,8 +66,8 @@ export function AIResultView({ result, onOpen, onPrepare, onFunding, onNeed, onP
       return <article className="ai-finding" key={i}><b>{f.title}</b><p>{f.detail}</p>{f.quote && <blockquote>{f.quote}</blockquote>}
         <small>{f.severity === 'warning' ? 'Найдено в тексте' : 'Проверьте вручную'}{citation?.page ? ` · стр. ${citation.page}` : ''}</small></article>;
     })}
-    {result.proposedNeed && onNeed && <section className="ai-proposal"><h3>Проверьте потребность</h3><Facts data={result.proposedNeed} />
-      <ActionButton className="secondary" disabled={applied.includes('need')} onClick={() => { onNeed(result.proposedNeed!); setApplied((v) => [...v, 'need']); }}>{applied.includes('need') ? 'Потребность заполнена' : 'Заполнить потребность'}</ActionButton></section>}
+    {result.proposedNeed && onNeed && <section className="ai-proposal"><h3>Проверьте задачу</h3><Facts data={result.proposedNeed} />
+      <ActionButton className="secondary" disabled={applied.includes('need')} onClick={() => { onNeed(result.proposedNeed!); setApplied((v) => [...v, 'need']); }}>{applied.includes('need') ? 'Задача сохранена' : 'Применить к подбору'}</ActionButton></section>}
     {result.proposedProfile && onProfile && <section className="ai-proposal"><h3>Предложенные сведения о бизнесе</h3><Facts data={result.proposedProfile} />
       <ActionButton className="secondary" onClick={() => onProfile(result.proposedProfile!)}>Проверить в профиле</ActionButton></section>}
     {!!result.scenarios.length && <details className="info-disclosure"><InfoDisclosureRow as="summary" label="Сравнение сценариев" />{result.scenarios.map((s, i) => <section className="ai-proposal" key={i}><h3>{s.label}</h3><Facts data={s.need} />

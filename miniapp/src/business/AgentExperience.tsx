@@ -1,24 +1,24 @@
+import type { FundingOpportunity } from '../../api-server/funding-catalog/types';
 import { InfoDisclosureRow } from './InfoDisclosureRow';
 // Файлы читаются на устройстве; отправка текста в AI запускается отдельной кнопкой.
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { ActionButton, BusinessTextarea } from './MaxControls';
 import { Icon } from './Icon';
-import { AIPanel } from './AIExperience';
+
 
 import { readDocument } from './document-reader';
 import { requestAI, type AIDocument } from './ai-client';
 import { toFundingProfile } from '../../api-server/funding-catalog/input';
-import { type Profile, type Program, type Application, type DraftKind,
+import { type Profile, type Application, type DraftKind,
   documentGuide, inspectDocumentText, generateDraft, draftKinds } from './domain';
 export function DocumentChecklist({
   program,
   app,
-  profile,
   onUpdate,
   documents,
   setDocuments,
 }: {
-  program: Program;
+  program: FundingOpportunity;
   app: Application;
   profile: Profile | null;
   onUpdate: (patch: Partial<Application>) => void;
@@ -28,7 +28,7 @@ export function DocumentChecklist({
   const [reviews, setReviews] = useState<Record<string, ReturnType<typeof inspectDocumentText>>>(
     {},
   );
-  const [texts, setTexts] = useState<Record<string, string>>({});
+  const [texts, setTexts] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(documents).map(([name, doc]) => [name, doc.pages.map(p => p.text).join('\n\n')])));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [reading, setReading] = useState('');
   const reader = useRef<AbortController | null>(null);
@@ -47,6 +47,11 @@ export function DocumentChecklist({
     try {
       const document = await readDocument(file, (text) => { if (!controller.signal.aborted) setErrors((old) => ({ ...old, [name]: text })); }, controller.signal);
       if (controller.signal.aborted || reader.current !== controller) return;
+      const others = Object.entries(documents).filter(([key]) => key !== name);
+      const characters = [...others.map(([, d]) => d), document].reduce((n, d) => n + d.pages.reduce((total, p) => total + p.text.length, 0), 0);
+      if (others.length >= 8 || characters > 60000 || document.pages.length > 40 || document.pages.some(p => p.text.length > 40000)) {
+        setErrors(old => ({ ...old, [name]: 'Добавьте нужный фрагмент текста: до 40 страниц, 8 документов и 60 000 знаков в комплекте.' })); return;
+      }
       const text = document.pages.map((p) => `[Страница ${p.page}]\n${p.text}`).join('\n\n');
       setDocuments((old) => ({ ...old, [name]: document })); setTexts((old) => ({ ...old, [name]: text }));
       setReviews((old) => ({ ...old, [name]: inspectDocumentText(name, text) }));
@@ -56,7 +61,7 @@ export function DocumentChecklist({
   }
   return (
     <div className="personal-checklist">
-      {program.documents.map((name) => {
+      {program.requiredDocuments.map((name) => {
         const guide = documentGuide(name);
         return (
           <section className="widget checklist-item" key={name}>
@@ -78,6 +83,7 @@ export function DocumentChecklist({
                 <small>
                   {app.documents[name] ? 'Готовность отмечена вами' : 'Нужно подготовить'}
                   {app.documentFiles?.[name] ? ` · ${app.documentFiles[name]}` : ''}
+                  {app.documentFiles?.[name] && !documents[name] && ' · выберите файл повторно'}
                 </small>
               </span>
             </label>
@@ -104,13 +110,20 @@ export function DocumentChecklist({
                 />
               </label>
               <p className="widget-footnote">PDF, DOCX, TXT или скан · до 10 МБ</p>
+              {(documents[name] || app.documentFiles?.[name]) && <button type="button" className="text-button" onClick={() => {
+                reader.current?.abort(); reader.current = null; setReading('');
+                const next = { ...documents }; delete next[name]; setDocuments(next);
+                setTexts(old => ({ ...old, [name]: '' })); setReviews(old => { const copy = { ...old }; delete copy[name]; return copy; });
+                onUpdate({ documentFiles: { ...app.documentFiles, [name]: '' }, documents: { ...app.documents, [name]: '' } });
+              }}>Удалить текст и файл</button>}
               {reading === name && <ActionButton className="secondary" onClick={() => { reader.current?.abort(); reader.current = null; setReading(''); setErrors((old) => ({ ...old, [name]: 'Чтение отменено.' })); }}>Отменить чтение</ActionButton>}
               <label className="field">
                 Проверка текста документа
               <BusinessTextarea
                   aria-label={`Проверка текста документа: ${name}`}
                   rows={3}
-                  maxLength={60000}
+                  maxLength={Math.max(0, Math.min(40000, 60000 - Object.entries(documents).filter(([key]) => key !== name).reduce((n, [, doc]) => n + doc.pages.reduce((size, p) => size + p.text.length, 0), 0)))}
+                  disabled={!documents[name] && Object.keys(documents).length >= 8}
                   value={texts[name] || ''}
                   onChange={(e) => {
                     setTexts((old) => ({ ...old, [name]: e.target.value }));
@@ -123,7 +136,7 @@ export function DocumentChecklist({
                       return next;
                     });
                   }}
-                  placeholder="Вставьте текст документа; он останется в этой вкладке"
+                  placeholder="Текст сохраняется в черновике на этом устройстве"
                 />
               </label>
               <ActionButton
@@ -156,13 +169,7 @@ export function DocumentChecklist({
           </section>
         );
       })}
-      <details className="ai-entry"><summary>AI-проверка заявки</summary>
-        <AIPanel title="Проверить перед подачей" task="review" context={{ profile: profile ? toFundingProfile(profile) : {},
-          identifiers: profile ? { name: profile.name, inn: profile.inn } : undefined, programId: program.id, project: app.project,
-          draft: app.generatedDraft?.slice(0, 18000), budget: app.budget.trim() ? Number(app.budget) : null,
-          preparedDocuments: program.documents.filter((d) => app.documents[d]), documents: Object.values(documents).filter((d) => d.pages.some((p) => p.text.trim())) }}
-          button="Проверить заявку" initialQuestion="Проверь заявку: чего не хватает и что нужно исправить перед подачей?" />
-      </details>
+
     </div>
   );
 }
@@ -174,13 +181,15 @@ export function DraftComposer({
   app,
   onUpdate,
   onDownload,
+  onAsk,
   documents,
 }: {
-  program: Program;
+  program: FundingOpportunity;
   profile: Profile;
   app: Application;
   onUpdate: (patch: Partial<Application>) => void;
   onDownload: (text: string) => void;
+  onAsk?: (text: string) => void;
   documents: AIDocument[];
 }) {
   const [kind, setKind] = useState<DraftKind>('project');
@@ -199,7 +208,7 @@ export function DraftComposer({
       const data = await requestAI({ task: 'draft', question: 'Подготовь черновик по выбранной программе и описанию моего проекта.',
         context: { profile: toFundingProfile(profile), identifiers: { name: profile.name, inn: profile.inn },
           programId: program.id, draftKind: draftKinds[kind], project: app.project, documents,
-          preparedDocuments: program.documents.filter((d) => app.documents[d]), budget: app.budget.trim() ? Number(app.budget) : null } },
+          preparedDocuments: program.requiredDocuments.filter((d) => app.documents[d]), budget: app.budget.trim() ? Number(app.budget) : null } },
         controller.signal);
       if (data.mode !== 'llm' || !data.draft?.trim())
         throw new Error(data.providerFailure ?? 'INVALID_RESPONSE');
@@ -268,13 +277,7 @@ export function DraftComposer({
             <Icon name="download" size={18} />
             Скачать этот документ
           </ActionButton>
-          <details className="ai-entry"><summary>Доработать текст с AI</summary><AIPanel title="Редактор с AI" task="draft"
-            context={{ profile: toFundingProfile(profile), identifiers: { name: profile.name, inn: profile.inn }, programId: program.id,
-              project: app.project, documents, draft: app.generatedDraft.slice(0, 18000), draftKind: draftKinds[kind], budget: app.budget.trim() ? Number(app.budget) : null }}
-            initialQuestion="Улучши структуру и обоснование документа по условиям программы. Сохрани факты и цифры; недостающие сведения отметь [заполните]."
-            onDraft={(text) => onUpdate({ generatedDraft: text, draftOrigin: 'GigaChat · правки применены пользователем' })} />
-            {app.generatedDraft.length > 18000 && <p className="widget-footnote">Для AI-редактирования доступны первые 18 000 символов. Выберите нужный фрагмент перед применением результата.</p>}
-          </details>
+          {onAsk && <ActionButton className="secondary" onClick={() => onAsk('Улучши структуру и обоснование документа по условиям программы. Сохрани факты и цифры; недостающие сведения отметь [заполните].')}>Доработать в AI-чате</ActionButton>}
         </>
       )}
     </section>

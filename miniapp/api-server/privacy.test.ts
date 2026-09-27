@@ -1,3 +1,5 @@
+import { matchFundingOpportunity } from './funding-catalog/matching';
+import { emptyFundingNeed } from './funding-catalog/types';
 // Проверяем, что личные данные и подставленные инструкции не попадают в запрос модели.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -181,8 +183,8 @@ test('selected program and deterministic assessment are trusted, document text n
   assert.equal(safe.intent, 'strategy');
   assert.equal(safe.trustedPrograms.length, 1);
   assert.equal(safe.trustedPrograms[0].id, 'equipment');
-  assert.equal(safe.assessments[0].benefit.max, 850000);
-  assert.notEqual(safe.assessments[0].score, 100);
+  assert.equal(safe.assessments[0].opportunity.amountMax, 3000000);
+  assert.equal(safe.assessments[0].score, matchFundingOpportunity(profile, emptyFundingNeed, programs.find(p => p.id === 'equipment')!).score);
   for (const secret of ['SECRET_QUESTION', 'SECRET_DOCUMENT', 'SECRET_PROJECT'])
     assert.ok(!JSON.stringify(safe).includes(secret));
   p.dispose();
@@ -228,12 +230,12 @@ test('business analysis uses allowlisted application facts and ignores forged sc
   });
   const safe = JSON.parse(p.payload.messages[1].content);
   const equipment = safe.assessments.find(
-    (a: { programId: string }) => a.programId === 'equipment',
+    (a: { opportunity: { id: string } }) => a.opportunity.id === 'equipment',
   );
   assert.ok(equipment);
-  assert.equal(equipment.benefit.max, 850000);
-  assert.equal(equipment.preparedDocuments.length, 1);
-  assert.notEqual(equipment.score, 100);
+  assert.equal(equipment.opportunity.amountMax, 3000000);
+  assert.equal(equipment.missingDocuments.includes('Подтверждение статуса МСП'), false);
+  assert.equal(equipment.score, matchFundingOpportunity({ ...profile, goals: ['Разработка продукта', 'Покупка оборудования'] }, emptyFundingNeed, programs.find(p => p.id === 'equipment')!).score);
   for (const secret of ['PRIVATE_DOCUMENT', 'PRIVATE_PROJECT', 'FORGED_PROGRAM'])
     assert.ok(!JSON.stringify(safe).includes(secret));
   p.dispose();

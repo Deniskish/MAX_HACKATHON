@@ -58,14 +58,13 @@ test('saved need survives reload; corrupted or invalid saved data defaults safel
     assert.deepEqual(restoreFundingNeed(saved), emptyFundingNeed);
   assert.deepEqual(restoreFundingNeed('{"purpose":"экспорт"}'), { ...emptyFundingNeed, purpose: 'экспорт' });
 });
-test('rendered cards show demo source, catalog facts, explanation, missing documents and next actions', () => {
+test('list cards show essential facts, while conditions are reserved for the detail screen', () => {
   const match = result.matches.find((m) => m.opportunity.id === 'demo-sme-loan')!;
   const html = renderToStaticMarkup(createElement(FundingOpportunityCard, { match }));
   for (const text of ['Учебные данные', match.opportunity.title, match.opportunity.providerName,
-    'Ставка:', 'Срок:', 'Условия и соответствие', 'Документы:', 'Подготовить:', match.opportunity.source.name]) assert.ok(html.includes(text), text);
-  assert.match(html, /Окончательное решение принимает кредитор/);
+    'Ставка:', 'Срок:']) assert.ok(html.includes(text), text);
+  assert.doesNotMatch(html, /<details|Соответствие:|Документы:|версия /);
   assert.doesNotMatch(html, /кредит одобрен|банк точно выдаст|вы получите кредит/i);
-  assert.match(html, /не вероятность одобрения/);
 });
 test('rendered guarantee and strategy do not represent support limits as cash or promise compatibility', () => {
   const match = result.matches.find((m) => m.opportunity.id === 'demo-guarantee')!;

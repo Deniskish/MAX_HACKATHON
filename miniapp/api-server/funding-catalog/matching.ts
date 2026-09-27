@@ -103,7 +103,7 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
         || (need.amount !== null && !isSupporting(opportunity.kind) && amountFit === 'unknown')
         || (need.preferredTermMonths !== null && hasTerm(opportunity.kind) && termFit === 'unknown')
         ? 'need_more_data'
-        : missingDocuments.length || amountFit === 'partial' || termFit === 'partial' || missingRequirements.length
+        : amountFit === 'partial' || termFit === 'partial' || missingRequirements.length
           ? 'almost_eligible' : 'eligible';
   const points: number[] = checks.map((c) => c.status === 'fulfilled' ? 1 : 0);
   points.push(purposeFit ? 1 : 0);

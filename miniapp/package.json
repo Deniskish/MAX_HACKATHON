@@ -6,9 +6,10 @@
     "build": "tsc && vite build",
     "start": "node scripts/serve.cjs",
     "test:production": "node --test scripts/serve.test.cjs scripts/restart-api.test.cjs",
+    "test:ux": "node scripts/ux-ui.check.cjs",
     "check:production": "node scripts/check-production.cjs",
     "preview": "vite preview",
-    "test": "tsx --require ./scripts/static-render-setup.cjs --test src/business/domain.test.ts src/business/agent.test.ts src/business/business-analysis.test.ts dev-server.test.ts src/business/company-data.test.ts src/business/funding.test.ts src/business/workspace.test.ts src/business/ui-runtime.test.ts src/business/verification-demo.test.ts"
+    "test": "tsx --require ./scripts/static-render-setup.cjs --test src/business/domain.test.ts src/business/agent.test.ts dev-server.test.ts src/business/company-data.test.ts src/business/funding.test.ts src/business/workspace.test.ts src/business/ui-runtime.test.ts src/business/application-readiness.test.ts"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "5.3.0",
@@ -30,6 +31,7 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "playwright": "1.63.0",
     "tsx": "^4.19.1",
     "typescript": "^5.6.3",
     "vite": "^5.4.0"

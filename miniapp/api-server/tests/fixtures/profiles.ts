@@ -1,6 +1,7 @@
-import type { Profile, Program } from '../../support-model';
+import type { FundingOpportunity } from '../../funding-catalog/types';
+import type { Profile } from '../../business-model';
 import catalog from './trusted-programs.json';
-export const programs = catalog as Program[];
+export const programs = catalog as FundingOpportunity[];
 export const demoProfile: Profile = {
   inn: '7707083893',
   name: 'ООО «Новая идея» · учебный профиль',

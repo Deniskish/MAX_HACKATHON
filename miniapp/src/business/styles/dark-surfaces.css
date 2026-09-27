@@ -1,0 +1,200 @@
+/* Explicit palette avoids WebView auto-darkening white cards and form controls. */
+body {
+  background: var(--canvas);
+}
+.opora-theme.opora-theme {
+  color-scheme: dark;
+  color: var(--ink);
+  background: var(--canvas);
+  --background-surface-primary: #1c1e24;
+  --background-surface-secondary: #292c35;
+  --background-surface-ground: #111318;
+  --background-surface-card: #1c1e24;
+  --background-button-secondary: #292c35;
+  --text-primary: #f5f6fa;
+  --text-secondary: #b0b6c4;
+  --text-tertiary: #a6adbd;
+  --text-themed: #b39bff;
+  --icon-themed: #b39bff;
+  --stroke-themed: #b39bff;
+}
+.app-shell,
+.access-screen {
+  background:
+    radial-gradient(ellipse 100% 400px at 90% 0, #34373f 0, transparent 90%),
+    var(--canvas);
+}
+.widget,
+.profile-panel,
+.application-row,
+.timeline-row,
+.empty-state,
+.requirements,
+.plain-list,
+.detail-checks > section {
+  background: var(--surface);
+  border-color: var(--line);
+}
+h1,
+h2,
+h3,
+.brand,
+.field input,
+.field textarea,
+.field select,
+.opora-theme .opora-native-input,
+.opora-theme .opora-native-textarea {
+  color: var(--ink);
+}
+p,
+.muted,
+.field,
+.widget-footnote,
+.data-note,
+.catalog-results-header > span,
+.profile-grid dt,
+.field small,
+.checklist-title small,
+.checklist-item dd,
+.document-review small,
+footer {
+  color: var(--muted);
+}
+.topbar {
+  background: transparent;
+  border-color: var(--line);
+}
+.modal-toolbar {
+  background: var(--canvas);
+  border-color: var(--line);
+}
+.icon-button,
+.empty-symbol {
+  background: #292c35;
+  color: var(--ink);
+}
+.brand-mark {
+  color: #121416;
+}
+.opora-theme .opora-action.secondary,
+.secondary,
+.opora-theme .opora-action.goal-chip {
+  background: #292c35;
+  color: var(--ink);
+  border-color: var(--line);
+}
+.opora-theme .opora-action.primary {
+  background: linear-gradient(110deg, #833bfc, #4829ff);
+  color: #fff;
+}
+.opora-theme .opora-action.text-button,
+.text-button,
+.official-link,
+.funding-card > a,
+.checklist-item summary {
+  color: var(--accent);
+}
+.opora-theme .opora-action.goal-chip.chosen {
+  background: #342851;
+  color: #d5c7ff;
+}
+.tag,
+.funding-card > details,
+.data-note,
+.message.assistant,
+.document-review {
+  background: #292c35;
+  color: var(--muted);
+}
+.field select,
+.field input,
+.field textarea,
+.opora-theme .opora-input-body,
+.opora-theme .opora-native-textarea,
+.funding-experience .field select,
+.funding-experience .field .opora-input-body,
+.project-dialog .field .opora-input-body,
+.access-card .opora-input-body,
+.opora-theme .chat-input .opora-input-body {
+  background: #292c35;
+}
+.opora-theme .opora-native-input {
+  background: transparent;
+}
+.search-box {
+  background: var(--surface);
+}
+.opora-theme .search-box .opora-input-body {
+  background: transparent;
+}
+.segmented-control {
+  background: #292c35;
+}
+.segmented-control > button {
+  color: var(--muted);
+}
+.segmented-control > button.selected {
+  background: #414552;
+  color: #fff;
+}
+.segmented-control > button > span,
+.filter-chips > button {
+  background: #292c35;
+  color: var(--muted);
+}
+.filter-chips > button.selected {
+  background: #d9d1ff;
+  color: #201638;
+}
+.funding-status {
+  background: #183c2a;
+  color: #a1e6b8;
+}
+.funding-status-not_eligible,
+.funding-status-expired {
+  background: #45262a;
+  color: #ffc3c8;
+}
+.funding-status-need_more_data {
+  background: #40351e;
+  color: #f3d592;
+}
+.save-program {
+  color: var(--muted);
+}
+.save-program.is-saved {
+  background: #342851;
+  color: #c6b4ff;
+}
+dialog,
+.modal-sheet .project-dialog {
+  background: var(--canvas);
+  color: var(--ink);
+}
+.message.user {
+  background: #443764;
+  color: #fff;
+}
+.checklist-item .opora-native-textarea {
+  background: #292c35;
+}
+.preparation-options > button {
+  background: #292c35;
+  color: var(--ink);
+}
+.preparation-options > button.current {
+  background: #342851;
+}
+.date-tile {
+  background: #292c35;
+  color: var(--ink);
+}
+.error,
+.access-card .error {
+  background: #45262a;
+  color: #ffc3c8;
+}
+.max-card {
+  background: #292c35;
+  color: var(--ink);
+}

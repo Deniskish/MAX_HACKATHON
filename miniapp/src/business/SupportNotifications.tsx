@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FundingNeed, FundingProfile } from '../../api-server/funding-catalog/types';
-import { ActionButton } from './MaxControls';
 
 import { maxInitData } from './max-auth';
 type Notice = { id: string; programId: string; title: string; reason: string; source: string; createdAt: number; readAt: number | null; delivery: string };
@@ -76,17 +75,8 @@ export function useSupportNotifications(profile: FundingProfile | null, need: Fu
 }
 export function SupportNotificationSettings({ notifications: n }: { notifications: ReturnType<typeof useSupportNotifications> }) {
   return <section className="profile-panel support-notification-settings">
-    <h3>Уведомления о поддержке</h3>
-    <p>{n.enabled ? 'Следим за мерами для вашего бизнеса.' : 'Сообщим, когда найдём подходящую возможность.'}</p>
-    {n.available ? <>
-      <label className="notification-toggle"><span>Уведомления в приложении</span><input type="checkbox" checked={n.enabled} disabled={n.busy} onChange={(e) => void n.subscribe(e.target.checked, e.target.checked && n.bot)} /></label>
-      <label className="notification-toggle"><span>Сообщения от бота MAX</span><input type="checkbox" checked={n.bot} disabled={n.busy || !n.enabled} onChange={(e) => void n.subscribe(true, e.target.checked)} /></label>
-    </> : <p>Откройте «Опору» в MAX, чтобы подключить уведомления.</p>}
+    <h3>Сообщения в MAX</h3>
+    {n.available ? <label className="notification-toggle"><span>Сообщать о новых мерах поддержки</span><input type="checkbox" checked={n.enabled && n.bot} disabled={n.busy} onChange={(e) => void n.subscribe(e.target.checked, e.target.checked)} /></label>
+      : <p>Откройте «Опору» в MAX, чтобы подключить сообщения бота.</p>}
   </section>;
-}
-export function SupportNotificationList({ notifications: n, onOpen }: { notifications: ReturnType<typeof useSupportNotifications>; onOpen: (id: string) => void }) {
-  return <>{n.items.map((item) => <article className="ai-proposal" key={item.id}>
-    <span className="tag">{item.readAt ? 'Мера поддержки' : 'Новое для вашего бизнеса'}</span><h3>{item.title}</h3>
-    <p>{item.reason}</p><ActionButton className="secondary" onClick={() => { void n.read(item.id); onOpen(item.programId); }}>Посмотреть меру</ActionButton>
-  </article>)}</>;
 }

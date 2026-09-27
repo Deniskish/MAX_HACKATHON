@@ -1,0 +1,36 @@
+/* Single source for application palette, typography and safe areas. */
+:root {
+  --font-ui: "Manrope Variable", Manrope, Arial, sans-serif;
+  font-family: var(--font-ui);
+  font-synthesis: none;
+  font-weight: 400;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
+  --ink: #ebebf3;
+  --muted: #9293a0;
+  --surface: #1c1d23;
+  --canvas: #191a1f;
+  --line: #ffffff0f;
+  --accent: #8064ff;
+  --brand: #ff5a1f;
+  --focus-color: var(--accent);
+  --app-safe-top: env(safe-area-inset-top, 0px);
+  --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+  color: var(--ink);
+  background: var(--canvas);
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ink: #24262b;
+  --muted: #676b73;
+  --surface: #fffffff2;
+  --canvas: #f7f7f8;
+  --line: #252a351c;
+  --accent: #514091;
+  --brand: #c74413;
+}
+:root[data-max-platform="android"] {
+  --app-safe-top: 0px;
+  --app-safe-bottom: 0px;
+}

@@ -78,7 +78,7 @@ test('application flow derives draft/collecting/ready and unchecking a document 
   const o = officialFundingCatalog[0];
   const app: Application = { id: 'test', programId: o.id, createdAt: '', project: '', budget: '', documents: {} };
   assert.equal(applicationStatus(app, o), 'draft'); app.project = 'Описание'; assert.equal(applicationStatus(app, o), 'collecting_documents');
-  app.documents = Object.fromEntries(o.requiredDocuments.map((d) => [d, 'ready'])); app.reviewConfirmed = true;
+  app.documents = Object.fromEntries(o.requiredDocuments.map((d) => [d, 'ready'])); app.reviewConfirmed = true; app.budget = '100000';
   assert.equal(applicationStatus(app, o), 'ready_for_review'); app.documents[o.requiredDocuments[0]] = '';
   assert.equal(applicationStatus(app, o), 'collecting_documents');
   assert.match(inspectDocumentText('Бизнес-план', 'Коротко').notice, /не проверяет достоверность/);
@@ -92,14 +92,14 @@ test('calendar includes only published dates, escapes and folds ICS text with ex
 });
 test('notifications report actual closed bookmarks and snapshot updates only on observation', () => {
   const closed = officialFundingCatalog.find((o) => o.status === 'closed')!;
-  const events = fundingEvents(officialFundingCatalog, [closed.id], { [ids[0]]: 'older' }, []);
+  const events = fundingEvents(officialFundingCatalog, [closed.id, ids[0]], { [ids[0]]: 'older' }, []);
   assert.ok(events.some((e) => e.opportunityId === closed.id)); assert.ok(events.some((e) => e.id.startsWith('updated:')));
   assert.equal(fundingEvents(officialFundingCatalog, [], Object.fromEntries(officialFundingCatalog.map((o) => [o.id, o.version])), []).length, 0);
 });
 test('official details show source/date, unknown criteria and next actions; project onboarding requires no INN', () => {
   const match = matchFundingOpportunity({}, { ...emptyFundingNeed, purpose: 'покупка оборудования' }, officialFundingCatalog[0]);
   const html = renderToStaticMarkup(React.createElement(OfficialDetails, { match, onAsk() {} }));
-  for (const label of ['Следующие действия', 'Открыть официальный источник', '2026-09-22']) assert.ok(html.includes(label));
+  for (const label of ['Следующие действия', 'Открыть официальный источник', '22 сентября 2026']) assert.ok(html.includes(label));
   for (const [label, checks] of [['Почему подходит', match.fulfilledRequirements], ['Что нужно уточнить', match.unknownRequirements], ['Что не соответствует', match.missingRequirements]] as const) {
     assert.equal(html.includes(`<h3>${label}</h3>`), checks.length > 0);
     for (const check of checks) assert.ok(html.includes(check.label));

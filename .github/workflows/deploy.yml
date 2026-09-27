@@ -14,7 +14,10 @@ concurrency:
   queue: max
 
 jobs:
+  ux:
+    uses: ./.github/workflows/ux-check.yml
   deploy:
+    needs: ux
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30

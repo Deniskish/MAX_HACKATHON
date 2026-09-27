@@ -1,18 +1,1 @@
-/* Сначала компоновка, затем тема MAX и более точные стили виджетов. */
-@import './business/plata-layout.css';
-@import './business/max-theme.css';
-@import './business/widgets.css';
-@import './business/agent-experience.css';
-@import './business/funding.css';
-@import './business/product.css';
-@import './business/mobile.css';
-@import './business/dark.css';
-@import './business/home.css';
-@import './business/application.css';
-@import './business/ai.css';
-@import './business/business-hub.css';
-@import './business/assistant.css';
-@import './business/glass.css';
-@import './business/glass-controls.css';
-@import './business/system-theme.css';
-@import './business/preferences-details.css';
+@import './business/styles/index.css';

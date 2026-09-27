@@ -3,6 +3,7 @@ import type { FundingNeed, FundingOpportunity, FundingMatch, ProjectProfile } fr
 import { emptyFundingNeed } from '../../api-server/funding-catalog/types';
 import { restoreFundingNeed } from './funding';
 import { parseFundingProfile } from '../../api-server/funding-catalog/input';
+import { applicationReadiness } from './application-readiness';
 export type BusinessNotice = { id: string; title: string; createdAt: number; readAt: number | null };
 export type Workspace = { profile: Profile | null; projectProfile: ProjectProfile | null; fundingNeed: FundingNeed; saved: string[]; applications: Application[]; detachedApplicationIds?: string[]; businessNotice?: BusinessNotice | null };
 export function businessAddedNotice(project = false): BusinessNotice {
@@ -13,6 +14,19 @@ const blank = (): Workspace => ({ profile: null, projectProfile: null, fundingNe
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const stringMap = (value: unknown) => record(value) ? Object.fromEntries(Object.entries(value).filter(([, v]) => typeof v === 'string')) as Record<string, string> : {};
 const nullableNumber = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
+export function restoreDocumentTexts(value: unknown): NonNullable<Application['documentTexts']> {
+  if (!record(value)) return {};
+  let remaining = 60000;
+  const result: NonNullable<Application['documentTexts']> = {};
+  for (const [name, item] of Object.entries(value).slice(0, 30)) {
+    if (!record(item) || typeof item.id !== 'string' || typeof item.name !== 'string' || !Array.isArray(item.pages) || item.pages.length > 200) continue;
+    if (!item.pages.every(p => record(p) && Number.isSafeInteger(p.page) && Number(p.page) > 0 && typeof p.text === 'string')) continue;
+    const size = item.pages.reduce((n, p) => n + p.text.length, 0);
+    if (size > remaining) continue;
+    remaining -= size; result[name] = { id: item.id, name: item.name, pages: item.pages.map(p => ({ page: p.page, text: p.text })) };
+  }
+  return result;
+}
 export function loadWorkspace(storage: Pick<Storage, 'getItem'>, ids: string[]): Workspace {
   const known = (id: unknown): id is string => typeof id === 'string' && (ids.includes(id) || /^budget-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id) || /^web-[a-f0-9]{24}$/.test(id));
   const read = (key: string) => { try { return JSON.parse(storage.getItem(key) ?? 'null'); } catch { return null; } };
@@ -49,6 +63,7 @@ export function loadWorkspace(storage: Pick<Storage, 'getItem'>, ids: string[]):
     && typeof a.project === 'string' && typeof a.budget === 'string' && record(a.documents)).map((a: Application) => ({
       id: a.id, programId: a.programId, project: a.project, budget: a.budget, createdAt: typeof a.createdAt === 'string' ? a.createdAt : '',
       documents: stringMap(a.documents), documentFiles: stringMap(a.documentFiles), reviewConfirmed: a.reviewConfirmed === true,
+      ...(a.documentTexts ? { documentTexts: restoreDocumentTexts(a.documentTexts) } : {}),
       ...(typeof a.generatedDraft === 'string' ? { generatedDraft: a.generatedDraft } : {}),
       ...(typeof a.draftOrigin === 'string' ? { draftOrigin: a.draftOrigin } : {}),
     }));
@@ -84,7 +99,7 @@ export function projectAsProfile(project: ProjectProfile): Profile {
   return { ...emptyProfile, name: project.name, region: project.region, applicantType: 'project', goals: project.fundingPurpose ? [project.fundingPurpose] : [] };
 }
 export function applicationStatus(app: Application, opportunity: FundingOpportunity) {
-  if (app.reviewConfirmed && app.project.trim() && (!opportunity.imported || opportunity.requiredDocuments.length > 0) && opportunity.requiredDocuments.every((d) => app.documents[d])) return 'ready_for_review';
+  if (applicationReadiness(app, opportunity).ready) return 'ready_for_review';
   return app.project.trim() || Object.values(app.documents).some(Boolean) ? 'collecting_documents' : 'draft';
 }
 export const applicationLabels = { draft: 'Черновик', collecting_documents: 'Сбор документов', ready_for_review: 'Комплект готов к проверке перед подачей' };
@@ -104,14 +119,13 @@ export function filterFunding(catalog: FundingOpportunity[], query: string, kind
 }
 export { calendarICS } from '../../api-server/funding-catalog/calendar';
 export type FundingEvent = { id: string; opportunityId: string; text: string };
-export function fundingEvents(catalog: FundingOpportunity[], saved: string[], previous: Record<string, string>, matches: FundingMatch[], now = new Date()): FundingEvent[] {
+export function fundingEvents(catalog: FundingOpportunity[], saved: string[], previous: Record<string, string>, _matches: FundingMatch[], now = new Date()): FundingEvent[] {
   const events: FundingEvent[] = [];
   for (const o of catalog) {
     const days = o.deadline ? (new Date(`${o.deadline}T23:59:59+03:00`).getTime() - now.getTime()) / 86400000 : null;
     if (saved.includes(o.id) && o.status === 'closed') events.push({ id: `closed:${o.id}:${o.version}`, opportunityId: o.id, text: `Прием завершен: ${o.title}` });
     if (saved.includes(o.id) && days !== null && days >= 0 && days <= 14) events.push({ id: `deadline:${o.id}:${o.deadline}`, opportunityId: o.id, text: `Приближается срок: ${o.title} — ${o.deadline}` });
-    if (previous[o.id] && previous[o.id] !== o.version) events.push({ id: `updated:${o.id}:${o.version}`, opportunityId: o.id, text: `Обновлены условия: ${o.title}` });
-    if (!previous[o.id] && Object.keys(previous).length && matches.some((m) => m.opportunity.id === o.id && m.status === 'eligible')) events.push({ id: `new:${o.id}`, opportunityId: o.id, text: `Новая возможность для рассмотрения: ${o.title}` });
+    if (saved.includes(o.id) && previous[o.id] && previous[o.id] !== o.version) events.push({ id: `updated:${o.id}:${o.version}`, opportunityId: o.id, text: `Обновлены условия: ${o.title}` });
   }
   return events;
 }

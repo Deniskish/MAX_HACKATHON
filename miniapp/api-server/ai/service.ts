@@ -3,7 +3,7 @@ import { emptyFundingNeed, fundingPurposes, type FundingNeed, type FundingProfil
 import { parseFundingNeed, parseFundingProfile } from '../funding-catalog/input';
 import { matchFundingOpportunity, rankFundingMatches } from '../funding-catalog/matching';
 import { buildFundingStrategy } from '../funding-catalog/strategy';
-import { draftKinds } from '../support-model';
+import { draftKinds } from '../documents';
 import { PrivacyError } from '../privacy';
 import { object, prepareAIContext } from './context';
 import { workspaceActions, workspacePages, type AIEvidence, type AIRequest, type AIResult, type AIPersonalization } from './types';

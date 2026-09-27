@@ -2,15 +2,14 @@ import { useState, type ReactNode } from 'react';
 import { Icon } from './Icon';
 
 const tabs = [
-  { id: 'analysis', label: 'Анализ', icon: 'compass' },
-  { id: 'updates', label: 'Изменения', icon: 'bell' },
+  { id: 'analysis', label: 'Рекомендации', icon: 'compass' },
   { id: 'details', label: 'Данные', icon: 'building' },
 ] as const;
-export function BusinessDetailsPage({ name, analysis, updates, details }: {
-  name: string; analysis: ReactNode; updates: ReactNode; details: ReactNode;
+export function BusinessDetailsPage({ name, analysis, details }: {
+  name: string; analysis: ReactNode; details: ReactNode;
 }) {
   const [active, setActive] = useState<typeof tabs[number]['id']>('analysis');
-  const content = { analysis, updates, details };
+  const content = { analysis, details };
   return <div className="business-details-page">
     <p className="business-details-name">{name}</p>
     <div className="business-details-tabs" role="tablist" aria-label="Разделы бизнеса">

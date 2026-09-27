@@ -1,20 +1,4 @@
 /* Базовая компоновка, навигация и адаптация основных экранов. */
-:root {
-  font-family: 'Manrope Variable', Manrope, Arial, sans-serif;
-  color: #121416;
-  background: #f7f8fb;
-  font-synthesis: none;
-  font-weight: 400;
-  font-size: 14px;
-  -webkit-font-smoothing: antialiased;
-  --brand: #ff5000;
-  --accent: #2401fe;
-  --ink: #121416;
-  --muted: #69707b;
-  --surface: #fff;
-  --canvas: #f7f8fb;
-  --line: rgba(33, 60, 112, 0.11);
-}
 * {
   box-sizing: border-box;
 }
@@ -50,13 +34,13 @@ a {
 }
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid #2401fe;
+  outline: 3px solid var(--focus-color);
   outline-offset: 4px;
 }
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid #2401fe;
+  outline: 2px solid var(--focus-color);
   outline-offset: 2px;
 }
 h1,
@@ -100,21 +84,7 @@ button {
   min-height: 100dvh;
   isolation: isolate;
 }
-.mobile-identity {
-  display: none;
-}
 /* На широком экране разделы доступны в боковой панели. */
-.sidebar {
-  position: fixed;
-  inset: 0 auto 0 0;
-  width: 238px;
-  padding: 32px 18px 0;
-  background: #fff;
-  border-right: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  z-index: 10;
-}
 .brand {
   display: flex;
   align-items: center;
@@ -126,10 +96,6 @@ button {
   width: fit-content;
   margin-left: 12px;
   color: #121416;
-}
-.brand-dot {
-  color: #ff5000;
-  margin-left: -9px;
 }
 .brand-mark {
   position: relative;
@@ -153,10 +119,6 @@ button {
   background: white;
   bottom: 6px;
   right: 6px;
-}
-.sidebar nav {
-  display: grid;
-  gap: 7px;
 }
 .nav-item {
   width: 100%;
@@ -186,25 +148,6 @@ button {
   padding: 3px 6px;
   font-size: 10px;
 }
-.assistant-nav {
-  margin-top: 22px;
-}
-.assistant-nav.active {
-  color: #2401fe;
-  background: #eeebff;
-}
-.tiny-badge {
-  font-size: 9px;
-  background: #eeeaff;
-  color: #2401fe;
-  padding: 4px 7px;
-  border-radius: 6px;
-  margin-left: auto;
-}
-.sidebar-bottom {
-  margin-top: auto;
-  padding-top: 32px;
-}
 .max-card {
   display: flex;
   gap: 10px;
@@ -233,42 +176,6 @@ button {
   font-size: 9px;
   margin: 5px 0 0;
 }
-.business-switch {
-  background: none;
-  border: 0;
-  border-top: 1px solid var(--line);
-  width: calc(100% + 36px);
-  margin-left: -18px;
-  padding: 22px 18px;
-  text-align: left;
-  justify-content: flex-start;
-  gap: 10px;
-}
-.business-switch > span:nth-child(2) {
-  overflow: hidden;
-  flex: 1;
-}
-.business-switch b {
-  display: block;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  font-size: 11px;
-}
-.business-switch small {
-  display: block;
-  color: #737983;
-  font-size: 9px;
-  margin-top: 5px;
-}
-.avatar {
-  background: #f2f4f8;
-  border-radius: 50%;
-  padding: 10px;
-}
-.main-wrap {
-  margin-left: 238px;
-}
 .topbar {
   height: 82px;
   padding: 0 40px;
@@ -278,21 +185,6 @@ button {
   border-bottom: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.7);
 }
-.breadcrumb {
-  font-size: 11px;
-  color: #777e88;
-  display: flex;
-  gap: 16px;
-}
-.breadcrumb b {
-  color: #121416;
-  font-weight: 600;
-}
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
 .icon-button {
   padding: 10px;
   border: 0;
@@ -301,16 +193,6 @@ button {
   color: #121416;
   min-width: 40px;
   min-height: 40px;
-}
-.user-avatar {
-  border: 0;
-  background: #ffe7dc;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  font-size: 13px;
-  font-weight: 750;
-  color: #c43e00;
 }
 main {
   max-width: 1570px;
@@ -323,14 +205,6 @@ main {
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 28px;
-}
-.eyebrow {
-  font-size: 9px;
-  letter-spacing: 1.6px;
-  font-weight: 650;
-  color: #727783;
-  margin-bottom: 12px;
-  display: block;
 }
 .page-heading p {
   font-size: 13px;
@@ -390,55 +264,6 @@ main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
-.program-card {
-  background: white;
-  border: 1px solid #ffffffb3;
-  border-radius: 28px;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  transition:
-    box-shadow 0.2s,
-    transform 0.2s;
-}
-.card-top {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-bottom: 20px;
-}
-.program-icon {
-  background: #f2f4f8;
-  border: 0;
-  border-radius: 17px;
-  display: grid;
-  place-items: center;
-  color: #121416;
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
-}
-.program-icon.innovation {
-  background: #eeeaff;
-  color: #2401fe;
-}
-.program-icon.equipment {
-  background: #ffe7dc;
-  color: #d74500;
-}
-.program-icon.working-capital {
-  background: #eaf0ff;
-  color: #27418b;
-}
-.program-icon.hiring {
-  background: #e5f8ec;
-  color: #16864a;
-}
-.program-icon.export {
-  background: #fce9f3;
-  color: #bf2578;
-}
 .tag {
   font-size: 9px;
   padding: 6px 8px;
@@ -453,22 +278,6 @@ main {
   font-size: 9px;
   color: #757e89;
   margin-left: auto;
-}
-.program-provider {
-  font-size: 9px;
-  color: #77808e;
-  line-height: 1.5;
-  margin-bottom: 8px;
-}
-.program-card h3 {
-  font-size: 18px;
-  margin-bottom: 10px;
-  letter-spacing: -0.5px;
-}
-.program-card p {
-  font-size: 12px;
-  line-height: 1.7;
-  margin-bottom: 18px;
 }
 .amount {
   display: block;
@@ -529,21 +338,10 @@ footer {
   font-size: 9px;
   color: #818894;
 }
-.footer-logo {
-  font-size: 19px;
-  letter-spacing: -1px;
-  color: #121416;
-  margin-right: 14px;
-  font-weight: 800;
-}
 /* Каталог, заявки и профиль оформлены одинаковыми группами карточек. */
 .catalog {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 24px;
-}
-.filter-bar {
-  display: flex;
-  gap: 14px;
 }
 .search-box {
   display: flex;
@@ -562,14 +360,6 @@ footer {
   width: 100%;
   padding: 14px 0;
   background: none;
-}
-.filter-bar select {
-  border: 0;
-  border-radius: 18px;
-  padding: 0 18px;
-  background: white;
-  color: #121416;
-  max-width: 100%;
 }
 .data-note {
   background: #eef0f6;
@@ -719,32 +509,6 @@ footer {
   padding: 10px 14px;
   border-radius: 12px;
 }
-.chat-panel {
-  max-width: 900px;
-  margin: auto;
-  background: white;
-  border: 0;
-  border-radius: 30px;
-  padding: 26px;
-}
-.chat-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding-bottom: 18px;
-}
-.chat-header b {
-  font-size: 15px;
-}
-.chat-header small {
-  display: block;
-  margin-top: 5px;
-  color: #76808d;
-  font-size: 10px;
-}
-.chat-panel > .data-note {
-  margin-top: 0;
-}
 .messages {
   height: 370px;
   overflow: auto;
@@ -773,38 +537,6 @@ footer {
   color: white;
   align-self: flex-end;
   border-bottom-right-radius: 6px;
-}
-.suggestions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 15px 0;
-}
-.suggestions button {
-  font-size: 11px;
-  border: 0;
-  background: #f2f4f8;
-  color: #5d6674;
-  padding: 10px 12px;
-  border-radius: 20px;
-  min-height: 40px;
-}
-.chat-input {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.chat-input input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  border-radius: 16px;
-  padding: 14px;
-  font-size: 13px;
-}
-.chat-input .primary {
-  width: 50px;
-  padding: 0;
 }
 /* Карточка программы и форма профиля открываются поверх текущего экрана. */
 dialog {
@@ -904,24 +636,6 @@ dialog::backdrop {
   color: #ba3500;
   border-radius: 16px;
 }
-.detail-summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 25px;
-  background: white;
-  border-radius: 24px;
-  margin-bottom: 24px;
-}
-.detail-summary strong {
-  font-size: 34px;
-  font-weight: 800;
-  letter-spacing: -1.2px;
-}
-.detail-summary span {
-  font-size: 12px;
-  color: #717b89;
-}
 .requirements {
   display: grid;
   gap: 1px;
@@ -968,13 +682,6 @@ dialog::backdrop {
   color: #75808f;
   margin-top: 6px;
 }
-.source-note {
-  font-size: 10px;
-  line-height: 1.75;
-  color: #78808e;
-  margin: 20px 0;
-  padding: 0 5px;
-}
 .plain-list {
   padding: 20px 20px 20px 38px;
   background: white;
@@ -982,41 +689,6 @@ dialog::backdrop {
   font-size: 12px;
   line-height: 2.3;
   color: #646e7d;
-}
-.document-list {
-  background: white;
-  border-radius: 24px;
-  padding: 5px 18px;
-}
-.document-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 17px 0;
-  border-bottom: 1px solid #f2f4f8;
-}
-.document-row:last-child {
-  border: 0;
-}
-.document-row > label:first-child {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-}
-.document-row input[type='checkbox'] {
-  accent-color: #2401fe;
-  width: 19px;
-  height: 19px;
-  flex-shrink: 0;
-}
-.document-row small {
-  display: block;
-  color: #7a8493;
-  font-size: 10px;
-  margin-top: 6px;
-  overflow-wrap: anywhere;
 }
 .attach {
   font-size: 10px;
@@ -1035,7 +707,7 @@ dialog::backdrop {
   opacity: 0;
 }
 .attach:focus-within {
-  outline: 2px solid #2401fe;
+  outline: 2px solid var(--focus-color);
 }
 .toast {
   position: fixed;
@@ -1056,10 +728,6 @@ dialog::backdrop {
   width: max-content;
 }
 @media (hover: hover) {
-  .program-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 16px 32px #12141606;
-  }
   .secondary:hover {
     background: #f2f4f8;
   }
@@ -1072,34 +740,13 @@ dialog::backdrop {
   main {
     padding: 48px 50px 0;
   }
-  .program-card {
-    padding: 28px;
-  }
-  .program-card h3 {
-    font-size: 21px;
-  }
-  .program-card p {
-    font-size: 13px;
-  }
 }
 @media (max-width: 1250px) {
-  .sidebar {
-    width: 210px;
-    padding-left: 13px;
-    padding-right: 13px;
-  }
-  .main-wrap {
-    margin-left: 210px;
-  }
   main {
     padding: 30px 26px 0;
   }
   .topbar {
     padding: 0 26px;
-  }
-  .business-switch {
-    width: calc(100% + 26px);
-    margin-left: -13px;
   }
   .nav-item {
     font-size: 11px;
@@ -1116,37 +763,21 @@ dialog::backdrop {
   }
 }
 @media (max-width: 900px) {
-  .sidebar {
-    width: 76px;
-    padding: 24px 8px;
-  }
   .brand {
     font-size: 0;
     margin: 0 auto;
     gap: 0;
   }
-  .brand-dot,
   .nav-item > span,
-  .nav-item small,
-  .sidebar-bottom {
+  .nav-item small {
     display: none;
   }
   .brand-mark {
     font-size: 32px;
   }
-  .sidebar nav {
-    margin-top: 36px;
-    gap: 10px;
-  }
   .nav-item {
     justify-content: center;
     padding: 15px;
-  }
-  .assistant-nav {
-    margin-top: 25px;
-  }
-  .main-wrap {
-    margin-left: 76px;
   }
   .topbar {
     height: 70px;
@@ -1157,110 +788,17 @@ dialog::backdrop {
   .page-heading .compact {
     display: none;
   }
-  .program-card {
-    padding: 22px;
-  }
-  .program-card h3 {
-    font-size: 18px;
-  }
 }
 /* На телефоне карточки и действия идут в одну колонку. */
 @media (max-width: 600px) {
   .app-shell {
-    background: radial-gradient(ellipse 100% 400px at 90% 0, #d5d9e2 0, transparent 90%), #f7f8fb;
+    background:
+      radial-gradient(ellipse 100% 400px at 90% 0, #d5d9e2 0, transparent 90%),
+      #f7f8fb;
     min-height: 100dvh;
-  }
-  .sidebar {
-    inset: auto 16px calc(14px + env(safe-area-inset-bottom)) 16px;
-    width: auto;
-    height: 68px;
-    padding: 0;
-    background: transparent;
-    border: 0;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    pointer-events: none;
   }
   .brand {
     display: none;
-  }
-  .sidebar nav {
-    display: flex;
-    flex: 1;
-    justify-content: space-around;
-    margin: 0;
-    gap: 2px;
-    background: #ffffffc9;
-    backdrop-filter: blur(22px);
-    border: 1px solid #fff9;
-    box-shadow:
-      0 8px 30px #12141609,
-      inset 0 1px 2px #fff;
-    border-radius: 40px;
-    padding: 5px;
-    pointer-events: auto;
-    min-width: 0;
-  }
-  .sidebar nav .nav-item {
-    flex: 1;
-    flex-direction: column;
-    gap: 4px;
-    border-radius: 30px;
-    width: auto;
-    padding: 7px 2px;
-    font-size: 9px;
-    min-width: 0;
-    min-height: 55px;
-    color: #727986;
-    font-weight: 500;
-  }
-  .sidebar .nav-item > span {
-    display: block;
-  }
-  .sidebar .nav-item > svg {
-    width: 22px;
-    height: 22px;
-  }
-  .sidebar nav .nav-item.active {
-    background: #e5e8ed;
-    color: #e04500;
-  }
-  .sidebar nav .nav-item.active > svg {
-    stroke-width: 2;
-  }
-  .sidebar .nav-calendar,
-  .sidebar .nav-profile {
-    display: none !important;
-  }
-  .sidebar .assistant-nav {
-    width: 65px;
-    height: 65px;
-    margin: 0;
-    border: 1px solid #fff9;
-    background: #ffffffc9;
-    backdrop-filter: blur(22px);
-    border-radius: 50%;
-    padding: 0;
-    pointer-events: auto;
-    flex-shrink: 0;
-    box-shadow: 0 8px 30px #12141609;
-    color: #616977;
-  }
-  .sidebar .assistant-nav > span {
-    display: none;
-  }
-  .sidebar .assistant-nav.active {
-    color: #2401fe;
-    background: #eeebff;
-  }
-  .sidebar .assistant-nav > svg {
-    width: 25px;
-    height: 25px;
-  }
-  .main-wrap {
-    margin-left: 0;
   }
   .topbar {
     padding: 22px 22px 14px;
@@ -1268,59 +806,6 @@ dialog::backdrop {
     background: transparent;
     border: 0;
     gap: 12px;
-  }
-  .breadcrumb {
-    display: none;
-  }
-  .mobile-identity {
-    display: flex;
-    text-align: left;
-    justify-content: flex-start;
-    gap: 10px;
-    border: 0;
-    background: transparent;
-    padding: 0;
-    min-width: 0;
-    flex: 1;
-  }
-  .identity-avatar {
-    background: #ff5000;
-    color: #121416;
-    width: 43px;
-    height: 43px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-  }
-  .mobile-identity > span:last-child {
-    min-width: 0;
-  }
-  .mobile-identity b {
-    display: block;
-    font-size: 14px;
-    max-width: 200px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: -0.3px;
-  }
-  .mobile-identity small {
-    display: block;
-    font-size: 10px;
-    margin-top: 4px;
-    color: #697380;
-  }
-  .top-actions {
-    gap: 8px;
-  }
-  .top-actions .user-avatar {
-    display: none;
-  }
-  .top-actions .icon-button {
-    width: 42px;
-    height: 42px;
-    background: #ffffffa1;
   }
   main {
     padding: 16px 20px 115px;
@@ -1374,34 +859,6 @@ dialog::backdrop {
   .text-button {
     font-size: 10px;
   }
-  .program-card {
-    padding: 22px;
-    border-radius: 28px;
-  }
-  .card-top {
-    margin-bottom: 17px;
-  }
-  .program-icon {
-    height: 44px;
-    width: 44px;
-    border-radius: 15px;
-  }
-  .program-provider {
-    font-size: 9px;
-  }
-  .program-card h3 {
-    font-size: 20px;
-    line-height: 1.35;
-    margin-bottom: 10px;
-  }
-  .program-card p {
-    font-size: 12px;
-    margin-bottom: 17px;
-  }
-  .card-top .tag,
-  .card-top .region {
-    font-size: 9px;
-  }
   .amount {
     font-size: 31px;
     margin-bottom: 18px;
@@ -1422,14 +879,6 @@ dialog::backdrop {
     gap: 11px;
     margin-top: 27px;
     padding: 21px 0;
-  }
-  .filter-bar {
-    flex-direction: column;
-    gap: 10px;
-  }
-  .filter-bar select {
-    padding: 14px 16px;
-    font-size: 13px;
   }
   .search-box {
     border-radius: 19px;
@@ -1518,16 +967,6 @@ dialog::backdrop {
     font-size: 11px;
     padding: 9px 11px;
   }
-  .chat-panel {
-    padding: 18px;
-    border-radius: 27px;
-  }
-  .chat-header {
-    gap: 11px;
-  }
-  .chat-header small {
-    font-size: 9px;
-  }
   .messages {
     height: 40dvh;
     min-height: 240px;
@@ -1537,20 +976,6 @@ dialog::backdrop {
     max-width: 95%;
     padding: 15px;
     border-radius: 21px;
-  }
-  .suggestions button {
-    font-size: 9px;
-    padding: 9px 11px;
-  }
-  .chat-input {
-    gap: 8px;
-  }
-  .chat-input .primary {
-    width: 45px;
-    min-height: 45px;
-  }
-  .chat-panel > .data-note {
-    font-size: 9px;
   }
   .page-assistant main {
     padding-bottom: 110px;
@@ -1617,23 +1042,6 @@ dialog::backdrop {
     font-size: 12px;
     margin: 20px 0;
   }
-  .detail-summary {
-    padding: 20px 0 30px;
-    gap: 12px;
-    flex-direction: column;
-    background: transparent;
-    border-radius: 0;
-    margin-bottom: 2px;
-  }
-  .detail-summary strong {
-    font-size: 40px;
-    font-weight: 800;
-    letter-spacing: -1.5px;
-  }
-  .detail-summary span {
-    font-size: 12px;
-    color: #e04500;
-  }
   .modal h3 {
     font-size: 20px;
     margin: 25px 2px 14px;
@@ -1651,33 +1059,10 @@ dialog::backdrop {
     font-size: 10px;
     line-height: 1.5;
   }
-  .source-note {
-    font-size: 9px;
-    line-height: 1.8;
-    padding: 0 5px;
-  }
   .plain-list {
     font-size: 12px;
     padding: 20px 18px 20px 36px;
     border-radius: 27px;
-  }
-  .document-list {
-    padding: 5px 16px;
-    border-radius: 26px;
-  }
-  .document-row {
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 9px;
-    padding: 17px 0;
-  }
-  .document-row > label:first-child {
-    font-size: 12px;
-    flex: 1;
-    min-width: 180px;
-  }
-  .document-row small {
-    font-size: 10px;
   }
   .attach {
     font-size: 9px;
@@ -1725,32 +1110,11 @@ dialog::backdrop {
     padding-left: 17px;
     padding-right: 17px;
   }
-  .sidebar {
-    left: 12px;
-    right: 12px;
-    gap: 7px;
-  }
-  .sidebar .assistant-nav {
-    width: 59px;
-    height: 59px;
-  }
-  .sidebar nav .nav-item {
-    font-size: 8px;
-  }
   .region {
     font-size: 8px;
   }
-  .card-top {
-    gap: 7px;
-  }
-  .program-card {
-    padding: 20px;
-  }
   .card-bottom .text-button {
     font-size: 10px;
-  }
-  .mobile-identity b {
-    max-width: 190px;
   }
   .modal {
     padding-left: 16px;

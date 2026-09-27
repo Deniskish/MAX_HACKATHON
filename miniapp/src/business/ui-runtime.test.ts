@@ -13,11 +13,25 @@ import { SupportNotificationSettings } from './SupportNotifications';
 import { AdaptiveInsight } from './AdaptiveInsight';
 import { DetailSteps, preparationProgress, PreparationRequirements } from './VisualWidgets';
 import { InfoDisclosureRow } from './InfoDisclosureRow';
-import { AppNavigation, navigationTab } from './AppChrome';
-import { DemoSubmission } from './VerificationDemo';
+import { AppHeader, AppNavigation, navigationTab } from './AppChrome';
 
 const request: AIRequest = { task: 'intake', question: 'Мастерская мебели', context: {} };
 const answer = { mode: 'llm', answer: 'Ответ', actions: [], citations: [], matches: [], findings: [], scenarios: [], followups: [], tools: [] };
+
+test('MAX delivery uses one independent switch and there is no notification button', () => {
+  for (const bot of [false, true]) {
+    const html = renderToStaticMarkup(createElement(SupportNotificationSettings, { notifications: {
+      enabled: true, bot, aiConfigured: true, available: true, busy: false, error: '', items: [],
+      subscribe: async () => true, read: async () => {},
+    } }));
+    assert.equal((html.match(/type="checkbox"/g) ?? []).length, 1);
+    assert.equal(html.includes('checked=""'), bot);
+    assert.doesNotMatch(html, /Уведомления в приложении/);
+  }
+  const header = renderToStaticMarkup(createElement(AppHeader, {title: 'Мой бизнес', onBack: () => {}, onSettings: () => {}}));
+  assert.doesNotMatch(header, /Уведомления|notification-dot/);
+  assert.match(header, /Настройки/);
+});
 
 test('service diagnostics stay out of settings and analysis while recovery actions remain available', () => {
   const error = 'PRIVATE_PROVIDER_DIAGNOSTIC HTTP 500';
@@ -44,18 +58,6 @@ test('a cached provider failure cannot reappear as an AI answer or successful an
   const result = { ...answer, mode: 'local' as const, answer: 'PRIVATE_PROVIDER_DIAGNOSTIC',
     notice: 'PRIVATE_PROVIDER_DIAGNOSTIC', providerFailure: 'PROVIDER_UNAVAILABLE' as const };
   assert.equal(renderToStaticMarkup(createElement(AIResultView, { result })), '');
-});
-
-test('unsaved submission offers retry without claiming acceptance or exposing the storage failure', () => {
-  const html = renderToStaticMarkup(createElement(DemoSubmission, {
-    demo: { state: { enabled: true, signedIn: true, inn: '7707083893', role: 'director', receipts: [] },
-      error: 'PRIVATE_STORAGE_DIAGNOSTIC', update: () => false, reset: () => false, submit: () => false,
-    } as Parameters<typeof DemoSubmission>[0]['demo'],
-    company: { inn: '7707083893', name: 'Компания' } as Parameters<typeof DemoSubmission>[0]['company'],
-    applicationId: 'test', title: 'Программа', ready: true, onVerify: () => {},
-  }));
-  assert.doesNotMatch(html, /PRIVATE_STORAGE|Заявка принята|role="alert"/);
-  assert.match(html, /Повторить отправку/);
 });
 
 test('theme and themed artwork can render in Node without a browser or image loader', () => {

@@ -1,0 +1,42 @@
+name: UX checks
+on:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: miniapp/package-lock.json
+      - run: npm ci --prefix miniapp
+      - run: npm ci --prefix miniapp/api-server
+      - run: npm run build --prefix miniapp && npm test --prefix miniapp
+      - run: npx --prefix miniapp playwright install --with-deps chromium webkit
+      - name: Browser journeys in both themes and engines
+        env:
+          PORT: 3021
+          OPORA_UI_URL: http://127.0.0.1:3021
+          OPORA_TEST_PASSWORD: '20042004'
+          OPORA_UI_OUTPUT: ${{ github.workspace }}/test-results/ux
+        run: |
+          node miniapp/scripts/serve.cjs &
+          preview_pid=$!
+          trap 'kill "$preview_pid"' EXIT
+          for i in $(seq 1 30); do
+            curl -fsS "$OPORA_UI_URL" >/dev/null && break
+            sleep 1
+          done
+          npm run test:ux --prefix miniapp
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ux-screenshots
+          path: test-results/ux

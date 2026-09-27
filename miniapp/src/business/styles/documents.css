@@ -1,0 +1,220 @@
+/* Главный AI-сценарий: анализ, рекомендации, документы и состояния загрузки. */
+.status-ready {
+  background: #e7f8ec;
+  color: #187139;
+}
+.status-unknown {
+  background: #efedff;
+  color: #4e38a9;
+}
+.detail-facts {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+  margin: 26px 0;
+}
+.detail-facts > div {
+  background: #fff;
+  border-radius: 21px;
+  padding: 20px;
+}
+.detail-facts > div:first-child {
+  grid-column: 1/-1;
+}
+.detail-facts span,
+.detail-facts small {
+  display: block;
+  font-size: 12px;
+  color: #758090;
+  line-height: 1.6;
+}
+.detail-facts strong {
+  display: block;
+  font-size: 24px;
+  margin: 7px 0;
+  line-height: 1.4;
+}
+.personal-checklist {
+  display: grid;
+  gap: 15px;
+}
+.checklist-item {
+  padding: 20px;
+}
+.checklist-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  cursor: pointer;
+}
+.checklist-title input {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  accent-color: #2401fe;
+  margin: 1px 0;
+}
+.checklist-title b {
+  display: block;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.checklist-title small {
+  display: block;
+  font-size: 11px;
+  color: #758090;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+}
+.checklist-item details {
+  margin: 18px 0 0;
+}
+.checklist-item summary {
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #2401fe;
+  padding: 8px 0;
+}
+.checklist-item dt {
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 16px;
+}
+.checklist-item dd {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #6e7988;
+}
+.checklist-item .attach {
+  display: inline-block;
+  margin-top: 15px;
+}
+.checklist-item .attach input {
+  display: none;
+}
+.checklist-item .opora-native-textarea {
+  background: #f7f8fb;
+}
+.document-review {
+  background: #f7f8fb;
+  padding: 17px;
+  border-radius: 17px;
+  margin-top: 15px;
+}
+.document-review b {
+  font-size: 13px;
+}
+.document-review p {
+  font-size: 12px;
+  margin: 10px 0;
+}
+.document-review small {
+  font-size: 11px;
+  color: #6e7988;
+  line-height: 1.7;
+  display: block;
+}
+.draft-composer {
+  margin-top: 26px;
+}
+.draft-composer > p {
+  font-size: 13px;
+}
+.draft-composer .opora-native-textarea {
+  background: #f7f8fb;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.draft-composer > .tag {
+  margin-top: 16px;
+}
+.max-notification-label {
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 700;
+  color: #6550bc;
+}
+.page-programs .service-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+@media (max-width: 850px) {
+  .page-programs .service-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+/* На телефоне карточки и действия идут в одну колонку. */
+@media (max-width: 600px) {
+  .detail-facts {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .detail-facts > div {
+    padding: 18px;
+  }
+  .detail-facts strong {
+    font-size: 20px;
+  }
+  .detail-facts > div:first-child strong {
+    font-size: 29px;
+  }
+  .detail-facts small {
+    font-size: 11px;
+  }
+  .draft-composer .widget-heading h2 {
+    font-size: 22px;
+  }
+  .checklist-item {
+    padding: 21px;
+  }
+  .checklist-title b {
+    font-size: 14px;
+  }
+  .checklist-item summary {
+    font-size: 12px;
+  }
+  .draft-composer .opora-native-textarea {
+    font-size: 16px;
+  }
+  .modal .eligibility-detail h3 {
+    margin-top: 23px;
+  }
+  .modal .assessment-head h3 {
+    margin-top: 0;
+  }
+  .page-overview main > .agent-dashboard {
+    order: 0;
+  }
+}
+.page-heading > h1 {
+  margin: 0;
+}
+.page-overview .agent-welcome {
+  padding-top: 35px;
+  padding-bottom: 30px;
+}
+.page-overview .agent-welcome h2 {
+  margin: 24px 0 32px;
+}
+@keyframes agent-breathe {
+  50% {
+    transform: scale(1.08);
+    filter: saturate(1.25);
+  }
+}
+
+/* Сведения об источнике остаются рядом с редактируемыми полями. */
+.company-form-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.company-field-source {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--muted, #637069);
+}

@@ -5,6 +5,8 @@ import { Icon } from './Icon';
 import { ActionButton } from './MaxControls';
 import { BrandWordmark } from './AppChrome';
 import { type Profile, type Application } from './domain';
+import { applicationReadiness } from './application-readiness';
+import type { FundingKind } from '../../api-server/funding-catalog/types';
 
 export const supportCategories = [
   { label: 'Гранты', filter: 'Грант', icon: 'spark', tone: 'violet' },
@@ -110,11 +112,10 @@ export function BusinessCard({ profile, onEdit }: { profile: Profile | null; onE
     </section>
   );
 }
-/** Display state only; this does not change draft readiness or submission rules. */
-export function preparationProgress(app: Pick<Application, 'documents' | 'project' | 'budget'>, documents: string[]) {
-  const budget = Number(app.budget);
-  return { prepared: documents.filter((name) => !!app.documents[name]).length, total: documents.length,
-    hasProject: !!app.project.trim(), hasBudget: !!app.budget.trim() && Number.isSafeInteger(budget) && budget > 0 };
+/** Progress and application status share the same requirements. */
+export function preparationProgress(app: Pick<Application, 'documents' | 'project' | 'budget'>, documents: string[], kind: FundingKind = 'loan') {
+  const state = applicationReadiness(app, { kind, requiredDocuments: documents });
+  return { prepared: state.prepared, total: state.total, hasProject: state.project, hasBudget: state.budgetComplete };
 }
 
 export function PreparationRequirements({ documents, source }: { documents: string[]; source: string }) {

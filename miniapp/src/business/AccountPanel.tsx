@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Profile } from './domain';
 import { maxInitData } from './max-auth';
+import { ActionButton } from './MaxControls';
 
 type Account = { id: string; company: Profile | null; revision: number; identity: 'max'; authority: 'unverified'; esia: 'not_configured'; canSubmitApplications: false };
 export function useAccount() {
@@ -37,12 +38,12 @@ export function useAccount() {
     save: (company: Profile) => update('PUT', company),
     remove: () => update('DELETE') };
 }
-export function AccountPanel({ state, onRestore, onSave, hasCompany, esiaSignedIn = false }: { state: ReturnType<typeof useAccount>; onRestore: (profile: Profile) => void; onSave: () => void; hasCompany: boolean; esiaSignedIn?: boolean }) {
+export function AccountPanel({ state, onRestore, onSave, hasCompany }: { state: ReturnType<typeof useAccount>; onRestore: (profile: Profile) => void; onSave: () => void; hasCompany: boolean }) {
   return <section className="profile-panel account-panel">
-    <h3>{state.account ? 'Аккаунт MAX' : esiaSignedIn ? 'Аккаунт' : state.available ? 'Подключение аккаунта' : 'Гостевой режим'}</h3>
-    <p>{state.account ? 'Вход подтверждён через MAX.' : esiaSignedIn ? 'Вход через Госуслуги.' : state.available ? state.loading ? 'Проверяем данные входа.' : 'Вход через MAX' : 'Профиль хранится на этом устройстве. Для аккаунта откройте «Опору» через MAX.'}</p>
-    {state.error && !state.account && <button className="secondary" disabled={state.loading} onClick={() => void state.refresh()}>Повторить вход</button>}
-    {state.account && hasCompany && !state.account.company && <button className="secondary" disabled={state.loading} onClick={onSave}>{state.error ? 'Повторить сохранение' : 'Сохранить компанию в аккаунте'}</button>}
-    {state.account?.company && !hasCompany && <button className="secondary" onClick={() => onRestore(state.account!.company!)}>Загрузить компанию из аккаунта</button>}
+    <h3>{state.account ? 'Аккаунт MAX' : state.available ? 'Подключение аккаунта' : 'Гостевой режим'}</h3>
+    <p>{state.account ? 'Вход подтверждён через MAX.' : state.available ? state.loading ? 'Проверяем данные входа.' : 'Вход через MAX' : 'Профиль хранится на этом устройстве. Для аккаунта откройте «Опору» через MAX.'}</p>
+    {state.error && !state.account && <ActionButton className="secondary" disabled={state.loading} onClick={() => void state.refresh()}>Повторить вход</ActionButton>}
+    {state.account && hasCompany && !state.account.company && <ActionButton className="secondary" disabled={state.loading} onClick={onSave}>{state.error ? 'Повторить сохранение' : 'Сохранить компанию в аккаунте'}</ActionButton>}
+    {state.account?.company && !hasCompany && <ActionButton className="secondary" onClick={() => onRestore(state.account!.company!)}>Загрузить компанию из аккаунта</ActionButton>}
   </section>;
 }

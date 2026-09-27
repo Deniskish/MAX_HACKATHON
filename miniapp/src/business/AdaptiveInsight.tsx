@@ -1,7 +1,7 @@
 import { Icon } from './Icon';
 import type { BusinessAnalysis } from './useBusinessAnalysis';
 import type { workspaceActions, workspacePages } from '../../api-server/ai/types';
-const labels = { programs: 'Посмотреть программы', funding: 'Уточнить потребность', applications: 'К подготовке заявок', profile: 'Уточнить профиль', assistant: 'Обсудить с AI', calendar: 'Посмотреть сроки' };
+const labels = { programs: 'Посмотреть программы', funding: 'Уточнить задачу', applications: 'К подготовке заявок', profile: 'Уточнить профиль', assistant: 'Обсудить с AI', calendar: 'Посмотреть сроки' };
 export function AdaptiveInsight({ analysis, section, onAction, compact = false }: {
   analysis: BusinessAnalysis; section: typeof workspacePages[number]; onAction: (action: typeof workspaceActions[number]) => void; compact?: boolean;
 }) {

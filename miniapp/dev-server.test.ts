@@ -55,7 +55,7 @@ test('development server serves shared frontend modules and proxies only API rou
     assert.ok(origin);
     for (const resource of [
       'src/business/domain.ts',
-      'api-server/support-model.ts',
+      'api-server/business-model.ts',
       'api-server/funding-catalog/official-funding.snapshot.json?import',
     ]) {
       const response = await fetch(new URL(resource, origin));

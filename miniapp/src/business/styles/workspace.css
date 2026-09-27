@@ -1,0 +1,130 @@
+.application-stages {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin: 24px 0;
+}
+.application-stages button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 2px;
+  min-height: 64px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+}
+.application-stages button > span {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+}
+.application-stages button[aria-selected="true"] {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.application-workspace [hidden] {
+  display: none !important;
+}
+.application-workspace [role="tabpanel"] {
+  min-width: 0;
+}
+.application-workspace [role="tabpanel"] > .primary {
+  width: 100%;
+  margin-top: 20px;
+}
+.application-workspace .field {
+  margin-bottom: 18px;
+}
+.application-workspace .field > .muted {
+  font-weight: 400;
+  font-size: 13px;
+}
+.readiness-list {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+}
+.document-composer {
+  margin: 20px 0;
+}
+.document-composer > summary {
+  cursor: pointer;
+  padding: 16px 0;
+}
+.submission-actions {
+  display: grid;
+  gap: 16px;
+}
+.submission-actions a.primary {
+  text-align: center;
+  padding: 16px;
+  border-radius: 18px;
+  text-decoration: none;
+}
+.catalog-task {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  gap: 16px;
+  padding: 16px 18px;
+  margin: 12px 0;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: inherit;
+}
+.catalog-task > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.catalog-task span span {
+  font-size: 14px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.company-authority {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--muted);
+  margin: 16px 0;
+}
+.company-authority svg {
+  flex-shrink: 0;
+}
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+.header-actions:empty {
+  width: 44px;
+}
+.app-topbar {
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+}
+.app-topbar > h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 360px) {
+  .app-topbar {
+    gap: 8px;
+  }
+  .app-topbar h1 {
+    font-size: 16px;
+  }
+}

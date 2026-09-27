@@ -1,11 +1,10 @@
 import { Icon } from './Icon';
 import { ThemedImage } from './ThemedImage';
 
-export type AppPage = 'overview' | 'programs' | 'applications' | 'calendar' | 'profile' | 'assistant' | 'funding-results' | 'settings' | 'verification' | 'business-details';
+export type AppPage = 'overview' | 'programs' | 'applications' | 'calendar' | 'profile' | 'assistant' | 'settings' | 'verification' | 'business-details';
 export type MainTab = 'overview' | 'programs' | 'applications' | 'profile';
 export function navigationTab(page: AppPage): MainTab | null {
   if (page === 'settings' || page === 'verification' || page === 'assistant') return null;
-  if (page === 'funding-results') return 'programs';
   if (page === 'calendar' || page === 'business-details') return 'profile';
   return page;
 }
@@ -36,15 +35,17 @@ export function AppNavigation({ active, onNavigate }: {
   </div>;
 }
 
-export function AppHeader({ title, onBack, onSettings, hasNotifications, backLabel = 'На главную' }: {
-  title: string; onBack: () => void; onSettings?: () => void; hasNotifications: boolean; backLabel?: string;
+export function HeaderActions({ onSettings }: { onSettings?: () => void }) {
+  return <div className="header-actions">
+    {onSettings && <button type="button" className="header-settings" aria-label="Настройки" onClick={onSettings}><Icon name="settings" size={22} /></button>}
+  </div>;
+}
+export function AppHeader({ title, onBack, onSettings, backLabel = 'На главную' }: {
+  title: string; onBack: () => void; onSettings?: () => void; backLabel?: string;
 }) {
   return <header className="app-topbar">
     <button type="button" className="app-back icon-button" aria-label={backLabel} onClick={onBack}><Icon name="chevron" /></button>
     <h1>{title}</h1>
-    {onSettings ? <button type="button" className="home-notifications" aria-label={hasNotifications ? 'Настройки — есть новые уведомления' : 'Настройки'} onClick={onSettings}>
-      <Icon name="settings" size={22} />
-      {hasNotifications && <span className="home-notification-dot" aria-hidden="true" />}
-    </button> : <span className="app-header-spacer" aria-hidden="true" />}
+    <HeaderActions onSettings={onSettings} />
   </header>;
 }

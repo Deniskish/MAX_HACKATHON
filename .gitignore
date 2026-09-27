@@ -4,6 +4,7 @@ dist/
 build/
 .vite/
 coverage/
+test-results/
 *.tsbuildinfo
 
 # Локальные ключи не должны попадать в репозиторий.

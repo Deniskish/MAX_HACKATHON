@@ -2,13 +2,12 @@ import { ThemedImage } from './ThemedImage';
 import React, { useEffect, useState, type FormEvent } from 'react';
 import { ActionButton, BusinessInput } from './MaxControls';
 import { Icon } from './Icon';
-import type { FundingProfile } from '../../api-server/funding-catalog/types';
 import { emptyFundingNeed, fundingPurposes, type FundingMatch, type FundingNeed,
   type FundingResponse } from '../../api-server/funding-catalog/types';
-import { amountLabel, fundingKindLabels, fundingSourceLabel, fundingStatusLabels,
-  rateLabel, scoreNotice, termLabel } from '../../api-server/funding-catalog/presentation';
-import { fundingFingerprint, requestFunding, restoreFundingNeed } from './funding';
-import { AIPanel } from './AIExperience';
+import { amountLabel, fundingKindLabels, fundingStatusLabels,
+  rateLabel, termLabel } from '../../api-server/funding-catalog/presentation';
+
+import { displayDate } from './display';
 
 
 export function FundingOpportunityCard({ match, onOpen, onSave, saved, personalized = true }: { match: FundingMatch; onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: boolean; personalized?: boolean }) {
@@ -28,23 +27,7 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved, personali
     <div className="funding-key-facts">{rate && <span>{rate}</span>}{term && <span>Срок: {term}</span>}</div>
     <span className={`funding-status funding-status-${personalized ? match.status : o.status}`}>{personalized ? fundingStatusLabels[match.status] : { active: 'Приём открыт', closed: 'Приём завершён', upcoming: 'Ожидается открытие', unknown: 'Статус уточняется' }[o.status ?? 'unknown']}</span>
 
-    <details>
-      <summary>{personalized ? 'Условия и соответствие' : 'Условия программы'}</summary>
-      <p>{o.description}</p>
-      <p>Регион: {o.regions === "all" ? "Вся Россия" : o.regions.join(", ") || 'Смотрите территорию в объявлении'}</p>
-      {personalized && <><p>Соответствие: {match.score}% · {scoreNotice}</p>
-      <p>{match.explanation}</p>
-      {match.missingRequirements.length > 0 && <p>Не выполнено: {match.missingRequirements.map((r) => r.label).join('; ')}.</p>}
-      {match.unknownRequirements.length > 0 && <p>Нужно уточнить: {match.unknownRequirements.map((r) => r.label).join('; ')}.</p>}
-      {match.missingDocuments.length > 0 && <p>Документы: {match.missingDocuments.join('; ')}.</p>}
-      <ul>{match.nextActions.map((action) => <li key={action}>{action}</li>)}</ul></>}
-      <p>Подготовка: {o.preparationDays === null ? 'не указана' : `${o.preparationDays} дн.`}.
-        {' '}Сложность: {{ low: 'низкая', medium: 'средняя', high: 'высокая' }[o.difficulty]}.</p>
-      <p className="widget-footnote">{fundingSourceLabel(o)} · версия {o.version} · {o.source.verifiedAt ?? o.source.updatedAt}.</p>
-    </details>
-    {o.deadline && <p className="widget-footnote">Приём до {o.deadline}</p>}
-    {o.source.url && /^https:\/\//.test(o.source.url) &&
-      <a href={o.source.url} target="_blank" rel="noreferrer">Источник условий</a>}
+    {o.deadline && <p className="widget-footnote">Приём до {displayDate(o.deadline)}</p>}
     {onOpen && <ActionButton className="primary" onClick={() => onOpen(o.id)}>Подробнее</ActionButton>}
   </article>;
 }
@@ -72,57 +55,20 @@ export function FundingResults({ result, onOpen, onSave, saved = [] }: { result:
   </div>;
 }
 
-// key по ИНН задаётся в родителе только для локального хранения; matching ИНН не получает.
-export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onResult, storageId = '' }: {
-  profile: FundingProfile; initialNeed?: FundingNeed; onNeed?: (need: FundingNeed) => void;
-  onOpen?: (id: string) => void; onResult: (result: FundingResponse, fingerprint: string) => void; storageId?: string;
+// The form edits a draft task; confirmation updates the same catalogue matching used everywhere.
+export function FundingExperience({ initialNeed, onApply, onAsk, goals = [] }: {
+  initialNeed?: FundingNeed; onApply: (need: FundingNeed) => void; onAsk?: () => void; goals?: string[];
 }) {
-  const storageKey = `opora.funding-need.v1.${storageId}`;
-  const [need, setNeed] = useState<FundingNeed>(() => {
-    if (initialNeed) return initialNeed;
-    try { return restoreFundingNeed(localStorage.getItem(storageKey)); }
-    catch { return { ...emptyFundingNeed }; }
-  });
-  const [error, setError] = useState('');
+  const [need, setNeed] = useState<FundingNeed>(() => initialNeed ?? { ...emptyFundingNeed });
   const [loading, setLoading] = useState(false);
   const pending = React.useRef<AbortController | null>(null);
   const panel = React.useRef<HTMLElement | null>(null);
-  useEffect(() => {
-    panel.current?.closest('.project-dialog')?.scrollTo({ top: 0 });
-    panel.current?.closest('dialog')?.scrollTo({ top: 0 });
-  }, [loading]);
-  const fingerprint = fundingFingerprint(profile, need);
-  useEffect(() => {
-    pending.current?.abort();
-    pending.current = null;
-    setLoading(false);
-    setError('');
-    return () => { pending.current?.abort(); pending.current = null; };
-  }, [fingerprint]);
-  useEffect(() => {
-    onNeed?.(need);
-    try { if (!onNeed) localStorage.setItem(storageKey, JSON.stringify(need)); }
-    catch { /* Keep the entered need in this session. */ }
-  }, [need, storageKey]);
+  useEffect(() => () => pending.current?.abort(), []);
   async function submit(event: FormEvent) {
-    event.preventDefault();
-    pending.current?.abort();
-    const controller = new AbortController();
-    pending.current = controller;
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    setLoading(true);
-    setError('');
-    try {
-      const [data] = await Promise.all([requestFunding(profile, need, controller.signal), new Promise<void>((resolve) => setTimeout(resolve, 650))]);
-      if (!controller.signal.aborted && pending.current === controller) onResult(data, fingerprint);
-    } catch (err) {
-      if (pending.current === controller) setError(controller.signal.aborted
-        ? 'Время ожидания истекло. Повторите подбор.'
-        : err instanceof Error ? err.message : 'Не удалось выполнить подбор.');
-    } finally {
-      clearTimeout(timeout);
-      if (pending.current === controller) { pending.current = null; setLoading(false); }
-    }
+    event.preventDefault(); pending.current?.abort();
+    const controller = new AbortController(); pending.current = controller; setLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 400));
+    if (!controller.signal.aborted) onApply(need);
   }
   if (loading) return <section ref={panel} className="funding-searching" role="status" aria-live="polite">
     <div className="funding-search-animation" aria-hidden="true"><ThemedImage src="/assets/orb.png" width={100} height={100} alt="" /><span /></div>
@@ -130,12 +76,13 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onResu
     <ActionButton className="secondary" onClick={() => { pending.current?.abort(); pending.current = null; setLoading(false); }}>Отменить подбор</ActionButton>
   </section>;
   return <section ref={panel} className="funding-experience">
-    <details className="ai-entry"><summary>Описать потребность своими словами</summary><AIPanel title="Умный подбор" task="intake" context={{ profile, need: need.purpose ? need : undefined, page: 'funding' }} onNeed={setNeed} onOpen={onOpen} /></details>
+    {onAsk && <ActionButton className="text-button" onClick={onAsk}>Обсудить задачу с AI</ActionButton>}
     <form className="widget" onSubmit={submit}>
       <h2>Что нужно вашему бизнесу?</h2>
+      {!need.purpose && goals.length > 0 && <div className="filter-chips">{fundingPurposes.filter(purpose => goals.some(goal => goal.toLocaleLowerCase('ru-RU') === purpose.toLocaleLowerCase('ru-RU'))).map(purpose => <button type="button" key={purpose} onClick={() => setNeed({ ...need, purpose })}>{purpose}</button>)}</div>}
       <div className="form-grid">
         <label className="field">Цель
-          <select required value={need.purpose} onChange={(e) => setNeed({ ...need, purpose: e.target.value })}>
+          <select aria-label="Цель" required value={need.purpose} onChange={(e) => setNeed({ ...need, purpose: e.target.value })}>
             <option value="">Выберите цель</option>
             {fundingPurposes.map((purpose) => <option key={purpose} value={purpose}>{purpose}</option>)}
           </select>
@@ -154,7 +101,7 @@ export function FundingExperience({ profile, initialNeed, onNeed, onOpen, onResu
         </label>
       </div>
       <ActionButton type="submit" className="primary" disabled={loading}>
-        {loading ? 'Подбираем варианты…' : error ? 'Повторить подбор' : 'Найти варианты'}
+        {loading ? 'Подбираем варианты…' : 'Найти варианты'}
       </ActionButton>
     </form>
   </section>;

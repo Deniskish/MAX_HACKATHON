@@ -1,7 +1,7 @@
 /* Настраиваем публичные переменные и классы MAX UI, не внутреннюю разметку. */
 .opora-theme.opora-theme {
-  --family-base: 'Manrope Variable', Manrope, Arial, sans-serif;
-  --family-accent: 'Manrope Variable', Manrope, Arial, sans-serif;
+  --family-base: var(--font-ui);
+  --family-accent: var(--font-ui);
   --background-accent-themed: #2401fe;
   --background-button-secondary: #f2f4f8;
   --background-button-secondary-hovered: #e8ebf2;
@@ -20,7 +20,7 @@
   min-height: 100dvh;
   color: #121416;
   background: #f7f8fb;
-  font-family: 'Manrope Variable', Manrope, Arial, sans-serif;
+  font-family: var(--font-ui);
 }
 .opora-theme .opora-action {
   font-family: inherit;

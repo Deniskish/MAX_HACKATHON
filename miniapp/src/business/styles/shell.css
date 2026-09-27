@@ -1,0 +1,831 @@
+/* Shared product palette and mobile frame, derived from the approved home. */
+.funding-searching {
+  min-height: min(460px, 65dvh);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  padding: 24px 0;
+}
+.funding-searching h2,
+.funding-searching p {
+  margin: 0;
+}
+.funding-search-animation {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: grid;
+  place-items: center;
+}
+.funding-search-animation img {
+  object-fit: contain;
+  animation: funding-breathe 1.8s ease-in-out infinite;
+}
+.funding-search-animation span {
+  position: absolute;
+  inset: 0;
+  border: 2px solid #8064ff20;
+  border-top-color: #8064ff;
+  border-radius: 50%;
+  animation: funding-turn 1.3s linear infinite;
+}
+@keyframes funding-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes funding-breathe {
+  50% {
+    transform: scale(0.92);
+    opacity: 0.8;
+  }
+}
+@keyframes funding-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .funding-search-animation img,
+  .funding-search-animation span {
+    animation: none;
+  }
+}
+body,
+.opora-theme.opora-theme {
+  background: #191a1f;
+  color: var(--ink);
+}
+.opora-theme.opora-theme {
+  --background-accent-themed: #604dca;
+  --background-button-secondary: #242229;
+  --background-surface-primary: #1c1d23;
+  --background-surface-secondary: #242229;
+  --background-surface-ground: #191a1f;
+  --background-surface-card: #1c1d23;
+  --text-primary: #ebebf3;
+  --text-secondary: #9293a0;
+  --text-themed: #8064ff;
+  --icon-themed: #8064ff;
+  --stroke-themed: #8064ff;
+}
+.app-shell {
+  width: 100%;
+  max-width: 430px;
+  height: var(--app-height, 100dvh);
+  min-height: 0;
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: calc(76px + var(--app-safe-top)) minmax(0, 1fr) calc(
+      78px + var(--app-safe-bottom)
+    );
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 0% 55%, #7337ff0c, transparent 45%), #191a1f;
+}
+.app-topbar {
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 12px;
+  padding: calc(14px + var(--app-safe-top)) 16px 8px;
+}
+.app-topbar h1 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.5px;
+  margin: 0;
+  text-align: center;
+}
+.app-back {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #242229;
+  color: var(--ink);
+}
+.app-back svg {
+  transform: rotate(180deg);
+}
+.app-shell > .app-content {
+  grid-row: 2;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 16px 20px 28px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-padding-block: 16px;
+  scrollbar-width: thin;
+}
+.app-shell > .home-nav-wrap {
+  grid-row: 3;
+}
+.home-nav > button {
+  font-family: inherit;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus,
+select:focus,
+textarea:focus {
+  outline-color: #8064ff;
+}
+.home-wordmark img,
+.profile-briefcase,
+.access-symbol {
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+.widget,
+.profile-panel,
+.application-row,
+.timeline-row,
+.empty-state {
+  background: #1c1d23d1;
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  box-shadow: 0 18px 45px #00000020;
+}
+.widget,
+.profile-panel,
+.application-row,
+.empty-state {
+  padding: 20px;
+}
+.widget h2,
+.widget-heading h2,
+.profile-panel h2,
+.empty-state h2 {
+  font-size: 22px;
+  line-height: 1.3;
+  letter-spacing: -0.6px;
+}
+.widget p,
+.profile-panel p,
+.official-details p,
+.project-dialog p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.opora-theme .opora-action.primary {
+  background: linear-gradient(130deg, #604dca, #4f439a);
+  color: #ebebf3;
+  border: 1px solid #a092f029;
+}
+.opora-theme .opora-action.secondary {
+  background: #242229;
+  color: #ebebf3;
+  border: 1px solid var(--line);
+}
+.opora-theme .opora-action.text-button {
+  color: #b8a7ff;
+}
+.opora-theme .opora-action {
+  min-height: 48px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.opora-theme .opora-action.danger-button {
+  background: #743638;
+  border-color: #de797933;
+  color: #fff0ee;
+}
+.opora-theme .opora-action.goal-chip {
+  background: #242229;
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.opora-theme .opora-action.goal-chip.chosen {
+  background: #604dca26;
+  color: #c9bfff;
+  box-shadow: inset 0 0 0 1px #8064ff55;
+}
+.field {
+  color: #c0becd;
+  font-size: 13px;
+  gap: 8px;
+}
+.opora-theme .opora-input-body,
+.opora-theme .field .opora-input-body,
+.opora-theme .access-card .opora-input-body,
+.opora-theme .chat-input .opora-input-body,
+.field select,
+.funding-experience .field select,
+.opora-theme .opora-native-textarea {
+  background: #242229;
+  color: var(--ink);
+  border: 1px solid #ffffff0a;
+}
+.opora-theme .opora-native-input {
+  color: var(--ink);
+  background: transparent;
+  font-size: 16px;
+}
+.opora-theme .opora-native-textarea {
+  font-size: 16px;
+  line-height: 1.6;
+  border-radius: 16px;
+}
+.field select {
+  font-size: 16px;
+  border-radius: 16px;
+  min-height: 48px;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #9293a0;
+  opacity: 1;
+}
+input[type="checkbox"] {
+  accent-color: #8064ff;
+}
+.tag {
+  background: #242229;
+  color: #b0adbf;
+  border: 1px solid #ffffff06;
+  border-radius: 10px;
+  padding: 5px 8px;
+}
+.search-box {
+  background: #242229;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+.opora-theme .search-box .opora-input-body {
+  border: 0;
+  background: transparent;
+}
+.segmented-control {
+  background: #242229;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+.segmented-control > button {
+  border-radius: 14px;
+  color: var(--muted);
+}
+.segmented-control > button.selected {
+  background: #604dca40;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px #8064ff29;
+}
+.segmented-control > button > span {
+  background: #ffffff0a;
+  color: inherit;
+}
+.filter-chips {
+  scrollbar-width: none;
+}
+.filter-chips > button {
+  background: #242229;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+}
+.filter-chips > button.selected {
+  background: #604dca33;
+  color: #c9bfff;
+  border-color: #8064ff40;
+}
+.catalog-results-header {
+  flex-wrap: wrap;
+  gap: 5px 12px;
+}
+.catalog-results-header h2 {
+  font-size: 21px;
+}
+.catalog-results-header > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.funding-card {
+  gap: 12px;
+}
+.funding-card h3 {
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.funding-card > strong {
+  font-size: clamp(24px, 6.6vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.9px;
+}
+.funding-key-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: #b3afc4;
+  font-size: 13px;
+}
+.funding-card details {
+  background: #24222980;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+}
+.funding-card summary {
+  font-size: 13px;
+  color: #c4bbdf;
+  cursor: pointer;
+}
+.funding-card details[open] > * + * {
+  margin-top: 12px;
+}
+.funding-card > a,
+.official-link {
+  color: #b8a7ff;
+  overflow-wrap: anywhere;
+}
+.funding-card .widget-footnote,
+.widget-footnote {
+  font-size: 12px;
+  color: var(--muted);
+}
+.funding-status {
+  background: #25362e;
+  color: #a6ccb6;
+  border: 1px solid #a6ccb61a;
+}
+.funding-status-not_eligible,
+.funding-status-expired {
+  background: #38282d;
+  color: #d5a6ae;
+  border-color: #d5a6ae1a;
+}
+.funding-status-need_more_data {
+  background: #373126;
+  color: #d3c094;
+  border-color: #d3c0941a;
+}
+.save-program {
+  border-radius: 50%;
+}
+.save-program.is-saved {
+  background: #604dca33;
+  color: #c9bfff;
+}
+.funding-grid,
+.catalog,
+.form-grid,
+.profile-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.funding-results {
+  gap: 24px;
+}
+.funding-results > section > h2 {
+  font-size: 22px;
+}
+.empty-state {
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 32px 24px;
+}
+.empty-state h2,
+.empty-state p {
+  margin: 0;
+}
+.empty-state > svg,
+.empty-symbol {
+  color: #a799da;
+}
+.empty-symbol {
+  background: #604dca1f;
+  color: #b8a7ff;
+}
+.application-row {
+  gap: 14px;
+}
+.application-info h3 {
+  font-size: 19px;
+  line-height: 1.35;
+}
+.application-info p {
+  color: var(--muted);
+  font-size: 13px;
+}
+.progress {
+  background: #242229;
+}
+.progress i {
+  background: #8064ff;
+}
+.timeline {
+  display: grid;
+  gap: 12px;
+}
+.timeline-row {
+  padding: 16px;
+  text-align: left;
+  align-items: flex-start;
+}
+.timeline-row h3 {
+  font-size: 15px;
+  line-height: 1.4;
+}
+.timeline-row small {
+  color: var(--muted);
+}
+.timeline-row > svg {
+  color: var(--muted);
+}
+.date-tile {
+  background: #604dca24;
+  color: #c9bfff;
+  border-radius: 16px;
+}
+.data-note,
+.document-review {
+  background: #24222980;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.black-business-card {
+  position: relative;
+  background:
+    radial-gradient(ellipse at 100% 0%, #604dca26, transparent 65%), #1c1d23;
+  border: 1px solid #9682ff26;
+  border-radius: 26px;
+  min-height: 226px;
+  padding: 24px 20px;
+  overflow: hidden;
+}
+.profile-wordmark {
+  width: 80px;
+  margin-bottom: 24px;
+}
+.profile-briefcase {
+  position: absolute;
+  right: 6px;
+  top: 10px;
+  width: 92px;
+  height: 92px;
+  opacity: 0.65;
+}
+.black-card-meta {
+  font-size: 10px;
+  color: var(--muted);
+  gap: 6px;
+  justify-content: flex-start;
+}
+.black-business-card > strong {
+  display: block;
+  font-size: 20px;
+  line-height: 1.35;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.black-card-bottom {
+  color: #c0becd;
+  font-size: 13px;
+}
+.card-reveal {
+  color: var(--muted);
+}
+.card-reveal:disabled {
+  display: none;
+}
+.business-card-widget > .opora-action {
+  margin-top: 12px;
+}
+.profile-panel .section-title {
+  gap: 12px;
+}
+.profile-grid dd {
+  overflow-wrap: anywhere;
+}
+.page-assistant > .app-content {
+  display: flex;
+  align-items: stretch;
+  padding-bottom: 16px;
+}
+.message {
+  flex-shrink: 0;
+  max-width: 100%;
+  font-size: 14px;
+  border-radius: 18px;
+}
+.message.assistant {
+  background: #242229;
+  color: #c9c6d5;
+}
+.message.user {
+  background: #604dca3d;
+  color: #ebebf3;
+}
+.opora-theme .chat-input .opora-action.primary {
+  border-radius: 50%;
+  background: linear-gradient(130deg, #604dca, #4f439a);
+  color: #ebebf3;
+}
+dialog[open] {
+  position: fixed;
+  inset: 0;
+  width: min(100%, 430px);
+  max-width: 430px;
+  height: var(--app-height, 100dvh);
+  max-height: var(--app-height, 100dvh);
+  margin: 0 auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: #191a1f;
+  color: var(--ink);
+}
+dialog::backdrop {
+  background: #090a10b3;
+}
+.modal-toolbar {
+  padding: calc(10px + var(--app-safe-top)) 16px 10px;
+  background: #191a1f;
+  border-bottom: 1px solid var(--line);
+}
+.modal-toolbar > span {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.modal-toolbar .icon-button,
+.modal-toolbar .save-program {
+  background: #242229;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 50%;
+}
+dialog .modal,
+.modal-sheet .project-dialog {
+  min-height: 0;
+  max-height: none;
+  height: auto;
+  width: 100%;
+  padding: 24px 20px calc(28px + var(--app-safe-bottom));
+  background: #191a1f;
+  color: var(--ink);
+}
+.modal > h2,
+.modal form > h2,
+.project-dialog h2 {
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+}
+.modal-sheet .project-dialog:focus {
+  outline: none;
+}
+.modal .eyebrow {
+  color: #b0a0e7;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+.company-profile-heading {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.company-profile-heading h2 {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.6px;
+}
+.company-profile-heading .muted {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.company-profile-form .company-form-fields {
+  display: grid;
+  gap: 20px;
+}
+.company-profile-form .field {
+  margin: 0;
+  gap: 8px;
+}
+.company-profile-form .form-grid {
+  gap: 18px;
+}
+.company-profile-form .modal-actions,
+.company-profile-form .error {
+  margin: 0;
+}
+.company-profile-form .company-form-fields > .opora-action {
+  width: 100%;
+}
+.company-profile-form .company-sources {
+  margin: 0 0 20px;
+}
+.company-profile-form h3 {
+  margin: 4px 0 0;
+}
+.company-profile-form .widget-footnote {
+  margin: 0;
+}
+.detail-emblem {
+  background: #604dca26;
+  color: #b8a7ff;
+}
+.detail-facts {
+  padding: 18px;
+  background: #24222980;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  gap: 12px;
+}
+.detail-facts strong {
+  font-size: 27px;
+  line-height: 1.3;
+}
+.detail-checks > section {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #1c1d23;
+}
+.requirements,
+.plain-list {
+  background: #1c1d23;
+  border-color: var(--line);
+}
+.preparation-options > button {
+  background: #242229;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.preparation-options > button.current {
+  background: #604dca26;
+  border-color: #8064ff40;
+}
+.step-radio.complete {
+  background: #604dca;
+  color: #ebebf3;
+}
+.step-radio i {
+  background: #8064ff;
+}
+.checklist-title,
+.checklist-title b {
+  color: #ddd9e8;
+}
+.checklist-title small,
+.checklist-item dd {
+  color: var(--muted);
+}
+.checklist-item summary {
+  color: #b8a7ff;
+}
+.checklist-item .attach {
+  background: #242229;
+  border: 1px dashed #8064ff55;
+  color: #c9bfff;
+  border-radius: 14px;
+}
+.checklist-item input[type="file"] {
+  max-width: 100%;
+}
+.error,
+.access-card .error {
+  background: #38282d;
+  border: 1px solid #d5a6ae26;
+  color: #e7b5bd;
+  border-radius: 14px;
+  padding: 12px;
+}
+.toast {
+  position: fixed;
+  bottom: calc(104px + var(--app-safe-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(390px, calc(100% - 32px));
+  background: #26232b;
+  border: 1px solid #9682ff26;
+  color: var(--ink);
+  border-radius: 16px;
+  box-shadow: 0 18px 45px #0003;
+}
+.access-screen {
+  width: 100%;
+  max-width: 430px;
+  min-height: var(--app-height, 100dvh);
+  margin: 0 auto;
+  padding: calc(28px + var(--app-safe-top)) 20px
+    calc(28px + var(--app-safe-bottom));
+  gap: 28px;
+  background:
+    radial-gradient(ellipse at 0% 70%, #7337ff14, transparent 50%), #191a1f;
+}
+.access-wordmark {
+  width: 120px;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+.access-card {
+  border-radius: 26px;
+  padding: 26px 22px;
+}
+.access-symbol {
+  display: block;
+  margin: -12px 0 12px -12px;
+}
+.access-card h1 {
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.8px;
+}
+.access-card .eyebrow {
+  color: var(--muted);
+}
+@media (max-width: 359px) {
+  .app-shell > .app-content {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  dialog .modal,
+  .modal-sheet .project-dialog {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* One dock persists across the four tabs. Home keeps its original header/hero geometry. */
+.app-shell.shared-navigation {
+  position: relative;
+}
+.app-shell.shared-navigation.page-overview {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) calc(78px + var(--app-safe-bottom));
+}
+.shared-navigation.page-overview > .app-content {
+  grid-row: 1;
+}
+.shared-navigation.page-overview .home-dashboard {
+  grid-template-rows: calc(64px + var(--app-safe-top)) minmax(0, 1fr);
+}
+.app-shell.shared-navigation.page-overview > .home-nav-wrap {
+  grid-row: 2;
+}
+.app-shell > .tab-snapshot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.tab-snapshot :is(.app-topbar, .home-topbar) {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.opora-theme .guest-applications > .opora-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 52px;
+  margin: 12px 0 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+/* Preserve a mobile gutter on these content pages, including below 360px. */
+.opora-theme .app-shell:is(.page-profile, .page-programs) > .app-content {
+  padding-inline: clamp(16px, 5vw, 20px);
+}
+.retained-application {
+  display: grid;
+  gap: 16px;
+  margin-block: 20px;
+}
+.retained-application p {
+  margin: 0;
+}
+.retained-application-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

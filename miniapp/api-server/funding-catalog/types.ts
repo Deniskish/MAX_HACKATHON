@@ -1,4 +1,4 @@
-import type { Profile } from '../support-model';
+import type { Profile } from '../business-model';
 
 export type FundingKind = 'grant' | 'subsidy' | 'preferential_loan' | 'commercial_loan' | 'loan'
   | 'guarantee' | 'lease' | 'tax' | 'property' | 'service' | 'investment';

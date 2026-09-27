@@ -1,147 +1,637 @@
-// Production-preview regressions for the iPhone/MAX UX fixes. Uses external Playwright.
-// NODE_PATH=<playwright>/node_modules OPORA_TEST_PASSWORD=... node miniapp/scripts/ux-ui.check.cjs
-const { chromium, webkit } = require('playwright');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const url = process.env.OPORA_UI_URL || 'http://127.0.0.1:3021';
-const out = process.env.OPORA_UI_OUTPUT || '/tmp/opora-iphone-ui';
+// Production-build journeys with controlled APIs: no real messages or submissions.
+const { chromium, webkit } = require("playwright"),
+  assert = require("node:assert/strict"),
+  fs = require("node:fs"),
+  path = require("node:path");
+const url = process.env.OPORA_UI_URL || "http://127.0.0.1:3021",
+  out = process.env.OPORA_UI_OUTPUT || path.resolve("test-results/ux");
 fs.mkdirSync(out, { recursive: true });
-const catalog = JSON.parse(fs.readFileSync(path.join(__dirname, '../api-server/funding-catalog/official-funding.snapshot.json')));
-const withDocs = catalog.find(o => o.requiredDocuments.length > 1 && o.status === 'active');
-const withoutDocs = catalog.find(o => !o.requiredDocuments.length && o.status === 'active');
-assert.ok(withDocs && withoutDocs);
-const workspace = { version: 2, data: { profile: { inn: '7707083893', name: 'Мастерская', region: 'Москва', okved: '62.01', goals: [], companyType: 'ООО', applicantType: 'legal_entity' }, projectProfile: null,
-  fundingNeed: { purpose: '', amount: null, ownFunds: null, preferredTermMonths: null, needsCollateralSupport: null }, saved: [],
-  applications: [{ id: 'empty-draft', programId: withDocs.id, project: '', budget: '', createdAt: '2026-09-27', documents: {}, documentFiles: {} }] } };
-const answer = { mode: 'llm', answer: 'Проверьте условия программы и подготовьте документы.', actions: [], citations: [{ id: 'official', title: withDocs.source.name, text: withDocs.description, url: withDocs.source.url }], matches: [], findings: [{ title: 'Документы', detail: 'Сверьте перечень в официальном объявлении.', severity: 'info' }], scenarios: [], followups: [], tools: [] };
-const results = [];
-async function activate(page, target) { if (page.viewportSize().width < 500) await target.tap(); else await target.click(); }
-async function unlock(page) {
-  if (await page.locator('#access-password').count()) {
-    assert.ok(process.env.OPORA_TEST_PASSWORD); await page.locator('#access-password').fill(process.env.OPORA_TEST_PASSWORD);
-    await page.getByRole('button', { name: 'Войти', exact: true }).click();
+const catalog = JSON.parse(
+  fs.readFileSync(
+    path.join(
+      __dirname,
+      "../api-server/funding-catalog/official-funding.snapshot.json",
+    ),
+  ),
+);
+const withDocs = catalog.find((o) => o.id === "frp-development"),
+  withoutDocs = catalog.find((o) => o.id === "msp-umbrella");
+const workspace = {
+  version: 2,
+  data: {
+    profile: {
+      inn: "7707083893",
+      name: "Мастерская",
+      region: "Москва",
+      okved: "28.99",
+      goals: [],
+      companyType: "ООО",
+      applicantType: "legal_entity",
+      isSme: "yes",
+      ageMonths: 60,
+    },
+    projectProfile: null,
+    fundingNeed: {
+      purpose: "покупка оборудования",
+      amount: null,
+      ownFunds: null,
+      preferredTermMonths: null,
+      needsCollateralSupport: null,
+    },
+    saved: [],
+    applications: [
+      {
+        id: "draft",
+        programId: withDocs.id,
+        project: "",
+        budget: "",
+        createdAt: "2026-09-27",
+        documents: {},
+        documentFiles: {},
+      },
+      {
+        id: "unknown-list",
+        programId: withoutDocs.id,
+        project: "Гарантия для проекта",
+        budget: "",
+        createdAt: "2026-09-27",
+        documents: {},
+        reviewConfirmed: true,
+      },
+    ],
+  },
+};
+const answer = {
+    mode: "llm",
+    answer: "Проверьте условия программы и подготовьте документы.",
+    actions: [],
+    citations: [],
+    matches: [],
+    findings: [],
+    scenarios: [],
+    followups: [],
+    tools: [],
+  },
+  results = [];
+async function load(page, id) {
+  await page.goto(url + (id ? `?program=${id}` : ""));
+  if (await page.locator("#access-password").count()) {
+    assert.ok(process.env.OPORA_TEST_PASSWORD);
+    await page
+      .locator("#access-password")
+      .fill(process.env.OPORA_TEST_PASSWORD);
+    await page.getByRole("button", { name: "Войти", exact: true }).click();
   }
-  await page.locator('.app-shell').waitFor();
+  await page.locator(".app-shell").waitFor();
 }
-async function load(page, program) { await page.goto(url + (program ? `?program=${program}` : '')); await unlock(page); }
 async function nav(page, index) {
-  await activate(page, page.locator('.home-nav button').nth(index));
-  await page.waitForFunction(() => !document.querySelector('.tab-snapshot'));
+  await page.locator(".home-nav button").nth(index).click();
+  await page.waitForFunction(() => !document.querySelector(".tab-snapshot"));
 }
-async function noOverflow(page) {
-  assert.deepEqual(await page.locator('.app-content, dialog[open] .modal, dialog[open] .project-dialog, .assistant-messages, .verification-sign-in').evaluateAll(nodes => nodes.filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.className)), []);
+async function tab(page, name) {
+  await page.getByRole("tab", { name: new RegExp(name) }).click();
 }
-async function steps(page, expected) {
-  assert.deepEqual(await page.locator('.preparation-options > button').evaluateAll(nodes => nodes.map(e => e.dataset.completed === 'true')), expected);
-  for (let i = 0; i < 3; i++) {
-    const indicator = page.locator('.preparation-options .step-radio').nth(i);
-    assert.equal(await indicator.locator('svg').count(), Number(expected[i]));
-    if (!expected[i]) assert.equal(await indicator.evaluate(e => getComputedStyle(e).backgroundColor), 'rgba(0, 0, 0, 0)');
-  }
+async function close(page) {
+  await page
+    .locator("dialog[open]")
+    .getByRole("button", { name: "Закрыть", exact: true })
+    .click();
+}
+async function snapshot(page, name) {
+  assert.deepEqual(
+    await page
+      .locator(
+        ".app-topbar, .home-topbar, .app-content, dialog[open] .modal, dialog[open] .project-dialog, .assistant-messages",
+      )
+      .evaluateAll((nodes) =>
+        nodes
+          .filter((e) => e.scrollWidth > e.clientWidth + 1)
+          .map((e) => e.className),
+      ),
+    [],
+  );
+  await page.screenshot({ path: path.join(out, name + ".png") });
 }
 (async () => {
-  for (const engine of process.env.OPORA_UI_ENGINE ? [process.env.OPORA_UI_ENGINE] : process.env.OPORA_UI_QUICK ? ['chromium'] : ['chromium', 'webkit']) {
-    const browser = await (engine === 'chromium' ? chromium.launch({ headless: true, ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}) }) : webkit.launch({ headless: true }));
+  for (const engine of process.env.OPORA_UI_ENGINE
+    ? [process.env.OPORA_UI_ENGINE]
+    : process.env.OPORA_UI_QUICK
+      ? ["chromium"]
+      : ["chromium", "webkit"]) {
+    const browser = await (engine === "chromium"
+      ? chromium.launch({
+          headless: true,
+          ...(process.env.CHROMIUM_EXECUTABLE
+            ? { executablePath: process.env.CHROMIUM_EXECUTABLE }
+            : {}),
+        })
+      : webkit.launch({ headless: true }));
     try {
-      for (const theme of process.env.OPORA_UI_QUICK ? ['dark'] : ['dark', 'light']) for (const [width, height] of process.env.OPORA_UI_QUICK ? [[390, 844]] : [[320, 568], [390, 844], [430, 932], [1440, 1000]]) {
-        const name = `${engine}-${theme}-${width}`;
-        const page = await browser.newPage({ viewport: { width, height }, colorScheme: theme, isMobile: width < 500, hasTouch: width < 500 });
-        const errors = [];
-        page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-        try {
-          await page.addInitScript(data => { if (!sessionStorage.getItem('ux-seeded')) { localStorage.setItem('opora.workspace', JSON.stringify(data)); sessionStorage.setItem('ux-seeded', 'true'); } }, workspace);
-          await page.route('https://st.max.ru/**', r => r.fulfill({ contentType: 'application/javascript', body: '' }));
-          await page.route('**/api/**', r => {
-            const endpoint = new URL(r.request().url()).pathname;
-            return r.fulfill({ json: endpoint === '/api/funding/catalog' ? { opportunities: catalog } : endpoint.endsWith('/updates') ? { updates: [] }
-              : endpoint === '/api/ai/assist' ? { ...answer, ...(r.request().postDataJSON().task === 'workspace' ? { mode: 'local' } : {}) } : { configured: true, status: 'ready' } });
-          });
-          await load(page, withoutDocs.id);
-          let dialog = page.locator('dialog.opportunity-dialog[open]'); await dialog.waitFor();
-          assert.equal(await dialog.locator('.plain-list').count(), 0);
-          assert.equal(await dialog.getByRole('heading', { name: 'Что нужно подготовить', exact: true }).count(), 1);
-          assert.equal(await dialog.getByRole('link', { name: 'объявлении отбора', exact: true }).count(), 1);
-          const close = dialog.getByRole('button', { name: 'Закрыть', exact: true });
-          assert.equal(await close.evaluate(e => e === document.activeElement || e.matches(':focus-visible') || e.matches(':active')), false);
-          assert.equal(await close.evaluate(e => getComputedStyle(e).boxShadow), 'none');
-          assert.equal(await dialog.locator('.modal').evaluate(e => e === document.activeElement), true);
-          await page.screenshot({ path: `${out}/${name}-requirements.png` });
-          await page.keyboard.press(engine === 'webkit' ? 'Alt+Tab' : 'Tab'); await close.focus();
-          assert.equal(await close.evaluate(e => e.matches(':focus-visible')), true);
-          await page.keyboard.press('Enter'); await dialog.waitFor({ state: 'hidden' });
-          await load(page, withDocs.id); dialog = page.locator('dialog.opportunity-dialog[open]'); await dialog.waitFor();
-          await steps(page, [false, false, false]);
-          await activate(page, page.locator('.preparation-options > button').nth(1)); await steps(page, [false, false, false]);
-          await page.locator('#application-project').fill('Оборудование для мастерской'); await steps(page, [false, true, false]);
-          await page.locator('#application-project').fill('');
-          await page.locator('#application-budget').fill('150000'); await steps(page, [false, false, true]);
-          await page.locator('#application-budget').fill('0'); await steps(page, [false, false, false]);
-          const documents = page.locator('.personal-checklist .checklist-title > input');
-          assert.equal(await documents.count(), withDocs.requiredDocuments.length);
-          await documents.first().check(); await steps(page, [false, false, false]);
-          for (let i = 1; i < await documents.count(); i++) await documents.nth(i).check();
-          await steps(page, [true, false, false]); await documents.first().uncheck(); await steps(page, [false, false, false]);
-          const review = page.locator('.application-review');
-          await review.scrollIntoViewIfNeeded();
-          const alignment = await review.evaluate(e => ({ offset: e.querySelector('input').getBoundingClientRect().top - e.getBoundingClientRect().top, height: e.getBoundingClientRect().height }));
-          assert.ok(alignment.offset >= 10 && alignment.offset <= 14); assert.ok(alignment.height >= 44);
-          await noOverflow(page); await page.screenshot({ path: `${out}/${name}-review.png` });
-          const help = dialog.locator('.personal-checklist .info-disclosure-row').first();
-          await activate(page, help); assert.equal(await help.evaluate(e => e.parentElement.open), true);
-          assert.equal(await help.evaluate(e => getComputedStyle(e).borderTopWidth), '1px');
-          await activate(page, help); assert.equal(await help.evaluate(e => e.parentElement.open), false);
-          const conditions = dialog.locator('.application-conditions > summary'); await activate(page, conditions);
-          await dialog.getByRole('button', { name: 'Объяснить с AI', exact: true }).click();
-          const explanation = page.locator('.assistant-explanation'); await explanation.waitFor();
-          await page.getByRole('article', { name: 'Опора AI', exact: true }).getByText(answer.answer, { exact: false }).waitFor();
-          const outer = await explanation.locator('.assistant-messages').evaluate(e => parseFloat(getComputedStyle(e).paddingLeft));
-          const inner = await explanation.locator('.message.assistant').last().evaluate(e => parseFloat(getComputedStyle(e).paddingLeft));
-          assert.ok(outer >= 16 && outer <= 20); assert.ok(inner >= 16 && inner <= 20);
-          await noOverflow(page); await page.screenshot({ path: `${out}/${name}-ai.png` });
-          await page.locator('.assistant-back').click();
-          for (let tab = 0; tab < 4; tab++) {
-            await nav(page, tab);
-            const active = await page.locator('.home-nav [aria-current=page]').innerText();
-            await page.locator(tab === 0 ? '.home-topbar .home-notifications' : '.app-topbar .home-notifications').click();
-            await page.locator('.page-settings').waitFor();
-            assert.equal(await page.locator('.home-nav [aria-current=page]').innerText(), active);
-            assert.equal(await page.getByRole('radio').count(), 3);
-            await page.locator('.app-back').click();
-            assert.equal(await page.locator('.home-nav [aria-current=page]').innerText(), active);
-            assert.equal(await page.locator('.page-settings').count(), 0);
+      for (const theme of process.env.OPORA_UI_THEME
+        ? [process.env.OPORA_UI_THEME]
+        : process.env.OPORA_UI_QUICK ? ["dark"] : ["dark", "light"])
+        for (const [width, height] of process.env.OPORA_UI_QUICK
+          ? [[390, 844]]
+          : [
+              [320, 568],
+              [390, 844],
+              [430, 932],
+              [1440, 1000],
+            ]) {
+          const name = `${engine}-${theme}-${width}`,
+            page = await browser.newPage({
+              viewport: { width, height },
+              colorScheme: theme,
+              isMobile: width < 500,
+              hasTouch: width < 500,
+            }),
+            errors = [],
+            requests = [];
+          let failAI = false;
+          page.setDefaultTimeout(12000);
+          page.on("pageerror", (e) => errors.push(e.message));
+          try {
+            await page.addInitScript((data) => {
+              if (!sessionStorage.getItem("ux-seeded")) {
+                localStorage.setItem("opora.workspace", JSON.stringify(data));
+                sessionStorage.setItem("ux-seeded", "true");
+              }
+            }, workspace);
+            await page.route("https://st.max.ru/**", (r) =>
+              r.fulfill({ contentType: "application/javascript", body: "" }),
+            );
+            await page.route("**/api/**", (r) => {
+              const endpoint = new URL(r.request().url()).pathname;
+              if (endpoint.startsWith("/api/company/")) {
+                const profile = workspace.data.profile;
+                return r.fulfill({
+                  json: {
+                    mode: "aggregator",
+                    company: { inn: profile.inn },
+                    sources: [],
+                    profile: {
+                      ...profile,
+                      provenance: Object.fromEntries(
+                        ["inn", "name", "region", "okved", "companyType"].map(
+                          (key) => [
+                            key,
+                            {
+                              kind: "source",
+                              mode: "aggregator",
+                              sourceId: "fixture",
+                              source: "Данные реестра",
+                              sourceUrl: "https://egrul.nalog.ru",
+                              updatedAt: "2026-09-27",
+                            },
+                          ],
+                        ),
+                      ),
+                    },
+                  },
+                });
+              }
+              if (endpoint === "/api/ai/assist") {
+                const body = r.request().postDataJSON();
+                requests.push(body);
+                return r.fulfill({
+                  json:
+                    body.task === "workspace" || failAI
+                      ? {
+                          ...answer,
+                          mode: "local",
+                          providerFailure: "PROVIDER_UNAVAILABLE",
+                        }
+                      : answer,
+                });
+              }
+              return r.fulfill({
+                json:
+                  endpoint === "/api/funding/catalog"
+                    ? { opportunities: catalog }
+                    : endpoint.endsWith("/updates")
+                      ? { updates: [] }
+                      : endpoint === "/api/funding/match"
+                        ? {
+                            matches: [],
+                            strategy: { summary: "", options: [] },
+                            mode: "official",
+                          }
+                        : { configured: true, status: "ready" },
+              });
+            });
+            // Unknown checklist remains incomplete even with a historical confirmation.
+            await load(page, withoutDocs.id);
+            await tab(page, "Проверка");
+            assert.equal(
+              await page
+                .getByRole("button", { name: "К подаче", exact: true })
+                .isDisabled(),
+              true,
+            );
+            await page
+              .getByText("Уточните перечень документов у оператора", {
+                exact: true,
+              })
+              .waitFor();
+            await snapshot(page, name + "-unknown-list");
+            await close(page);
+            await load(page, withDocs.id);
+            await tab(page, "Проект");
+            await page
+              .locator("#application-project")
+              .fill("Оборудование для мастерской");
+            await page.locator("#application-budget").fill("150000");
+            await tab(page, "Документы");
+            const checks = page.locator(
+              ".personal-checklist .checklist-title > input",
+            );
+            for (let i = 0; i < (await checks.count()); i++)
+              await checks.nth(i).check();
+            await page.locator(".personal-checklist summary").first().click();
+            const label = `Проверка текста документа: ${withDocs.requiredDocuments[0]}`,
+              text = "Материалы: 100000 рублей. Оборудование: 50000 рублей.";
+            await page
+              .getByRole("textbox", { name: label, exact: true })
+              .fill(text);
+            await close(page);
+            await nav(page, 2);
+            await page
+              .getByRole("button", { name: /Продолжить/ })
+              .first()
+              .click();
+            await tab(page, "Документы");
+            await page.locator(".personal-checklist summary").first().click();
+            assert.equal(
+              await page
+                .getByRole("textbox", { name: label, exact: true })
+                .inputValue(),
+              text,
+            );
+            await tab(page, "Проверка");
+            await page.locator(".application-review input").check();
+            assert.equal(
+              await page
+                .getByRole("button", { name: "К подаче", exact: true })
+                .isEnabled(),
+              true,
+            );
+            await snapshot(page, name + "-review");
+            await tab(page, "Проект");
+            await page.locator("#application-budget").fill("");
+            await tab(page, "Проверка");
+            assert.equal(
+              await page.locator(".application-review input").isChecked(),
+              false,
+            );
+            await page.locator(".application-review input").check();
+            assert.equal(
+              await page
+                .getByRole("button", { name: "К подаче", exact: true })
+                .isDisabled(),
+              true,
+            );
+            await tab(page, "Проект");
+            await page.locator("#application-budget").fill("150000");
+            await tab(page, "Проверка");
+            await page.locator(".application-review input").check();
+            // Contextual review sends the actual saved text; back restores the draft and stage.
+            await page
+              .getByRole("button", { name: "Проверить с AI", exact: true })
+              .click();
+            await page
+              .getByRole("article", { name: "Опора AI", exact: true })
+              .last()
+              .getByText(answer.answer, { exact: false })
+              .waitFor();
+            const review = requests.findLast((r) => r.task === "review");
+            assert.equal(review.context.programId, withDocs.id);
+            assert.ok(
+              review.context.documents[0].pages[0].text.includes("100000"),
+            );
+            await snapshot(page, name + "-chat");
+            await page.locator(".assistant-back").click();
+            assert.equal(
+              await page
+                .getByRole("tab", { name: /Проверка/ })
+                .getAttribute("aria-selected"),
+              "true",
+            );
+            await page
+              .getByRole("button", { name: "К подаче", exact: true })
+              .click();
+            assert.equal(
+              await page
+                .getByRole("link", {
+                  name: "Перейти к оператору ↗",
+                  exact: true,
+                })
+                .getAttribute("href"),
+              withDocs.source.url,
+            );
+            assert.equal(await page.getByText(/Заявка принята/).count(), 0);
+            await snapshot(page, name + "-submission");
+            await close(page);
+            // Rule-based results survive AI outage; filters and scroll survive navigation.
+            await nav(page, 1);
+            assert.ok((await page.locator(".funding-card").count()) > 0);
+            await page
+              .getByRole("button", { name: "Все меры", exact: true })
+              .click();
+            await page
+              .getByRole("textbox", { name: "Поиск мер поддержки" })
+              .fill("ФРП");
+            await page
+              .locator(".app-content")
+              .evaluate((e) => (e.scrollTop = 300));
+            const scroll = await page
+              .locator(".app-content")
+              .evaluate((e) => e.scrollTop);
+            await nav(page, 3);
+            await nav(page, 1);
+            assert.equal(
+              await page
+                .getByRole("textbox", { name: "Поиск мер поддержки" })
+                .inputValue(),
+              "ФРП",
+            );
+            assert.equal(
+              await page
+                .getByRole("button", { name: "Все меры", exact: true })
+                .getAttribute("aria-pressed"),
+              "true",
+            );
+            assert.ok(
+              Math.abs(
+                (await page
+                  .locator(".app-content")
+                  .evaluate((e) => e.scrollTop)) - scroll,
+              ) < 2,
+            );
+            await snapshot(page, name + "-catalogue");
+            assert.equal(
+              await page
+                .getByText(
+                  /Сравниваем меры с данными бизнеса|Открыть весь каталог ·/,
+                )
+                .count(),
+              0,
+            );
+            // Cancelling a task edit leaves the previous task intact; submitting uses the same catalogue.
+            await page.locator(".catalog-task").click();
+            await page
+              .getByLabel("Цель", { exact: true })
+              .selectOption({ index: 1 });
+            await close(page);
+            assert.match(
+              await page.locator(".catalog-task").innerText(),
+              /покупка оборудования/,
+            );
+            await page.locator(".catalog-task").click();
+            await page
+              .getByRole("button", { name: "Найти варианты", exact: true })
+              .click();
+            await page.locator(".page-programs").waitFor();
+            await page.waitForFunction(
+              () => !document.querySelector("dialog[open]"),
+            );
+            assert.equal(
+              await page
+                .getByRole("button", { name: "Для вас", exact: true })
+                .getAttribute("aria-pressed"),
+              "true",
+            );
+            for (let i = 0; i < 4; i++) {
+              await nav(page, i);
+              const active = await page
+                .locator(".home-nav [aria-current=page]")
+                .innerText();
+              await page
+                .getByRole("button", { name: "Настройки", exact: true })
+                .click();
+              assert.equal(await page.getByRole("radio").count(), 3);
+              assert.equal(
+                await page
+                  .getByRole("button", { name: /^Уведомления/ })
+                  .count(),
+                0,
+              );
+              assert.equal(
+                await page.locator(".home-nav [aria-current=page]").innerText(),
+                active,
+              );
+              await page.locator(".app-back").click();
+              assert.equal(
+                await page.locator(".home-nav [aria-current=page]").innerText(),
+                active,
+              );
+            }
+            await page
+              .getByRole("button", { name: "Настройки", exact: true })
+              .click();
+            await snapshot(page, name + "-settings");
+            await page.goBack();
+            await page.locator(".page-profile").waitFor();
+            await page.evaluate(() => {
+              window.WebApp = {
+                ...window.WebApp,
+                BackButton: {
+                  show() {},
+                  hide() {},
+                  onClick(fn) {
+                    window.__testMaxBack = fn;
+                  },
+                  offClick(fn) {
+                    if (window.__testMaxBack === fn)
+                      window.__testMaxBack = null;
+                  },
+                },
+              };
+              window.dispatchEvent(new Event("opora:max-ready"));
+            });
+            await page
+              .getByRole("button", { name: "Настройки", exact: true })
+              .click();
+            await page.evaluate(() => window.__testMaxBack());
+            await page.locator(".page-profile").waitFor();
+            await page
+              .getByRole("button", {
+                name: "Данные и рекомендации",
+                exact: true,
+              })
+              .click();
+            await snapshot(page, name + "-business-details");
+            await page
+              .getByRole("tab", { name: "Данные", exact: true })
+              .click();
+            await snapshot(page, name + "-company-data");
+            await page.locator(".app-back").click();
+            assert.equal(
+              await page
+                .getByRole("button", {
+                  name: "Войти через Госуслуги",
+                  exact: true,
+                })
+                .count(),
+              0,
+            );
+            assert.equal(await page.getByRole("button", { name: /^Уведомления/ }).count(), 0);
+            await nav(page, 0);
+            await page.locator(".home-opportunities").click();
+            failAI = true;
+            await page
+              .getByRole("textbox", { name: "Сообщение помощнику" })
+              .fill("Какая помощь доступна?");
+            await page
+              .getByRole("button", { name: "Отправить сообщение" })
+              .click();
+            await page
+              .getByRole("button", { name: "Повторить запрос" })
+              .waitFor();
+            assert.equal(
+              await page.getByText("PROVIDER_UNAVAILABLE").count(),
+              0,
+            );
+            failAI = false;
+            await page
+              .getByRole("button", { name: "Повторить запрос" })
+              .click();
+            await page
+              .getByRole("article", { name: "Опора AI" })
+              .last()
+              .getByText(answer.answer, { exact: false })
+              .waitFor();
+            // Persisted text survives a full reload, then can be removed explicitly.
+            await load(page, withDocs.id);
+            await tab(page, "Документы");
+            await page.locator(".personal-checklist summary").first().click();
+            assert.equal(
+              await page
+                .getByRole("textbox", { name: label, exact: true })
+                .inputValue(),
+              text,
+            );
+            await page
+              .getByRole("button", {
+                name: "Удалить текст и файл",
+                exact: true,
+              })
+              .click();
+            await close(page);
+            await load(page, withDocs.id);
+            await tab(page, "Документы");
+            await page.locator(".personal-checklist summary").first().click();
+            assert.equal(
+              await page
+                .getByRole("textbox", { name: label, exact: true })
+                .inputValue(),
+              "",
+            );
+            await close(page);
+            // Public programme has one clear CTA; INN autofill returns to that programme.
+            await page.evaluate(() => {
+              const value = JSON.parse(localStorage.getItem("opora.workspace"));
+              value.data.profile = null;
+              value.data.applications = [];
+              localStorage.setItem("opora.workspace", JSON.stringify(value));
+            });
+            await load(page, withoutDocs.id);
+            assert.equal(
+              await page
+                .getByRole("button", {
+                  name: "Добавить бизнес и проверить",
+                  exact: true,
+                })
+                .count(),
+              1,
+            );
+            await page
+              .getByRole("button", {
+                name: "Добавить бизнес и проверить",
+                exact: true,
+              })
+              .click();
+            await page
+              .getByRole("button", {
+                name: "Добавить компанию по ИНН",
+                exact: true,
+              })
+              .click();
+            await page
+              .getByPlaceholder("10 или 12 цифр")
+              .fill(workspace.data.profile.inn);
+            await page
+              .getByRole("button", { name: "Загрузить по ИНН", exact: true })
+              .click();
+            await page.getByText("Загружено по ИНН", { exact: true }).waitFor();
+            await snapshot(page, name + "-autofill");
+            await page
+              .getByRole("button", { name: "Сохранить бизнес", exact: true })
+              .click();
+            await page
+              .locator("dialog.opportunity-dialog[open]")
+              .getByRole("heading", { name: withoutDocs.title, exact: true })
+              .waitFor();
+            await close(page);
+            let notificationState = { enabled: true, bot: false, aiConfigured: true, items: [] };
+            const subscriptionCalls = [];
+            await page.route("**/api/notifications**", r => {
+              const method = r.request().method();
+              if (method === "PUT") {
+                const body = r.request().postDataJSON();
+                subscriptionCalls.push({ method, bot: body.bot });
+                notificationState = { ...notificationState, enabled: true, bot: body.bot };
+              }
+              if (method === "DELETE") {
+                subscriptionCalls.push({ method });
+                notificationState = { ...notificationState, enabled: false, bot: false };
+              }
+              return r.fulfill({ json: notificationState });
+            });
+            // Controlled launch data is intercepted locally; no message is sent to MAX.
+            await page.evaluate(() => {
+              window.WebApp = { ...window.WebApp, initData: "test-launch" };
+              window.dispatchEvent(new Event("opora:max-ready"));
+            });
+            await page.getByRole("button", { name: "Настройки", exact: true }).click();
+            const delivery = page.getByRole("checkbox", { name: "Сообщать о новых мерах поддержки" });
+            await delivery.waitFor();
+            assert.equal(await page.getByRole("checkbox").count(), 1);
+            await delivery.click();
+            await page.waitForFunction(() => document.querySelector('.notification-toggle input')?.checked && !document.querySelector('.notification-toggle input')?.disabled);
+            await delivery.click();
+            await page.waitForFunction(() => !document.querySelector('.notification-toggle input')?.checked && !document.querySelector('.notification-toggle input')?.disabled);
+            assert.ok(subscriptionCalls.some(call => call.method === "PUT" && call.bot === true));
+            assert.ok(subscriptionCalls.some(call => call.method === "DELETE"));
+            assert.equal(await page.getByRole("button", { name: /^Уведомления/ }).count(), 0);
+            await snapshot(page, name + "-max-delivery");
+            assert.deepEqual(errors, []);
+            results.push({
+              engine,
+              theme,
+              width,
+              height,
+              status: "PASS",
+              checks: 21,
+            });
+            console.log(name, "PASS");
+            fs.writeFileSync(
+              path.join(out, "report.json"),
+              JSON.stringify(results, null, 2),
+            );
+          } catch (error) {
+            await page.screenshot({
+              path: path.join(out, name + "-failure.png"),
+            });
+            throw new Error(`${name}: ${error.stack}`);
+          } finally {
+            await page.close();
           }
-          await nav(page, 2); await page.locator('.app-topbar .home-notifications').click();
-          await page.getByRole('button', { name: 'Войти через Госуслуги', exact: true }).click();
-          const signIn = page.locator('.verification-sign-in'); await signIn.waitFor();
-          assert.equal(await page.locator('.home-nav [aria-current=page]').innerText(), 'Заявки');
-          const padding = await signIn.evaluate(e => parseFloat(getComputedStyle(e).paddingLeft)); assert.ok(padding >= 16 && padding <= 20);
-          const next = signIn.getByRole('button', { name: 'Продолжить', exact: true }), cancel = signIn.getByRole('button', { name: 'Отмена', exact: true });
-          assert.equal(await next.isDisabled(), true); assert.match(await cancel.getAttribute('class'), /secondary/);
-          assert.ok((await cancel.boundingBox()).height >= 44);
-          await signIn.getByRole('checkbox').check(); assert.equal(await next.isEnabled(), true);
-          await signIn.getByRole('checkbox').uncheck(); await noOverflow(page);
-          await page.screenshot({ path: `${out}/${name}-verification.png` });
-          await activate(page, cancel); await page.locator('.page-settings').waitFor();
-          assert.equal(await page.locator('.home-nav [aria-current=page]').innerText(), 'Заявки');
-          await page.screenshot({ path: `${out}/${name}-settings.png` });
-          await page.locator('.app-back').click(); assert.equal(await page.locator('.page-applications').count(), 1);
-          await nav(page, 3); await page.getByRole('button', { name: 'Редактировать профиль', exact: true }).click();
-          const form = page.getByRole('dialog', { name: 'Профиль бизнеса', exact: true }); await form.waitFor();
-          const row = form.getByText('Дополнительные параметры', { exact: true }).locator('..');
-          assert.match(await row.getAttribute('class'), /info-disclosure-row/);
-          assert.equal(await row.evaluate(e => getComputedStyle(e).borderTopWidth), '1px');
-          await page.emulateMedia({ reducedMotion: 'reduce' });
-          assert.equal(await row.locator('svg').last().evaluate(e => getComputedStyle(e).transitionDuration), '0s');
-          await row.focus(); await page.keyboard.press('Enter'); assert.equal(await row.evaluate(e => e.parentElement.open), true);
-          assert.equal(await row.evaluate(e => e.matches(':focus-visible')), true);
-          await page.screenshot({ path: `${out}/${name}-disclosure.png` });
-          await noOverflow(page); assert.deepEqual(errors, []);
-          results.push({ engine, theme, width, height, status: 'PASS', consoleErrors: errors }); console.log(name, 'PASS');
-          fs.writeFileSync(`${out}/report.json`, JSON.stringify(results, null, 2));
-        } catch (error) { await page.screenshot({ path: `${out}/${name}-failure.png` }); throw new Error(`${name}: ${error.stack}`); }
-        finally { await page.close(); }
-      }
-    } finally { await browser.close(); }
+        }
+    } finally {
+      await browser.close();
+    }
   }
-})().catch(error => { console.error(error); process.exitCode = 1; });
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

@@ -1,3 +1,4 @@
+import { displayDate } from './display';
 import React, { type FormEvent } from 'react';
 import type { FundingMatch, ProjectProfile } from '../../api-server/funding-catalog/types';
 import { fundingPurposes } from '../../api-server/funding-catalog/types';
@@ -11,9 +12,9 @@ export function OfficialDetails({ match, onAsk, personalized = true }: { match: 
   return <section className="official-details">
     <p>{o.providerName}</p>
     <div className="detail-facts"><strong>{amountLabel(o)}</strong>{rateLabel(o) && <span>{rateLabel(o)}</span>}{termLabel(o) && <span>{termLabel(o)}</span>}</div>
-    <p>{opportunityStateLabels[o.status ?? 'unknown']}{o.deadline ? ` · до ${o.deadline}` : ''}</p>
+    <p>{opportunityStateLabels[o.status ?? 'unknown']}{o.deadline ? ` · до ${displayDate(o.deadline)}` : ''}</p>
     <a className="official-link" href={o.source.url!} target="_blank" rel="noreferrer">Открыть официальный источник ↗</a>
-    <p className="widget-footnote">{o.source.name}{o.source.verifiedAt ? ` · ${o.source.verifiedAt}` : ''}</p>
+    <p className="widget-footnote">{o.source.name}{o.source.verifiedAt ? ` · ${displayDate(o.source.verifiedAt)}` : ''}</p>
     {personalized ? <><h3>{fundingStatusLabels[match.status]}</h3>
     <div className="detail-checks">
       {([['Почему подходит', match.fulfilledRequirements], ['Что нужно уточнить', match.unknownRequirements], ['Что не соответствует', match.missingRequirements]] as const).filter(([, checks]) => checks.length).map(([title, checks]) => <section key={title}><h3>{title}</h3><ul>{checks.map((c, i) => <li key={i}>{c.label}</li>)}</ul></section>)}

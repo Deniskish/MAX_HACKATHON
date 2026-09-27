@@ -6,10 +6,13 @@ const tabs: AppPage[] = ['overview', 'programs', 'applications', 'profile'];
 /** A short-lived inert DOM snapshot avoids mounting a second set of forms/effects. */
 export function useTabTransition(page: AppPage) {
   const shell = useRef<HTMLDivElement>(null);
+  const positions = useRef<Partial<Record<AppPage, [number, number]>>>({});
   const pending = useRef<{ node: HTMLElement; direction: number; scroll: [Element, number, number][] } | null>(null);
   const cleanup = useRef<() => void>(() => {});
 
   function prepare(next: AppPage) {
+    if (next === page) return;
+    positions.current[page] = [shell.current?.querySelector('.app-content')?.scrollTop ?? 0, shell.current?.querySelector('.home-scroll')?.scrollTop ?? 0];
     cleanup.current();
     pending.current = null;
     const from = tabs.indexOf(page), to = tabs.indexOf(next);
@@ -33,8 +36,8 @@ export function useTabTransition(page: AppPage) {
 
   useLayoutEffect(() => {
     const element = shell.current;
-    element?.querySelector(':scope > .app-content')?.scrollTo({ top: 0 });
-    element?.querySelector('.home-scroll')?.scrollTo({ top: 0 });
+    element?.querySelector(':scope > .app-content')?.scrollTo({ top: positions.current[page]?.[0] ?? 0 });
+    element?.querySelector('.home-scroll')?.scrollTo({ top: positions.current[page]?.[1] ?? 0 });
     const transition = pending.current;
     pending.current = null;
     if (!element || !transition) return;
