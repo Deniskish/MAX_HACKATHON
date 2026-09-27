@@ -335,10 +335,11 @@
   margin: 0 auto;
 }
 .modal > .detail-emblem ~ h2 {
-  text-align: justify;
-  text-align-last: left;
+  text-align: center;
   width: 100%;
-  overflow-wrap: anywhere;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 .modal > .detail-emblem ~ .muted {
   text-align: center;

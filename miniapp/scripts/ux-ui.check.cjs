@@ -264,7 +264,7 @@ async function snapshot(page, name) {
             });
             // Unknown checklist remains incomplete even with a historical confirmation.
             await load(page, withoutDocs.id);
-            assert.equal(await page.locator('.modal > h2').evaluate(e => getComputedStyle(e).textAlign), 'justify');
+            assert.equal(await page.locator('.modal > h2').evaluate(e => getComputedStyle(e).textAlign), 'center');
             await disclosure(page, '.application-conditions', true);
             await snapshot(page, name + '-conditions');
             await disclosure(page, '.application-conditions', false);

@@ -121,7 +121,9 @@
   letter-spacing: -0.5px;
   text-align: center;
   width: 100%;
-  overflow-wrap: anywhere;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 .opora-theme .page-programs .funding-card > p.muted {
   font-size: 14px;
