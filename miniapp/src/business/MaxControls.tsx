@@ -9,6 +9,15 @@ import {
 
 import React from 'react';
 
+/** Pointer focus is not keyboard focus; keep the latter available after Tab/keyboard activation. */
+export function IconButton({ className = '', type = 'button', onPointerDown, onKeyDown, onBlur,
+  ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button {...props} type={type} className={`opora-icon-action ${className}`}
+    onPointerDown={event => { event.currentTarget.dataset.pointerFocus = 'true'; onPointerDown?.(event); }}
+    onKeyDown={event => { delete event.currentTarget.dataset.pointerFocus; onKeyDown?.(event); }}
+    onBlur={event => { delete event.currentTarget.dataset.pointerFocus; onBlur?.(event); }} />;
+}
+
 // Настраиваем MAX UI через публичные свойства, чтобы обновления не ломали тему.
 export function ActionButton({ className = '', type = 'button', ...props }: React.ComponentProps<typeof Button>) {
   const variant =

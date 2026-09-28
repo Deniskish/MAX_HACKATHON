@@ -106,7 +106,7 @@ export const applicationLabels = { draft: 'Черновик', collecting_documen
 // Не смешиваем подтверждённое соответствие с вариантами, для которых не хватает данных.
 export function personalFunding(matches: FundingMatch[], hasProfile: boolean) {
   if (!hasProfile) return { candidates: [], confirmed: [], pending: [] };
-  const candidates = matches.filter((m) => ['eligible', 'almost_eligible', 'need_more_data'].includes(m.status));
+  const candidates = matches.filter((m) => m.personalEligibility?.confirmed === true && ['eligible', 'almost_eligible', 'need_more_data'].includes(m.status));
   return { candidates, confirmed: candidates.filter((m) => m.status === 'eligible'), pending: candidates.filter((m) => m.status !== 'eligible') };
 }
 export function trackedFunding(catalog: FundingOpportunity[], saved: string[], apps: Application[]) {

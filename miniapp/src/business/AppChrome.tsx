@@ -1,3 +1,4 @@
+import { IconButton } from './MaxControls';
 import { Icon } from './Icon';
 import { ThemedImage } from './ThemedImage';
 
@@ -37,14 +38,14 @@ export function AppNavigation({ active, onNavigate }: {
 
 export function HeaderActions({ onSettings }: { onSettings?: () => void }) {
   return <div className="header-actions">
-    {onSettings && <button type="button" className="header-settings" aria-label="Настройки" onClick={onSettings}><Icon name="settings" size={22} /></button>}
+    {onSettings && <IconButton type="button" className="header-settings" aria-label="Настройки" onClick={onSettings}><Icon name="settings" size={22} /></IconButton>}
   </div>;
 }
 export function AppHeader({ title, onBack, onSettings, backLabel = 'На главную' }: {
   title: string; onBack: () => void; onSettings?: () => void; backLabel?: string;
 }) {
   return <header className="app-topbar">
-    <button type="button" className="app-back icon-button" aria-label={backLabel} onClick={onBack}><Icon name="chevron" /></button>
+    <IconButton type="button" className="app-back icon-button" aria-label={backLabel} onClick={onBack}><Icon name="chevron" /></IconButton>
     <h1>{title}</h1>
     <HeaderActions onSettings={onSettings} />
   </header>;

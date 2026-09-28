@@ -1,7 +1,17 @@
+import { withBudgetFacts } from '../../api-server/funding-catalog/budget-facts';
 import { useEffect, useState } from 'react';
 import { officialFundingCatalog } from '../../api-server/funding-catalog/official-catalog';
 import type { FundingOpportunity } from '../../api-server/funding-catalog/types';
 const key = 'opora.live-catalog.v1';
+function restoreCatalogFacts(o: FundingOpportunity): FundingOpportunity {
+  const current = officialFundingCatalog.find(item => item.id === o.id);
+  // Apply eligibility annotations to an offline snapshot only when its original
+  // condition text is unchanged. Do not replace newer operator facts with bundled data.
+  if (!o.imported && !o.manualEligibilityConditions && current?.manualEligibilityConditions
+    && current.manualEligibilityConditions.every(label => o.manualConditions?.includes(label)))
+    return { ...o, manualEligibilityConditions: current.manualEligibilityConditions };
+  return withBudgetFacts(o);
+}
 function valid(value: unknown): value is FundingOpportunity[] {
   return Array.isArray(value) && value.length <= 50000 && value.every((o) => o && typeof o.id === 'string'
     && typeof o.title === 'string' && typeof o.providerName === 'string' && typeof o.version === 'string'
@@ -11,7 +21,7 @@ function valid(value: unknown): value is FundingOpportunity[] {
     && typeof o.source.url === 'string' && /^https:\/\//.test(o.source.url));
 }
 export function cachedCatalog() {
-  try { const data = JSON.parse(localStorage.getItem(key) ?? 'null'); if (valid(data)) return data; } catch { /* Offline first launch. */ }
+  try { const data = JSON.parse(localStorage.getItem(key) ?? 'null'); if (valid(data)) return data.map(restoreCatalogFacts); } catch { /* Offline first launch. */ }
   return officialFundingCatalog;
 }
 export function useLiveCatalog() {
@@ -35,7 +45,7 @@ export function useLiveCatalog() {
           const data = await response.json();
           if (!valid(data.opportunities)) throw new Error('INVALID_CATALOG');
           if (!controller.signal.aborted) {
-            setCatalog(data.opportunities); etag = response.headers.get('ETag') ?? '';
+            setCatalog(data.opportunities.map(restoreCatalogFacts)); etag = response.headers.get('ETag') ?? '';
             try { localStorage.setItem(key, JSON.stringify(data.opportunities)); } catch { /* Low storage: keep the current session. */ }
           }
         } else if (response.status !== 304) throw new Error('CATALOG_UNAVAILABLE');

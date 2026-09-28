@@ -1,3 +1,4 @@
+import { IconButton } from './MaxControls';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from './Icon';
 import { ModalSheet } from './ModalSheet';
@@ -51,13 +52,13 @@ export function AssistantPage({ businessName, guest = false, backLabel = 'В м�
   }
   return <section className={`assistant-page${program ? ' assistant-explanation' : ''}`} aria-label="Чат с AI-помощником">
     <header className="assistant-header">
-      <button className="assistant-icon-button assistant-back" aria-label={backLabel} onClick={onBack}><Icon name="chevron" /></button>
+      <IconButton className="assistant-icon-button assistant-back" aria-label={backLabel} onClick={onBack}><Icon name="chevron" /></IconButton>
       <div className="assistant-heading"><h1>Опора AI</h1><span>{businessName}</span></div>
-      <button className="assistant-icon-button" aria-label="Параметры чата" onClick={() => setInfoOpen(true)}><Icon name="settings" /></button>
+      <IconButton className="assistant-icon-button" aria-label="Параметры чата" onClick={() => setInfoOpen(true)}><Icon name="settings" /></IconButton>
     </header>
     {program && <div className="assistant-program">
       <button onClick={program.onOpen}><Icon name="file" size={17} /><span>{program.title}</span></button>
-      <button aria-label="Перейти к общим вопросам" onClick={program.onRemove}><Icon name="close" size={18} /></button>
+      <IconButton aria-label="Перейти к общим вопросам" onClick={program.onRemove}><Icon name="close" size={18} /></IconButton>
     </div>}
     <div className="assistant-conversation">
       <div className="assistant-messages" ref={scroll} role="log" aria-label="Переписка" aria-live="polite" onScroll={() => {

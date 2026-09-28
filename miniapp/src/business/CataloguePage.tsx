@@ -1,12 +1,14 @@
 import { InfoDisclosure } from './InfoDisclosure';
 import type { Dispatch, SetStateAction, ReactNode } from "react";
 import type {
+  FundingKind,
   FundingNeed,
   FundingOpportunity,
 } from "../../api-server/funding-catalog/types";
 import { fundingKindLabels } from "../../api-server/funding-catalog/presentation";
 import { ActionButton, BusinessInput } from "./MaxControls";
 import { CatalogStatusFilter } from "./CatalogStatusFilter";
+import { catalogRegions } from './catalog-filters';
 import { programmeCount } from "./display";
 import { Icon } from "./Icon";
 type Setter<T> = Dispatch<SetStateAction<T>>;
@@ -21,8 +23,10 @@ export function CataloguePage({
   setOnlySaved,
   query,
   setQuery,
-  filter,
-  setFilter,
+  selectedKinds,
+  setSelectedKinds,
+  selectedRegion,
+  setSelectedRegion,
   availability,
   setAvailability,
   catalogToolsOpen,
@@ -44,8 +48,10 @@ export function CataloguePage({
   setOnlySaved: Setter<boolean>;
   query: string;
   setQuery: Setter<string>;
-  filter: string;
-  setFilter: Setter<string>;
+  selectedKinds: FundingKind[];
+  setSelectedKinds: Setter<FundingKind[]>;
+  selectedRegion: string;
+  setSelectedRegion: Setter<string>;
   availability: string;
   setAvailability: Setter<string>;
   catalogToolsOpen: boolean;
@@ -58,6 +64,10 @@ export function CataloguePage({
   onTask: () => void;
   onEdit: () => void;
 }) {
+  const personal = profile && catalogScope === 'personal';
+  const regionActive = !personal && !!selectedRegion;
+  const filterCount = selectedKinds.length + Number(!!availability) + Number(regionActive);
+  const resetFilters = () => { setSelectedKinds([]); setSelectedRegion(''); setAvailability(''); };
   return (
     <>
       {profile && (
@@ -135,9 +145,9 @@ export function CataloguePage({
         summary={<summary>
           <Icon name="settings" size={18} />
           <span>Фильтры</span>
-          {(filter !== "Все меры" || availability) && (
+          {(filterCount > 0) && (
             <span className="catalog-tools-count">
-              {Number(filter !== "Все меры") + Number(!!availability)}
+              {filterCount}
             </span>
           )}
           <Icon name="chevron" size={16} />
@@ -149,32 +159,35 @@ export function CataloguePage({
             onChange={setAvailability}
             includeClosedByDefault={onlySaved}
           />
+          {personal ? <p className="muted">Территория подбирается по региону вашего бизнеса.</p> : (
+            <label className="field">Территория действия
+              <select value={selectedRegion} onChange={event => setSelectedRegion(event.target.value)}>
+                <option value="">Все территории</option>
+                <option value="all">Федеральные / вся Россия</option>
+                {catalogRegions(officialFundingCatalog).map(([key, name]) => <option key={key} value={key}>{name}</option>)}
+              </select>
+            </label>
+          )}
           <h3>Вид поддержки</h3>
           <div className="filter-chips" aria-label="Виды мер поддержки">
-            {[
-              "Все меры",
-              ...new Set(
-                officialFundingCatalog.map((o) => fundingKindLabels[o.kind]),
-              ),
-            ].map((type) => (
-              <button
-                key={type}
-                aria-pressed={filter === type}
-                className={filter === type ? "selected" : ""}
-                onClick={() => setFilter(type)}
-              >
-                {type === "Все меры" ? "Все виды" : type}
+            <button type="button" aria-pressed={!selectedKinds.length}
+              className={!selectedKinds.length ? 'selected' : ''} onClick={() => setSelectedKinds([])}>Все виды</button>
+            {[...new Set(officialFundingCatalog.map(o => o.kind))].map(kind => (
+              <button type="button" key={kind} aria-pressed={selectedKinds.includes(kind)}
+                className={selectedKinds.includes(kind) ? 'selected' : ''}
+                onClick={() => setSelectedKinds(previous => previous.includes(kind)
+                  ? previous.filter(item => item !== kind) : [...previous, kind])}>
+                {fundingKindLabels[kind]}
               </button>
             ))}
           </div>
 
-          {(filter !== "Все меры" || availability) && (
+          {(filterCount > 0) && (
             <button
               type="button"
               className="catalog-clear-filters"
               onClick={() => {
-                setFilter("Все меры");
-                setAvailability("");
+                resetFilters();
               }}
             >
               Сбросить фильтры
@@ -190,15 +203,11 @@ export function CataloguePage({
       </InfoDisclosure>
       <div className="catalog-results-header">
         <h2>
-          {filter === "Все меры"
-            ? profile && catalogScope === "personal"
-              ? "Для вашего бизнеса"
-              : "Все возможности"
-            : filter}
+          {personal ? 'Для вашего бизнеса' : 'Все возможности'}
         </h2>
         <span>{programmeCount(visiblePrograms.length)}</span>
-        {filter !== "Все меры" && (
-          <button onClick={() => setFilter("Все меры")}>
+        {filterCount > 0 && (
+          <button onClick={resetFilters}>
             Сбросить <Icon name="close" size={13} />
           </button>
         )}
@@ -244,7 +253,7 @@ export function CataloguePage({
           <ActionButton
             className="secondary"
             onClick={() => {
-              setFilter("Все меры");
+              resetFilters();
               setQuery("");
               setOnlySaved(false);
               setCatalogScope("all");

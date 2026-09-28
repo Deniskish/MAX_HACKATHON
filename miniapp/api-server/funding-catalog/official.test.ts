@@ -7,7 +7,8 @@ import { emptyFundingNeed, type FundingOpportunity } from './types';
 import { preparePrivateRequest, privateCompletion } from '../privacy';
 const need = { ...emptyFundingNeed, purpose: 'разработка продукта', amount: 10000000 };
 const start = officialFundingCatalog.find((o) => o.id === 'fasie-start-1')!;
-const active = { ...start, status: 'active', manualConditions: [], requiredDocuments: [], amountMax: 5000000 } as FundingOpportunity;
+// Synthetic active variant isolates applicant/amount rules from the real closed competition and manual review.
+const active: FundingOpportunity = { ...start, status: 'active', manualConditions: [], manualEligibilityConditions: [], requiredDocuments: [], amountMax: 5000000 };
 test('official snapshot validates six real sources and rejects missing URL/date and synthetic records', () => {
   assert.ok(officialFundingCatalog.length >= 6);
   for (const patch of [{ url: null }, { verifiedAt: undefined }, { type: 'demo' }, { url: 'https://commercial.invalid/fund' }])
@@ -22,16 +23,44 @@ test('closed, upcoming and unconfirmed acceptance are never eligible now', () =>
   assert.equal(matchFundingOpportunity(profile, need, active).amountFit, 'partial');
 });
 test('project without INN matches only explicitly permitted applicant types and unknown never passes', () => {
-  assert.equal(matchFundingOpportunity({ applicantType: 'project' }, { ...need, amount: 1000000 }, active).status, 'eligible');
-  assert.equal(matchFundingOpportunity({ applicantType: 'project' }, need, { ...active, applicantTypes: ['legal_entity'] }).status, 'not_eligible');
-  assert.equal(matchFundingOpportunity({}, need, active).status, 'need_more_data');
-  assert.equal(matchFundingOpportunity({ applicantType: 'project' }, need, { ...active, manualConditions: ['Подтвердить научную новизну'] }).status, 'need_more_data');
+  const profile = { applicantType: 'project' as const, industry: 'Технологии' };
+  const projectNeed = { ...need, amount: 1000000 };
+  assert.equal('inn' in profile, false);
+  const match = matchFundingOpportunity(profile, projectNeed, active);
+  assert.equal(match.status, 'eligible');
+  assert.deepEqual(match.unknownRequirements, []);
+  assert.equal(match.personalEligibility?.confirmed, true);
+  const rejected = matchFundingOpportunity(profile, projectNeed, { ...active, applicantTypes: ['legal_entity'] });
+  assert.equal(rejected.status, 'not_eligible');
+  assert.deepEqual(rejected.missingRequirements.map(r => r.field), ['applicantType']);
+  const unknownApplicant = matchFundingOpportunity({ industry: profile.industry }, projectNeed, active);
+  assert.equal(unknownApplicant.status, 'need_more_data');
+  assert.deepEqual(unknownApplicant.unknownRequirements.map(r => r.field), ['applicantType']);
+  assert.equal(unknownApplicant.personalEligibility?.confirmed, false);
+  const unknownIndustry = matchFundingOpportunity({ applicantType: profile.applicantType }, projectNeed, active);
+  assert.equal(unknownIndustry.status, 'need_more_data');
+  assert.deepEqual(unknownIndustry.unknownRequirements.map(r => r.field), ['industry']);
+  assert.equal(unknownIndustry.personalEligibility?.confirmed, false);
+  const manual = matchFundingOpportunity(profile, projectNeed, { ...active,
+    manualConditions: ['Подтвердить научную новизну'], manualEligibilityConditions: ['Подтвердить научную новизну'] });
+  assert.equal(manual.status, 'need_more_data');
+  assert.equal(manual.personalEligibility?.confirmed, false);
 });
 test('agriculture uses OKVED and does not assume that all farmers are a separate legal form', () => {
-  const agro = { ...officialFundingCatalog.find((o) => o.id === 'agrostart-tatarstan-2024')!, status: 'active', deadline: null, manualConditions: [], requiredDocuments: [], amountMax: 3000000 } as FundingOpportunity;
+  const agro: FundingOpportunity = { ...officialFundingCatalog.find((o) => o.id === 'agrostart-tatarstan-2024')!, status: 'active', deadline: null,
+    manualConditions: [], manualEligibilityConditions: [], requiredDocuments: [], amountMax: 3000000 };
   const agriculturalNeed = { ...emptyFundingNeed, purpose: 'сельхозтехника', amount: 1000000 };
-  assert.equal(matchFundingOpportunity({ companyType: 'ИП', region: 'Республика Татарстан', okved: '01.11' }, agriculturalNeed, agro).status, 'eligible');
-  assert.equal(matchFundingOpportunity({ companyType: 'ООО', region: 'Республика Татарстан', okved: '62.01' }, agriculturalNeed, agro).status, 'not_eligible');
+  for (const companyType of ['ИП', 'ООО'] as const) {
+    const profile = { companyType, region: 'Республика Татарстан', okved: '01.11', industry: 'Сельское хозяйство' };
+    const match = matchFundingOpportunity(profile, agriculturalNeed, agro);
+    assert.equal(match.status, 'eligible');
+    assert.deepEqual(match.unknownRequirements, []);
+    assert.equal(match.personalEligibility?.confirmed, true);
+    const rejected = matchFundingOpportunity({ ...profile, okved: '62.01' }, agriculturalNeed, agro);
+    assert.equal(rejected.status, 'not_eligible');
+    assert.deepEqual(rejected.unknownRequirements, []);
+    assert.deepEqual(rejected.missingRequirements.map(r => r.field), ['okved']);
+  }
 });
 test('guarantee is support, cannot cover cash need; strategy excludes unavailable instruments', () => {
   const guarantee = officialFundingCatalog.find((o) => o.kind === 'guarantee')!;

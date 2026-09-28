@@ -8,6 +8,7 @@ import { budgetTransport } from './budget-transport';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { OfficialWebCatalog } from './web-catalog';
 import { mergeCatalog } from './identity';
+import { budgetKindEvidence, withBudgetFacts } from './budget-facts';
 
 const origin = 'https://promote.budget.gov.ru';
 const guid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
@@ -24,7 +25,7 @@ export function normalizeBudgetCard(row: BudgetCard, now = new Date()): FundingO
   const facts = { title: row.title, provider: row.pppItemName, start: row.startDate, end: row.endDate,
     recipients: row.selectionRecipients, amount, active: row.isActive, withdrawn: row.isNotActive };
   return { id: `budget-${row.competitionId}`, title: row.title, providerName: row.pppItemName,
-    kind: 'subsidy', providerType: 'government', description: row.title, amountMin: null, amountMax: amount,
+    kind: 'unknown', providerType: 'government', description: row.title, amountMin: null, amountMax: amount,
     rateMin: null, rateMax: null, termMonthsMin: null, termMonthsMax: null,
     // An absent region/purpose is unknown, never proof of nationwide eligibility.
     regions: [], purposes: [], sectors: [], okvedPrefixes: [], companyTypes: [],
@@ -102,6 +103,7 @@ export class BudgetSource {
       activity.maxAmountOfSubsidy, activity.expectedResult, ...requirements.map((r: any) => r.userItemName || r.itemName)].map(strip).filter(Boolean).join('\n');
     return { text: text.slice(0, 48000), complete: text.length <= 48000 && !!activity.whoCanApply,
       version: `${version}:${activityVersion}`, checkedAt: new Date().toISOString(),
+      kindEvidence: budgetKindEvidence({ description: strip(activity.description), whatCanBeUsedFor: strip(activity.whatCanBeUsedFor) }),
       geography: activity.geography.filter((g: unknown): g is string => typeof g === 'string'),
       accepting: competitionStatus?.selectionAcceptingApplicationInfo?.canCreateApplication === true,
       startsAt: basic.beginDateCompetition as string, endsAt: basic.endDateCompetition as string };
@@ -120,12 +122,12 @@ export class LiveCatalog implements FundingProvider {
   constructor(private directory: string, private source = new BudgetSource()) {
     mkdirSync(directory, { recursive: true, mode: 0o700 });
     try { const state = JSON.parse(readFileSync(path.join(directory, 'catalog.json'), 'utf8'));
-      if (Array.isArray(state.entries) && state.entries.every((o: FundingOpportunity) => o.id?.startsWith('budget-') && o.source?.url?.startsWith(origin + '/'))) this.state = state;
+      if (Array.isArray(state.entries) && state.entries.every((o: FundingOpportunity) => o.id?.startsWith('budget-') && o.source?.url?.startsWith(origin + '/'))) this.state = { ...state, entries: state.entries.map(withBudgetFacts) };
     } catch { /* First start or unreadable cache: keep bundled official catalogue. */ }
   }
   getCatalog() {
     const now = Date.now();
-    return mergeCatalog([...officialFundingCatalog, ...this.state.entries.map((o) => o.imported?.endsAt && Date.parse(o.imported.endsAt) < now
+    return mergeCatalog([...officialFundingCatalog, ...this.state.entries.map(withBudgetFacts).map((o) => o.imported?.endsAt && Date.parse(o.imported.endsAt) < now
       ? { ...o, status: 'closed' as const } : o), ...(this.web?.getCatalog() ?? [])]);
   }
   status() { return { checkedAt: this.state.checkedAt, imported: this.state.entries.length, totalAtSource: this.state.total,
@@ -197,7 +199,7 @@ export class LiveCatalog implements FundingProvider {
   private async loadDetails(id: string) {
     const entry = this.state.entries.find((o) => o.id === id);
     if (!entry?.imported) return entry;
-    if (entry.imported.detail && Date.now() - Date.parse(entry.imported.detail.checkedAt) < 3600000) return entry;
+    if (entry.imported.detail && Date.now() - Date.parse(entry.imported.detail.checkedAt) < 3600000) return withBudgetFacts(entry);
     const version = entry.version;
     const detail = await this.source.details(id);
     // A concurrent import may have changed this selection; do not attach an old response to it.
@@ -205,6 +207,6 @@ export class LiveCatalog implements FundingProvider {
     if (current?.imported && current.version === version) {
       current.imported.detail = detail; current.imported.startsAt = detail.startsAt; current.imported.endsAt = detail.endsAt; this.save();
     }
-    return current;
+    return current ? withBudgetFacts(current) : undefined;
   }
 }

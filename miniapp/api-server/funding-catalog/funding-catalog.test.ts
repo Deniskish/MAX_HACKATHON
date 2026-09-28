@@ -19,7 +19,8 @@ const service = new FundingCatalogService(() => now, { getCatalog: () => structu
 const opportunity = (id: string) => demoFundingCatalog.find((o) => o.id === id)!;
 const techNeed = { ...emptyFundingNeed, purpose: 'разработка продукта', amount: 1000000 };
 const grant = opportunity('demo-tech-grant');
-const techProfile = async () => (await companies.getCompanyByInn('9900000031'))!.profile;
+// The registry fixture supplies OKVED; the declared industry is a separate eligibility fact.
+const techProfile = async () => ({ ...(await companies.getCompanyByInn('9900000031'))!.profile, industry: 'Технологии' });
 
 test('catalog has 14 distinct demo opportunities, all ten kinds, valid numeric ranges and sources', () => {
   assert.equal(demoFundingCatalog.length, 14);
@@ -52,7 +53,7 @@ test('demo IT company receives technology grant and young technology support', a
   assert.ok(result.strategy.options.some((o) => o.opportunityId === grant.id));
 });
 test('demo KFH receives agricultural opportunities, while an IT company cannot qualify', async () => {
-  const farm = (await companies.getCompanyByInn('9900000024'))!.profile;
+  const farm = { ...(await companies.getCompanyByInn('9900000024'))!.profile, industry: 'Сельское хозяйство' };
   const need = { ...emptyFundingNeed, purpose: 'сельхозтехника', amount: 3000000 };
   const agro = opportunity('demo-agro');
   const ready = { now, preparedDocuments: agro.requiredDocuments };
@@ -148,6 +149,7 @@ test('term fit handles minimum, maximum, partial and unknown; grants do not requ
     const match = matchFundingOpportunity(p, { ...techNeed, preferredTermMonths: months }, loan,
       { now, preparedDocuments: loan.requiredDocuments });
     assert.equal(match.termFit, fit); assert.equal(match.status, status);
+    assert.deepEqual(match.unknownRequirements, [], `Only repayment term should affect status at ${months} months`);
   }
   assert.equal(matchFundingOpportunity(p, techNeed, loan, options).termFit, 'unknown');
   assert.equal(matchFundingOpportunity(p, { ...techNeed, preferredTermMonths: 60 }, { ...loan, termMonthsMax: null }, options).status, 'need_more_data');
@@ -157,6 +159,8 @@ test('loan statuses and explanation never promise approval and preserve lender d
   for (const o of demoFundingCatalog.filter((o) => isLoan(o.kind))) {
     const match = matchFundingOpportunity(await techProfile(), techNeed, o, { now, preparedDocuments: o.requiredDocuments });
     assert.equal(match.status, 'eligible');
+    assert.deepEqual(match.unknownRequirements, []);
+    assert.equal(match.personalEligibility?.confirmed, true);
     assert.doesNotMatch(match.explanation + fundingStatusLabels[match.status], /одобрен|банк точно выдаст|вы получите кредит/i);
     assert.match(match.explanation, /Окончательное решение принимает кредитор/);
   }
@@ -198,9 +202,15 @@ test('matching is deterministic and pure, and core accepts a profile without INN
   const profile = parseFundingProfile(await techProfile());
   assert.equal('inn' in profile, false);
   const before = JSON.stringify({ profile, techNeed, grant });
-  assert.deepEqual(matchFundingOpportunity(profile, techNeed, grant, options), matchFundingOpportunity(profile, techNeed, grant, options));
+  const match = matchFundingOpportunity(profile, techNeed, grant, options);
+  assert.equal(match.status, 'eligible');
+  assert.deepEqual(match.unknownRequirements, []);
+  assert.equal(match.personalEligibility?.confirmed, true);
+  assert.deepEqual(match, matchFundingOpportunity(profile, techNeed, grant, options));
   assert.equal(JSON.stringify({ profile, techNeed, grant }), before);
-  assert.equal(matchFundingOpportunity({}, { ...emptyFundingNeed, purpose: 'масштабирование' }, opportunity('demo-advice'), options).status, 'eligible');
+  const advice = matchFundingOpportunity(profile, { ...emptyFundingNeed, purpose: 'масштабирование' }, opportunity('demo-advice'), options);
+  assert.equal(advice.status, 'eligible');
+  assert.deepEqual(advice.unknownRequirements, []);
 });
 test('purpose alone is valid; all optional need fields are null and no profile is required by core', () => {
   const need = parseFundingNeed({ purpose: 'покупка оборудования' });

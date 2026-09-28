@@ -1,7 +1,7 @@
 import type { Profile } from '../business-model';
 
 export type FundingKind = 'grant' | 'subsidy' | 'preferential_loan' | 'commercial_loan' | 'loan'
-  | 'guarantee' | 'lease' | 'tax' | 'property' | 'service' | 'investment';
+  | 'guarantee' | 'lease' | 'tax' | 'property' | 'service' | 'investment' | 'unknown';
 export const fundingFields = ['region', 'okved', 'ageMonths', 'employees', 'revenue',
   'isSme', 'companyType', 'tax', 'goals'] as const;
 export type FundingField = typeof fundingFields[number] | 'applicantType' | 'companyStatus' | 'industry' | 'stage';
@@ -39,6 +39,8 @@ export type FundingOpportunity = {
   applicantTypes?: ApplicantType[];
   status?: OpportunityState;
   manualConditions?: string[];
+  /** Subset of manualConditions that prevents personal selection until verified. */
+  manualEligibilityConditions?: string[];
   projectBudgetMin?: number | null;
   cofinancingPercent?: number | null;
   requirements: FundingRequirement[];
@@ -49,8 +51,8 @@ export type FundingOpportunity = {
   source: { name: string; url: string | null; type: 'demo' | 'official'; updatedAt: string; verifiedAt?: string };
   version: string;
   imported?: { provider: string; startsAt: string; endsAt: string; firstSeenAt?: string;
-    checkedAt?: string; ongoing?: boolean; verification?: 'verified' | 'pending'; evidence?: Record<string, string>;
-    detail?: { text: string; complete: boolean; version: string; checkedAt: string; startsAt: string; endsAt: string; accepting: boolean; geography: string[] } };
+    checkedAt?: string; factsVersion?: 1; kindEvidence?: { kind: FundingKind; quote: string; field: string }; ongoing?: boolean; verification?: 'verified' | 'pending'; evidence?: Record<string, string>;
+    detail?: { text: string; complete: boolean; version: string; checkedAt: string; startsAt: string; endsAt: string; accepting: boolean; geography: string[]; kindEvidence?: { kind: FundingKind; quote: string; field: string } } };
 };
 export const fundingPurposes = ['покупка оборудования', 'оборотные средства', 'разработка продукта',
   'найм сотрудников', 'экспорт', 'аренда / недвижимость', 'сельхозтехника',
@@ -70,6 +72,8 @@ export type FundingStatus = 'eligible' | 'almost_eligible' | 'need_more_data' | 
 export type FundingMatch = {
   opportunity: FundingOpportunity;
   status: FundingStatus;
+  /** Core eligibility is separate from missing secondary preparation data. */
+  personalEligibility?: { confirmed: boolean; reasons: string[] };
   score: number;
   // Приоритет отдельно от score: обеспечение не улучшает соответствие требованиям.
   relevance: number;

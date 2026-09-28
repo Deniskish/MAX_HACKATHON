@@ -5,19 +5,84 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { loadWorkspace, saveWorkspace, removeBusiness, businessAddedNotice, type Workspace, applicationStatus, filterFunding, calendarICS, fundingEvents, projectAsProfile, personalFunding, trackedFunding } from './workspace';
 import { officialFundingCatalog } from '../../api-server/funding-catalog/official-catalog';
 import { matchFundingOpportunity } from '../../api-server/funding-catalog/matching';
-import { emptyFundingNeed } from '../../api-server/funding-catalog/types';
+import { emptyFundingNeed, type FundingOpportunity, type FundingProfile } from '../../api-server/funding-catalog/types';
 import { OfficialDetails, ProjectOnboarding } from './OfficialExperience';
 import { inspectDocumentText, emptyProfile, type Application } from './domain';
 const ids = officialFundingCatalog.map((o) => o.id);
-test('personal selection hides ineligible and closed measures and never counts unknown conditions as confirmed', () => {
-  const base = matchFundingOpportunity({}, emptyFundingNeed, officialFundingCatalog[0]);
-  const matches = (['eligible', 'almost_eligible', 'need_more_data', 'not_eligible', 'expired', 'upcoming'] as const).map((status) => ({ ...base, status }));
-  assert.equal(personalFunding(matches, false).candidates.length, 0);
-  const selection = personalFunding(matches, true);
-  assert.deepEqual(selection.candidates.map((m) => m.status), ['eligible', 'almost_eligible', 'need_more_data']);
-  assert.equal(selection.confirmed.length, 1); assert.equal(selection.pending.length, 2);
-  const projectMatches = officialFundingCatalog.map((o) => matchFundingOpportunity({ applicantType: 'project' }, emptyFundingNeed, o));
-  assert.ok(personalFunding(projectMatches, true).candidates.every((m) => m.status !== 'not_eligible'));
+test('personal selection hides ineligible and closed measures and never counts unknown conditions as confirmed', async (t) => {
+  // Isolated programme facts keep eligibility tests independent of the live official snapshot.
+  const opportunity: FundingOpportunity = {
+    id: 'personal-selection-test', title: 'Тестовая мера', kind: 'grant',
+    providerName: 'Тестовый оператор', providerType: 'fund', description: 'Тестовая мера для производства',
+    amountMin: 100, amountMax: 1000, rateMin: null, rateMax: null, termMonthsMin: null, termMonthsMax: null,
+    regions: ['Москва'], purposes: ['покупка оборудования'], sectors: ['Промышленность'],
+    okvedPrefixes: ['28'], companyTypes: [], applicantTypes: ['legal_entity'], status: 'active',
+    requirements: [], manualConditions: [], manualEligibilityConditions: [], requiredDocuments: [],
+    deadline: null, difficulty: 'low', preparationDays: null,
+    source: { name: 'Тестовый источник', url: null, type: 'demo', updatedAt: '2026-09-28' }, version: 'test-1',
+  };
+  const profile: FundingProfile = { region: 'Москва', applicantType: 'legal_entity', okved: '28.41', industry: 'Промышленность' };
+  const need = { ...emptyFundingNeed, purpose: 'покупка оборудования', amount: 500 };
+  const options = { now: new Date('2026-09-28T12:00:00Z') };
+  const eligible = matchFundingOpportunity(profile, need, opportunity, options);
+  const almost = matchFundingOpportunity(profile, { ...need, amount: 1500 }, opportunity, options);
+  const secondaryUnknown = matchFundingOpportunity(profile, need, { ...opportunity, requirements: [
+    { field: 'revenue', operator: 'gte', value: 1000000, required: true, label: 'Годовая выручка от 1 млн ₽' },
+  ] }, options);
+
+  await t.test('no profile means no personal selection even for confirmed matches', () => {
+    assert.equal(eligible.personalEligibility?.confirmed, true);
+    assert.deepEqual(personalFunding([eligible, almost, secondaryUnknown], false), { candidates: [], confirmed: [], pending: [] });
+  });
+  await t.test('eligible with confirmed core criteria enters candidates and confirmed', () => {
+    assert.equal(eligible.status, 'eligible');
+    assert.deepEqual(eligible.personalEligibility, { confirmed: true, reasons: [] });
+    assert.deepEqual(personalFunding([eligible], true), { candidates: [eligible], confirmed: [eligible], pending: [] });
+  });
+  await t.test('partial amount coverage enters candidates and pending, not confirmed', () => {
+    assert.equal(almost.status, 'almost_eligible');
+    assert.equal(almost.amountFit, 'partial');
+    assert.deepEqual(almost.personalEligibility, { confirmed: true, reasons: [] });
+    assert.deepEqual(personalFunding([almost], true), { candidates: [almost], confirmed: [], pending: [almost] });
+  });
+  await t.test('unknown secondary data keeps confirmed core eligibility but not full confirmation', () => {
+    assert.equal(secondaryUnknown.status, 'need_more_data');
+    assert.deepEqual(secondaryUnknown.unknownRequirements.map(r => r.field), ['revenue']);
+    assert.deepEqual(secondaryUnknown.personalEligibility, { confirmed: true, reasons: [] });
+    assert.deepEqual(personalFunding([secondaryUnknown], true), { candidates: [secondaryUnknown], confirmed: [], pending: [secondaryUnknown] });
+  });
+
+  const unknownCases: { name: string; field: string; profile?: FundingProfile; opportunity?: FundingOpportunity }[] = [
+    { name: 'profile region', field: 'region', profile: { ...profile, region: undefined } },
+    { name: 'programme territory', field: 'region', opportunity: { ...opportunity, regions: [] } },
+    // No companyType fallback: the applicant category must actually be unknown.
+    { name: 'profile applicant type', field: 'applicantType', profile: { ...profile, applicantType: undefined } },
+    { name: 'programme applicant types', field: 'applicantType', opportunity: { ...opportunity, applicantTypes: [] } },
+    { name: 'required OKVED', field: 'okved', profile: { ...profile, okved: undefined } },
+    { name: 'required industry', field: 'industry', profile: { ...profile, industry: undefined } },
+  ];
+  for (const scenario of unknownCases) await t.test(`unknown ${scenario.name} excludes the measure from personal selection`, () => {
+    const match = matchFundingOpportunity(scenario.profile ?? profile, need, scenario.opportunity ?? opportunity, options);
+    assert.equal(match.status, 'need_more_data');
+    assert.equal(match.personalEligibility?.confirmed, false);
+    assert.ok(match.personalEligibility!.reasons.length > 0);
+    assert.ok(match.unknownRequirements.some(r => r.field === scenario.field && r.required));
+    // The confirmed positive control must survive while the unknown measure is excluded.
+    assert.deepEqual(personalFunding([eligible, match], true), { candidates: [eligible], confirmed: [eligible], pending: [] });
+  });
+
+  const excluded = [
+    matchFundingOpportunity({ ...profile, region: 'Республика Татарстан' }, need, opportunity, options),
+    matchFundingOpportunity(profile, need, { ...opportunity, status: 'closed' }, options),
+    matchFundingOpportunity(profile, need, { ...opportunity, status: 'upcoming' }, options),
+  ];
+  await t.test('ineligible, expired and upcoming measures are excluded from a mixed personal list', () => {
+    assert.deepEqual(excluded.map(m => m.status), ['not_eligible', 'expired', 'upcoming']);
+    assert.ok(excluded.every(m => m.personalEligibility?.confirmed === false));
+    assert.deepEqual(personalFunding([eligible, almost, secondaryUnknown, ...excluded], true), {
+      candidates: [eligible, almost, secondaryUnknown], confirmed: [eligible], pending: [almost, secondaryUnknown],
+    });
+  });
 });
 test('personal calendar is the union of bookmarks and applications, without other catalogue deadlines', () => {
   const app = { programId: ids[1] } as Application;

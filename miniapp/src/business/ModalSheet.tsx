@@ -1,3 +1,4 @@
+import { IconButton } from './MaxControls';
 import React, { type ReactNode } from 'react';
 import { Icon } from './Icon';
 
@@ -15,7 +16,7 @@ export function ModalSheet({ title, onClose, children }: { title: string; onClos
     onCancel={(event) => { event.preventDefault(); event.stopPropagation(); onClose(); }}
     onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <div className="modal-toolbar">
-      <button className="modal-close icon-button" aria-label="Закрыть" onClick={onClose}><Icon name="close" /></button>
+      <IconButton className="modal-close icon-button" aria-label="Закрыть" onClick={onClose}><Icon name="close" /></IconButton>
       <span>{title}</span>
     </div>
     <section className="project-dialog" tabIndex={-1}>{children}</section>

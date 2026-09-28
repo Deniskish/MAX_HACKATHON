@@ -4,7 +4,7 @@ export const fundingKindLabels: Record<FundingKind, string> = {
   grant: 'Грант', subsidy: 'Субсидия', preferential_loan: 'Льготный кредит',
   commercial_loan: 'Банковский кредит', loan: 'Кредит / заем', guarantee: 'Поручительство', lease: 'Лизинг',
   tax: 'Налоговая льгота', property: 'Имущественная поддержка', service: 'Нефинансовая поддержка',
-  investment: 'Инвестиции',
+  investment: 'Инвестиции', unknown: 'Вид поддержки не уточнён',
 };
 export const fundingStatusLabels: Record<FundingStatus, string> = {
   eligible: 'Подходит для рассмотрения', almost_eligible: 'Требует подготовки / частичное покрытие',

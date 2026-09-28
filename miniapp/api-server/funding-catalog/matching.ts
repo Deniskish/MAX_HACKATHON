@@ -6,6 +6,7 @@ import { normalizeRegion } from './source-registry';
 const unknown = (value: unknown) => value === undefined || value === null || value === ''
   || value === 'unknown' || (Array.isArray(value) && value.length === 0)
   || (typeof value === 'number' && (!Number.isFinite(value) || value < 0));
+const normalizeIndustry = (value: string) => value.trim().toLocaleLowerCase('ru-RU').replace(/ё/g, 'е');
 const prefixMatches = (value: string, prefix: string) => value === prefix || value.startsWith(`${prefix}.`);
 
 export function evaluateFundingRequirement(profile: FundingProfile, requirement: FundingRequirement): RequirementCheck {
@@ -17,8 +18,10 @@ export function evaluateFundingRequirement(profile: FundingProfile, requirement:
   if (unknown(value)) return { ...requirement, status: 'unknown' };
   let pass = false;
   switch (requirement.operator) {
-    case 'eq': pass = value === expected; break;
-    case 'neq': pass = value !== expected; break;
+    case 'eq': pass = requirement.field === 'region' && typeof value === 'string' && typeof expected === 'string'
+      ? normalizeRegion(value) === normalizeRegion(expected) : value === expected; break;
+    case 'neq': pass = requirement.field === 'region' && typeof value === 'string' && typeof expected === 'string'
+      ? normalizeRegion(value) !== normalizeRegion(expected) : value !== expected; break;
     case 'gte': pass = typeof value === 'number' && typeof expected === 'number' && value >= expected; break;
     case 'lte': pass = typeof value === 'number' && typeof expected === 'number' && value <= expected; break;
     case 'prefix':
@@ -30,7 +33,9 @@ export function evaluateFundingRequirement(profile: FundingProfile, requirement:
       pass = Array.isArray(value)
         ? (Array.isArray(expected) ? expected : [expected]).some((item) => (value as unknown[]).includes(item))
         : Array.isArray(expected) && typeof value === 'string' && (requirement.field === 'region'
-          ? expected.some(item => normalizeRegion(String(item)) === normalizeRegion(value as string)) : expected.includes(value));
+          ? expected.some(item => normalizeRegion(String(item)) === normalizeRegion(value as string))
+          : requirement.field === 'industry' ? expected.some(item => normalizeIndustry(String(item)) === normalizeIndustry(value as string))
+          : expected.includes(value));
       break;
   }
   return { ...requirement, status: pass ? 'fulfilled' : 'missing' };
@@ -72,8 +77,33 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
   if (opportunity.applicantTypes?.length) checks.push(evaluateFundingRequirement({ ...profile, applicantType }, {
     field: 'applicantType', operator: 'includes', value: opportunity.applicantTypes, required: true, label: 'Допустимая категория заявителя',
   }));
+  // Sector and OKVED restrictions can coexist; one cannot waive the other.
+  if (opportunity.sectors.length) checks.push(evaluateFundingRequirement(profile, {
+    field: 'industry', operator: 'includes', value: opportunity.sectors, required: true, label: `Отрасль: ${opportunity.sectors.join(' / ')}`,
+  }));
+  const coreFields = new Set(['region', 'applicantType', 'companyType', 'industry', 'okved', 'goals', 'stage']);
+  const coreChecks = checks.filter(r => r.required && coreFields.has(r.field));
+  const personalReasons = coreChecks.filter(r => r.status !== 'fulfilled').map(r => r.label);
+  const addUnknownCore = (field: FundingRequirement['field'], label: string) => {
+    personalReasons.push(label);
+    checks.push({ field, label, required: true, operator: 'eq', value: '', status: 'unknown' });
+  };
+  if (opportunity.regions !== 'all' && !opportunity.regions.length)
+    addUnknownCore('region', 'Территория действия не подтверждена');
+  if (!opportunity.applicantTypes?.length && !opportunity.companyTypes.length
+    && !coreChecks.some(r => r.field === 'applicantType' || r.field === 'companyType'))
+    addUnknownCore('applicantType', 'Категория заявителя не подтверждена');
+  // Empty imported restrictions mean unparsed conditions, not an unrestricted measure.
+  if (opportunity.imported && !opportunity.sectors.length && !opportunity.okvedPrefixes.length
+    && !coreChecks.some(r => r.field === 'industry' || r.field === 'okved'))
+    addUnknownCore('industry', 'Отраслевые условия ещё не проверены');
+  if (!opportunity.purposes.length || !need.purpose)
+    addUnknownCore('goals', 'Цель поддержки или потребность не подтверждена');
   if (profile.companyStatus && profile.companyStatus !== 'active') checks.push({ field: 'companyStatus', operator: 'eq', value: 'active', required: true, label: 'Действующий статус регистрации', status: 'missing' });
-  for (const label of opportunity.manualConditions ?? []) checks.push({ field: 'industry', operator: 'eq', value: '', required: true, label, status: 'unknown' });
+  for (const label of opportunity.manualConditions ?? []) {
+    checks.push({ field: 'industry', operator: 'eq', value: '', required: true, label, status: 'unknown' });
+    if (opportunity.manualEligibilityConditions?.includes(label)) personalReasons.push(label);
+  }
   if (opportunity.projectBudgetMin != null) {
     const budget = need.amount !== null && need.ownFunds !== null ? need.amount + need.ownFunds : null;
     checks.push({ field: 'revenue', operator: 'gte', value: opportunity.projectBudgetMin, required: true,
@@ -97,7 +127,7 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
     && new Date(`${opportunity.deadline}T23:59:59+03:00`).getTime() < (options.now ?? new Date()).getTime();
   const status: FundingStatus = expired ? 'expired'
     : opportunity.status === 'upcoming' ? 'upcoming'
-    : missingRequirements.some((r) => r.required) || (!!need.purpose && !purposeFit && !opportunity.imported) || amountFit === 'no' || termFit === 'no'
+    : missingRequirements.some((r) => r.required) || (!!need.purpose && opportunity.purposes.length > 0 && !purposeFit) || amountFit === 'no' || termFit === 'no'
       ? 'not_eligible'
       : opportunity.status === 'unknown' || unknownRequirements.some((r) => r.required) || !need.purpose
         || (need.amount !== null && !isSupporting(opportunity.kind) && amountFit === 'unknown')
@@ -140,7 +170,10 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
   if (opportunity.kind === 'guarantee') nextActions.push('Проверить требования кредитора к поручительству.');
   if (expired) nextActions.unshift('Приём завершён; проверить новую версию программы.');
   if (!nextActions.length) nextActions.push('Проверить актуальные условия и порядок рассмотрения.');
+  if (personalReasons.length && status === 'need_more_data') explanations.push('Недостаточно подтверждённых данных для персональной рекомендации.');
   return { opportunity, status, score,
+    personalEligibility: { confirmed: personalReasons.length === 0 && purposeFit
+      && !['not_eligible', 'expired', 'upcoming'].includes(status), reasons: personalReasons },
     relevance: score + (opportunity.kind === 'guarantee' && need.needsCollateralSupport === true ? 20 : 0),
     fulfilledRequirements, missingRequirements, unknownRequirements, missingDocuments,
     purposeFit, amountFit, termFit, explanation: explanations.join(' '), nextActions };

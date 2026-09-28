@@ -9,6 +9,7 @@ export function applicationReadiness(
   opportunity: Pick<FundingOpportunity, "kind" | "requiredDocuments">,
 ) {
   const budgetRequired = [
+    "unknown",
     "grant",
     "subsidy",
     "preferential_loan",
@@ -28,17 +29,25 @@ export function applicationReadiness(
   const prepared = opportunity.requiredDocuments.filter(
     (name) => !!app.documents[name],
   ).length;
-  const documents = total > 0 && prepared === total;
+  const documentsKnown = total > 0;
+  const documentsComplete = documentsKnown && prepared === total;
   const budgetComplete = budgetValid || (!budgetRequired && !app.budget.trim());
+  const readyForReview = project && budgetComplete && documentsComplete && app.reviewConfirmed === true;
+  const canProceedToOperator = project && budgetComplete && app.reviewConfirmed === true
+    && (documentsComplete || !documentsKnown);
   return {
     project,
     total,
     prepared,
-    documents,
+    documentsKnown,
+    documentsComplete,
+    readyForReview,
+    canProceedToOperator,
+    // Existing progress/status consumers retain strict document readiness.
+    documents: documentsComplete,
     budgetRequired,
     budgetValid,
     budgetComplete,
-    ready:
-      project && documents && budgetComplete && app.reviewConfirmed === true,
+    ready: readyForReview,
   };
 }

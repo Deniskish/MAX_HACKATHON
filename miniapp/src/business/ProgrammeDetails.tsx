@@ -2,7 +2,6 @@ import { InfoDisclosure } from './InfoDisclosure';
 import type { Dispatch, SetStateAction } from "react";
 import type { FundingMatch } from "../../api-server/funding-catalog/types";
 import { fundingKindLabels } from "../../api-server/funding-catalog/presentation";
-import { applicationStatus } from "./workspace";
 import { draftText, type Profile, type Application } from "./domain";
 import type { AIDocument } from "./ai-client";
 import { Icon } from "./Icon";
@@ -116,18 +115,11 @@ export function ProgrammeDetails({
                 <section className="submission-actions">
                   <h3>Подача оператору</h3>
                   <p>
-                    {applicationStatus(activeApp, selected) ===
-                    "ready_for_review"
-                      ? "Комплект подготовлен в «Опоре». Отправьте его на официальном сайте программы."
-                      : "Сверьте условия и порядок подачи на сайте оператора."}
+                    Опора подготовила данные для заявки. Финальная проверка документов,
+                    полномочий и отправка выполняются на официальном сайте программы.
                   </p>
                   <a
-                    className={
-                      applicationStatus(activeApp, selected) ===
-                      "ready_for_review"
-                        ? "primary"
-                        : "secondary"
-                    }
+                    className="primary"
                     href={selected.source.url ?? undefined}
                     target="_blank"
                     rel="noreferrer"

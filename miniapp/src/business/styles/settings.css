@@ -384,22 +384,28 @@
   flex: 0 0 20px;
 }
 
-/* Keep the close control neutral; only keyboard focus draws a ring. */
-.opora-theme .modal-toolbar .modal-close,
-.opora-theme .app-topbar .app-back,
-.opora-theme .assistant-header .assistant-icon-button {
+/* Shared close/back/settings feedback. No focus background or persistent pressed state. */
+.opora-theme button.opora-icon-action {
   background: var(--surface);
   border-color: var(--line);
   box-shadow: none;
+  transition: transform 120ms ease-out, background-color 120ms ease-out, opacity 120ms ease-out;
+  -webkit-tap-highlight-color: transparent;
 }
-.opora-theme .modal-toolbar .modal-close:active,
-.opora-theme .app-topbar .app-back:active,
-.opora-theme .assistant-header .assistant-icon-button:active {
+.opora-theme button.opora-icon-action:active {
   background: var(--glass-selected);
   transform: scale(0.96);
 }
-.opportunity-dialog > .modal:focus {
+.opora-theme button.opora-icon-action[data-pointer-focus]:focus-visible {
   outline: none;
+}
+dialog > .modal:focus,
+.modal-sheet > .project-dialog:focus {
+  outline: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .opora-theme button.opora-icon-action { transition: none; }
+  .opora-theme button.opora-icon-action:active { transform: none; }
 }
 
 /* A programme explanation has one padded message surface, not nested cards. */

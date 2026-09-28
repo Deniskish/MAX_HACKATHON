@@ -11,6 +11,8 @@ const base: Omit<FundingOpportunity, 'id' | 'title' | 'kind'> = {
   amountMin: null, amountMax: null, rateMin: null, rateMax: null,
   termMonthsMin: null, termMonthsMax: null, regions: 'all', purposes: [], sectors: [],
   okvedPrefixes: [], companyTypes: [], requirements: [], requiredDocuments: [], deadline: null,
+  // Explicit recipients of these fictional business measures, not an inferred lack of restrictions.
+  applicantTypes: ['legal_entity', 'individual_entrepreneur'],
   difficulty: 'medium', preparationDays: 10,
   source: { name: 'Каталог финансирования «Опора» — демонстрация', url: null, type: 'demo', updatedAt: '2026-09-22' },
   version: 'demo-1',
@@ -69,6 +71,7 @@ export const demoFundingCatalog: FundingOpportunity[] = [
     requiredDocuments: ['Расчёт налоговой базы'], preparationDays: 5 },
   { ...base, id: 'demo-advice', title: 'Учебная консультация по финансированию', kind: 'service',
     providerName: 'Учебный центр поддержки', providerType: 'development_institution',
+    applicantTypes: ['legal_entity', 'individual_entrepreneur', 'individual', 'team', 'project'],
     purposes: [...fundingPurposes], requirements: [], requiredDocuments: [], difficulty: 'low', preparationDays: 1 },
   { ...base, id: 'demo-property', title: 'Учебное помещение для производства', kind: 'property',
     providerName: 'Учебный имущественный центр', providerType: 'regional',

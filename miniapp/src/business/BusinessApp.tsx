@@ -1,3 +1,4 @@
+import { IconButton } from './MaxControls';
 import { ProgrammeDetails } from './ProgrammeDetails';
 import { fundingKindLabels } from '../../api-server/funding-catalog/presentation';
 import { SettingsPage } from './SettingsPage';
@@ -5,7 +6,8 @@ import { BusinessInformation } from './BusinessInformation';
 import { CalendarPage } from './CalendarPage';
 import { ApplicationsPage } from './ApplicationsPage';
 import { CompanyProfileForm } from './CompanyProfileForm';
-import type { FundingOpportunity } from '../../api-server/funding-catalog/types';
+import { matchesCatalogRegion } from './catalog-filters';
+import type { FundingKind, FundingOpportunity } from '../../api-server/funding-catalog/types';
 import { AssistantPage } from './AssistantPage';
 import { BusinessDetailsPage } from './BusinessDetailsPage';
 
@@ -212,7 +214,8 @@ export default function BusinessApp() {
     }
   }
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('Все меры');
+  const [selectedKinds, setSelectedKinds] = useState<FundingKind[]>([]);
+  const [selectedRegion, setSelectedRegion] = useState('');
   const [toast, setToast] = useState('');
   const [messages, setMessages] = useState<Message[]>(() => readAIHistory());
   const chatRequest = useRef<AbortController | null>(null);
@@ -261,15 +264,16 @@ export default function BusinessApp() {
   useEffect(() => {
     if (selected || onboard) {
       dialogRef.current?.showModal();
-      if (selected && !onboard) dialogRef.current?.querySelector<HTMLElement>('.modal')?.focus({ preventScroll: true });
+      dialogRef.current?.querySelector<HTMLElement>('.modal')?.focus({ preventScroll: true });
     }
     else dialogRef.current?.close();
   }, [selected, onboard]);
 
   const toggleSaved = (id: string) =>
     setSaved((old) => (old.includes(id) ? old.filter((x) => x !== id) : [...old, id]));
-  const browse = (type = 'Все меры') => {
-    setFilter(type);
+  const browse = () => {
+    setSelectedKinds([]);
+    setSelectedRegion('');
     setQuery('');
     setOnlySaved(false);
     setAvailability('');
@@ -277,8 +281,9 @@ export default function BusinessApp() {
     setPage('programs');
   };
   const visiblePrograms = matches.map(m => ({ p: programsById.get(m.opportunity.id)!, m }))
-    .filter(({p, m}) => p && (filter === 'Все меры' || fundingKindLabels[p.kind] === filter) && (!onlySaved || saved.includes(p.id)) &&
+    .filter(({p, m}) => p && (!selectedKinds.length || selectedKinds.includes(p.kind)) && (!onlySaved || saved.includes(p.id)) &&
       (!profile || catalogScope !== 'personal' || personalIds.has(p.id)) &&
+      (profile && catalogScope === 'personal' || matchesCatalogRegion(p, selectedRegion)) &&
       (availability ? m.opportunity.status === availability : onlySaved || m.opportunity.status !== 'closed') &&
       `${p.title} ${p.description} ${fundingKindLabels[p.kind]}`.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => profile && catalogScope === 'personal' ? priorityRank(a.p.id) - priorityRank(b.p.id) : 0);
@@ -399,7 +404,7 @@ export default function BusinessApp() {
       setProjectOnboard(false); setAIProjectSeed(null);
       setSelected(null); setHomePanel(null);
       setMessages([]); setQuestion(''); setChatProgram(null); setChatFailure(null); setSending(false);
-      setCatalogScope('all'); setOnlySaved(false); setFilter('Все меры'); setQuery(''); setAvailability('');
+      setCatalogScope('all'); setOnlySaved(false); setSelectedKinds([]); setSelectedRegion(''); setQuery(''); setAvailability('');
       setDeleteBusinessOpen(false); setToast('Бизнес удалён. Черновики и сохранённые программы остались на устройстве.');
     } catch {
       setDeleteBusinessError('Не удалось сохранить удаление на устройстве. Бизнес не удалён. Попробуйте ещё раз.');
@@ -493,7 +498,7 @@ export default function BusinessApp() {
           />}
           {page === 'programs' && <CataloguePage profile={!!profile} need={need} saved={saved}
             catalogScope={catalogScope} setCatalogScope={setCatalogScope} onlySaved={onlySaved} setOnlySaved={setOnlySaved}
-            query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} availability={availability} setAvailability={setAvailability}
+            query={query} setQuery={setQuery} selectedKinds={selectedKinds} setSelectedKinds={setSelectedKinds} selectedRegion={selectedRegion} setSelectedRegion={setSelectedRegion} availability={availability} setAvailability={setAvailability}
             catalogToolsOpen={catalogToolsOpen} setCatalogToolsOpen={setCatalogToolsOpen} officialFundingCatalog={officialFundingCatalog}
             visiblePrograms={visiblePrograms} catalogLimit={catalogLimit} setCatalogLimit={setCatalogLimit} programCard={programCard}
             onTask={() => setHomePanel(profile ? 'funding' : 'business')} onEdit={openProfile} />}
@@ -574,9 +579,9 @@ export default function BusinessApp() {
         }}
       >
         <div className="modal-toolbar">
-          <button className="modal-close icon-button" aria-label="Закрыть" onClick={close}>
+          <IconButton className="modal-close icon-button" aria-label="Закрыть" onClick={close}>
             <Icon name="close" />
-          </button>
+          </IconButton>
           <span>{onboard ? 'Профиль бизнеса' : activeApp ? 'Подготовка заявки' : 'Мера поддержки'}</span>
           {selected && <button
             className={'save-program ' + (saved.includes(selected.id) ? 'is-saved' : '')}
@@ -585,7 +590,7 @@ export default function BusinessApp() {
             onClick={() => toggleSaved(selected.id)}
           ><Icon name="bookmark" /></button>}
         </div>
-        <div className="modal" tabIndex={selected && !onboard ? -1 : undefined}>
+        <div className="modal" tabIndex={-1}>
           {onboard && (
             <CompanyProfileForm form={form} editForm={editForm} step={step} setStep={setStep}
               companyLoading={companyLoading} savingCompany={savingCompany} autoFilledCompany={autoFilledCompany}
@@ -613,7 +618,7 @@ export default function BusinessApp() {
         {homePanel === 'funding' && profile && <>
           <FundingExperience key={companyProfile?.inn ?? 'project'} initialNeed={need} goals={profile.goals}
             onAsk={() => void ask('Помоги уточнить цель и параметры подбора.', null, 'intake')} onApply={nextNeed => {
-              setNeed(nextNeed); setHomePanel(null); setCatalogScope('personal'); setOnlySaved(false); setFilter('Все меры'); setQuery(''); setAvailability(''); setPage('programs');
+              setNeed(nextNeed); setHomePanel(null); setCatalogScope('personal'); setOnlySaved(false); setSelectedKinds([]); setSelectedRegion(''); setQuery(''); setAvailability(''); setPage('programs');
             }} />
         </>}
 

@@ -5,7 +5,7 @@ import { normalizeRegion, type FundingSource } from './source-registry';
 import type { FundingOpportunity, ApplicantType, FundingKind } from './types';
 
 export type ExtractOpportunity = (page: ProgrammePage, source: FundingSource) => Promise<unknown>;
-const kinds: Record<FundingKind, RegExp> = { grant: /грант/i, subsidy: /субсиди/i, preferential_loan: /кредит/i,
+const kinds: Record<Exclude<FundingKind, 'unknown'>, RegExp> = { grant: /грант/i, subsidy: /субсиди/i, preferential_loan: /кредит/i,
   commercial_loan: /кредит/i, loan: /займ|заём|займов/i, guarantee: /поручительств|гаранти/i, lease: /лизинг/i,
   tax: /налог/i, property: /имуществ|помещени/i, service: /услуг|консультац|обучени/i, investment: /инвестиц/i };
 const applicants: Record<ApplicantType, RegExp> = { legal_entity: /юридическ|организаци|предприяти|субъект.{0,40}предпринимательств|субъект.{0,10}МСП/i,
@@ -40,7 +40,7 @@ export function verifiedOpportunity(value: any, page: ProgrammePage, source: Fun
     return text;
   };
   const titleQuote = proof('title'), geography = proof('geography'), recipientQuote = proof('applicants');
-  if (!titleQuote.includes(value.title) || !kinds[value.kind as FundingKind].test(proof('kind'))) throw new Error('EXTRACTION_UNGROUNDED');
+  if (!titleQuote.includes(value.title) || !kinds[value.kind as Exclude<FundingKind, 'unknown'>].test(proof('kind'))) throw new Error('EXTRACTION_UNGROUNDED');
   const conditions = proof('conditions');
   if (!Array.isArray(value.applicantTypes) || !value.applicantTypes.length || value.applicantTypes.length > 5
     || value.applicantTypes.some((type: string) => !Object.hasOwn(applicants, type) || !applicants[type as ApplicantType].test(recipientQuote))) throw new Error('EXTRACTION_APPLICANTS');

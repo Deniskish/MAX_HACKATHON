@@ -36,7 +36,7 @@ export function ApplicationWorkspace({
   onDownload: (text: string, name: string) => void;
   submission: ReactNode;
 }) {
-  const [stage, setStage] = useState(() => {
+  const [storedStage, setStage] = useState(() => {
     try {
       const value = Number(
         sessionStorage.getItem(`opora.application-stage.${app.id}`),
@@ -47,13 +47,17 @@ export function ApplicationWorkspace({
     }
   });
   const state = applicationReadiness(app, opportunity);
+  const stage = storedStage === 3 && !state.canProceedToOperator ? 2 : storedStage;
+  const stageCount = state.canProceedToOperator ? 4 : 3;
+  const documentsWarning = 'Точный перечень документов не опубликован. Проверьте его на официальном сайте программы.';
   const complete = [
     state.project && state.budgetComplete,
-    state.documents,
-    state.ready,
+    state.documentsComplete,
+    state.readyForReview,
     false,
   ];
   function move(next: number) {
+    if (next === 3 && !state.canProceedToOperator) return;
     setStage(next);
     try {
       sessionStorage.setItem(`opora.application-stage.${app.id}`, String(next));
@@ -75,6 +79,7 @@ export function ApplicationWorkspace({
           <button
             key={label}
             role="tab"
+            disabled={index === 3 && !state.canProceedToOperator}
             id={`application-stage-${index}`}
             aria-selected={stage === index}
             aria-controls={`application-panel-${index}`}
@@ -84,9 +89,9 @@ export function ApplicationWorkspace({
             onKeyDown={(event) => {
               const next =
                 event.key === "ArrowRight"
-                  ? (index + 1) % 4
+                  ? (index + 1) % stageCount
                   : event.key === "ArrowLeft"
-                    ? (index + 3) % 4
+                    ? (index + stageCount - 1) % stageCount
                     : null;
               if (next !== null) {
                 event.preventDefault();
@@ -147,7 +152,7 @@ export function ApplicationWorkspace({
         <h3>Документы</h3>
         {!state.total && (
           <p>
-            Перечень нужно уточнить у оператора.{" "}
+            {documentsWarning}{" "}
             <a href={opportunity.source.url!} target="_blank" rel="noreferrer">
               Открыть условия ↗
             </a>
@@ -196,7 +201,7 @@ export function ApplicationWorkspace({
           </li>
           <li>
             {!state.total
-              ? "Уточните перечень документов у оператора"
+              ? documentsWarning
               : `${state.prepared} из ${state.total} документов отмечено`}
           </li>
         </ul>
@@ -221,7 +226,7 @@ export function ApplicationWorkspace({
         </label>
         <ActionButton
           className="primary"
-          disabled={!state.ready}
+          disabled={!state.canProceedToOperator}
           onClick={() => move(3)}
         >
           К подаче <Icon name="arrow" />
@@ -233,8 +238,11 @@ export function ApplicationWorkspace({
         aria-labelledby="application-stage-3"
         hidden={stage !== 3}
       >
-        {submission}
-        {!state.ready && (
+        {state.canProceedToOperator && <>
+          {!state.documentsKnown && <p role="note">{documentsWarning}</p>}
+          {submission}
+        </>}
+        {!state.canProceedToOperator && (
           <ActionButton className="primary" onClick={() => move(2)}>
             Завершить проверку
           </ActionButton>

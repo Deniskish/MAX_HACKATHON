@@ -1,3 +1,4 @@
+import { IconButton } from './MaxControls';
 import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
 
@@ -53,7 +54,7 @@ export function CatalogStatusFilter({ value, onChange, includeClosedByDefault = 
       onCancel={(event) => { event.preventDefault(); event.stopPropagation(); close(); }}
       onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
       <header className="catalog-status-heading"><h2 id={`${id}-title`}>Статус программы</h2>
-        <button type="button" className="catalog-status-close" aria-label="Закрыть" onClick={close}><Icon name="close" size={20} /></button>
+        <IconButton type="button" className="catalog-status-close" aria-label="Закрыть" onClick={close}><Icon name="close" size={20} /></IconButton>
       </header>
       <div className="catalog-status-options" role="listbox" aria-label="Статус программы" onKeyDown={(event) => {
         const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
