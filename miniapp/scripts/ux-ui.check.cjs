@@ -262,7 +262,7 @@ async function snapshot(page, name) {
                         : { configured: true, status: "ready" },
               });
             });
-            // Unknown checklist remains incomplete even with a historical confirmation.
+            // Unknown documents stay incomplete, but do not block the official operator handoff.
             await load(page, withoutDocs.id);
             assert.equal(await page.locator('.modal > h2').evaluate(e => getComputedStyle(e).textAlign), 'left');
             await disclosure(page, '.application-conditions', true);
@@ -277,18 +277,31 @@ async function snapshot(page, name) {
             await page.waitForFunction(() => !document.querySelector('.application-conditions.is-toggling'));
             assert.equal(await page.locator('.application-conditions').evaluate(e => e.open), false);
             await tab(page, "Проверка");
+            const documentsWarning =
+              "Точный перечень документов не опубликован. Проверьте его на официальном сайте программы.";
+            const reviewPanel = page.getByRole("tabpanel", { name: /Проверка/ });
             assert.equal(
-              await page
+              await reviewPanel
                 .getByRole("button", { name: "К подаче", exact: true })
-                .isDisabled(),
+                .isEnabled(),
               true,
             );
-            await page
-              .getByText("Уточните перечень документов у оператора", {
-                exact: true,
-              })
-              .waitFor();
+            await reviewPanel.getByText(documentsWarning, { exact: true }).waitFor();
+            assert.doesNotMatch(await reviewPanel.innerText(), /документы готовы|комплект готов|✓\s*Документ/i);
+            assert.equal(await page.getByRole("tab", { name: /Документы/ }).locator("svg").count(), 0);
+            assert.equal(await page.getByRole("tab", { name: /Проверка/ }).locator("svg").count(), 0);
             await snapshot(page, name + "-unknown-list");
+            await reviewPanel.getByRole("button", { name: "К подаче", exact: true }).click();
+            const submissionPanel = page.getByRole("tabpanel", { name: /Подача/ });
+            await submissionPanel.getByRole("heading", { name: "Подача оператору", exact: true }).waitFor();
+            await submissionPanel.getByText(documentsWarning, { exact: true }).waitFor();
+            const operatorLink = submissionPanel.getByRole("link", { name: "Перейти к оператору ↗", exact: true });
+            assert.equal(await operatorLink.isVisible(), true);
+            assert.equal(await operatorLink.getAttribute("href"), withoutDocs.source.url);
+            const submissionText = await submissionPanel.innerText();
+            assert.match(submissionText, /Финальная проверка документов,\s*полномочий и отправка выполняются на официальном сайте программы/);
+            assert.doesNotMatch(submissionText, /документы готовы|комплект готов|заявк[аиу]\s+(?:успешно\s+)?(?:отправлен|подан)|успешно подали|ЕСИА|Госуслуг/i);
+            await snapshot(page, name + "-unknown-list-submission");
             await close(page);
             await load(page, withDocs.id);
             await tab(page, "Проект");
@@ -300,8 +313,16 @@ async function snapshot(page, name) {
             const checks = page.locator(
               ".personal-checklist .checklist-title > input",
             );
-            for (let i = 0; i < (await checks.count()); i++)
+            assert.equal(await checks.count(), withDocs.requiredDocuments.length);
+            assert.ok(withDocs.requiredDocuments.length > 0);
+            // A published checklist still blocks handoff while even one document is unprepared.
+            for (let i = 0; i < withDocs.requiredDocuments.length - 1; i++)
               await checks.nth(i).check();
+            await tab(page, "Проверка");
+            await page.locator(".application-review input").check();
+            assert.equal(await page.getByRole("button", { name: "К подаче", exact: true }).isDisabled(), true);
+            await tab(page, "Документы");
+            await checks.last().check();
             await page.locator(".personal-checklist summary").first().click();
             const label = `Проверка текста документа: ${withDocs.requiredDocuments[0]}`,
               text = "Материалы: 100000 рублей. Оборудование: 50000 рублей.";
@@ -386,8 +407,12 @@ async function snapshot(page, name) {
             assert.equal(await page.getByText(/Заявка принята/).count(), 0);
             await snapshot(page, name + "-submission");
             await close(page);
-            // Rule-based results survive AI outage; filters and scroll survive navigation.
+            // Public catalogue survives AI outage even when personal eligibility is unconfirmed.
+            // Filters and scroll survive navigation.
             await nav(page, 1);
+            await page
+              .getByRole("button", { name: "Все меры", exact: true })
+              .click();
             assert.ok((await page.locator(".funding-card").count()) > 0);
             assert.ok(await page.locator('.funding-card > h3').evaluateAll(nodes => nodes.every(e =>
               getComputedStyle(e).textAlign === 'left' && e.scrollWidth <= e.clientWidth + 1)));
@@ -400,9 +425,6 @@ async function snapshot(page, name) {
             await page.getByRole('button', { name: /Показать программы ·/ }).click();
             await page.waitForFunction(() => !document.querySelector('.catalog-tools.is-toggling'));
             assert.equal(await page.locator('.catalog-tools').evaluate(e => e.open), false);
-            await page
-              .getByRole("button", { name: "Все меры", exact: true })
-              .click();
             await page
               .getByRole("textbox", { name: "Поиск мер поддержки" })
               .fill("ФРП");
