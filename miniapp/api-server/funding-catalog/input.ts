@@ -1,4 +1,6 @@
-import { fundingFields, fundingPurposes, type FundingNeed, type FundingProfile } from './types';
+import { fundingFields, type FundingNeed, type FundingProfile } from './types';
+
+import { normalizeFundingPurpose } from './purposes';
 
 export class FundingInputError extends Error {
   constructor(message = 'Проверьте профиль и потребность в финансировании.') { super(message); }
@@ -15,12 +17,12 @@ function optionalNumber(value: unknown, min: number, max: number): number | null
 }
 export function parseFundingNeed(input: unknown): FundingNeed {
   const value = fundingRecord(input);
-  if (typeof value.purpose !== 'string' || !fundingPurposes.some((p) => p === value.purpose))
-    throw new FundingInputError('Выберите цель финансирования. Остальные поля необязательны.');
+  const purpose = typeof value.purpose === 'string' ? normalizeFundingPurpose(value.purpose) : undefined;
+  if (!purpose) throw new FundingInputError('Выберите цель финансирования или «Все цели». Остальные поля необязательны.');
   if (value.needsCollateralSupport !== undefined && value.needsCollateralSupport !== null
     && typeof value.needsCollateralSupport !== 'boolean') throw new FundingInputError();
   return {
-    purpose: value.purpose, amount: optionalNumber(value.amount, 1, 1e15),
+    purpose, amount: optionalNumber(value.amount, 1, 1e15),
     ownFunds: optionalNumber(value.ownFunds, 0, 1e15),
     preferredTermMonths: optionalNumber(value.preferredTermMonths, 1, 600),
     needsCollateralSupport: value.needsCollateralSupport as boolean | null | undefined ?? null,

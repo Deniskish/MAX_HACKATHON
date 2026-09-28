@@ -8,6 +8,7 @@ import type {
 import { fundingKindLabels } from "../../api-server/funding-catalog/presentation";
 import { ActionButton, BusinessInput } from "./MaxControls";
 import { CatalogStatusFilter } from "./CatalogStatusFilter";
+import { fundingTaskLabel } from '../../api-server/funding-catalog/purposes';
 import { catalogRegions } from './catalog-filters';
 import { programmeCount } from "./display";
 import { Icon } from "./Icon";
@@ -132,8 +133,7 @@ export function CataloguePage({
         <span>
           <b>Моя задача</b>
           <span>
-            {need.purpose || "Выбрать цель и сумму"}
-            {need.amount ? ` · ${need.amount.toLocaleString("ru-RU")} ₽` : ""}
+            {fundingTaskLabel(need)}
           </span>
         </span>
         <Icon name="chevron" size={18} />
@@ -237,7 +237,7 @@ export function CataloguePage({
             {onlySaved && !saved.length
               ? "Нажмите на закладку в карточке, чтобы сохранить возможность."
               : profile && catalogScope === "personal"
-                ? "По текущим параметрам и фильтрам подходящих программ не найдено. Уточните цель или посмотрите все меры."
+                ? "Пока недостаточно подтверждённых данных для персонального списка либо есть ограничения по условиям. Уточните сведения или посмотрите все меры."
                 : "С выбранными фильтрами нет результатов. Попробуйте изменить категорию или запрос."}
           </p>
           {profile && catalogScope === "personal" && (

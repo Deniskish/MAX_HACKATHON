@@ -438,3 +438,8 @@ dialog > .modal:focus,
     transition: none;
   }
 }
+
+/* Optional funding refinements reuse the shared framed, reduced-motion disclosure. */
+.opora-theme .funding-refinements { margin: 16px 0; }
+.opora-theme .funding-refinements .form-grid { margin: 0; }
+.opora-theme .funding-experience :is(select, .opora-input-body) { min-height: 44px; }

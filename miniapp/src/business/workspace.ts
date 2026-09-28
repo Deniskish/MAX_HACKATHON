@@ -1,5 +1,6 @@
 import { emptyProfile, type Profile, type Application } from './domain';
 import type { FundingNeed, FundingOpportunity, FundingMatch, ProjectProfile } from '../../api-server/funding-catalog/types';
+import { isAllFundingPurposes, normalizeFundingPurpose } from '../../api-server/funding-catalog/purposes';
 import { emptyFundingNeed } from '../../api-server/funding-catalog/types';
 import { restoreFundingNeed } from './funding';
 import { parseFundingProfile } from '../../api-server/funding-catalog/input';
@@ -55,7 +56,7 @@ export function loadWorkspace(storage: Pick<Storage, 'getItem'>, ids: string[]):
   if (project?.hasLegalEntity === false && typeof project.name === 'string' && typeof project.region === 'string'
     && typeof project.industry === 'string' && ['idea', 'prototype', 'mvp', 'revenue'].includes(project.stage)) result.projectProfile = {
       name: project.name, region: project.region, industry: project.industry, stage: project.stage, hasLegalEntity: false,
-      teamSize: nullableNumber(project.teamSize), fundingNeed: nullableNumber(project.fundingNeed), fundingPurpose: typeof project.fundingPurpose === 'string' ? project.fundingPurpose : '',
+      teamSize: nullableNumber(project.teamSize), fundingNeed: nullableNumber(project.fundingNeed), fundingPurpose: typeof project.fundingPurpose === 'string' ? normalizeFundingPurpose(project.fundingPurpose) ?? project.fundingPurpose : emptyFundingNeed.purpose,
     };
   result.fundingNeed = restoreFundingNeed(JSON.stringify(raw.fundingNeed));
   if (Array.isArray(raw.saved)) result.saved = [...new Set(raw.saved.filter(known))] as string[];
@@ -96,7 +97,7 @@ export function removeBusiness(storage: Pick<Storage, 'getItem' | 'setItem' | 'r
   return next;
 }
 export function projectAsProfile(project: ProjectProfile): Profile {
-  return { ...emptyProfile, name: project.name, region: project.region, applicantType: 'project', goals: project.fundingPurpose ? [project.fundingPurpose] : [] };
+  return { ...emptyProfile, name: project.name, region: project.region, applicantType: 'project', goals: project.fundingPurpose && !isAllFundingPurposes(project.fundingPurpose) ? [project.fundingPurpose] : [] };
 }
 export function applicationStatus(app: Application, opportunity: FundingOpportunity) {
   if (applicationReadiness(app, opportunity).ready) return 'ready_for_review';
@@ -106,8 +107,9 @@ export const applicationLabels = { draft: 'Черновик', collecting_documen
 // Не смешиваем подтверждённое соответствие с вариантами, для которых не хватает данных.
 export function personalFunding(matches: FundingMatch[], hasProfile: boolean) {
   if (!hasProfile) return { candidates: [], confirmed: [], pending: [] };
-  const candidates = matches.filter((m) => m.personalEligibility?.confirmed === true && ['eligible', 'almost_eligible', 'need_more_data'].includes(m.status));
-  return { candidates, confirmed: candidates.filter((m) => m.status === 'eligible'), pending: candidates.filter((m) => m.status !== 'eligible') };
+  const candidates = matches.filter((m) => (m.personalEligibility?.candidate ?? m.personalEligibility?.confirmed) === true && ['eligible', 'almost_eligible', 'need_more_data'].includes(m.status));
+  const confirmed = candidates.filter(m => m.status === 'eligible' && m.personalEligibility?.confirmed === true);
+  return { candidates, confirmed, pending: candidates.filter(m => !confirmed.includes(m)) };
 }
 export function trackedFunding(catalog: FundingOpportunity[], saved: string[], apps: Application[]) {
   const ids = new Set([...saved, ...apps.map((a) => a.programId)]);

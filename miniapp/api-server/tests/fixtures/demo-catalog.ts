@@ -1,4 +1,5 @@
-import { fundingPurposes, type FundingOpportunity, type FundingRequirement } from '../../funding-catalog/types';
+import { legacyFundingPurposes as fundingPurposes } from '../../funding-catalog/purposes';
+import type { FundingOpportunity, FundingRequirement } from '../../funding-catalog/types';
 
 const req = (field: FundingRequirement['field'], operator: FundingRequirement['operator'],
   value: FundingRequirement['value'], label: string): FundingRequirement =>

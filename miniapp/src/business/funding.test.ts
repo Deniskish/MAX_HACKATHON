@@ -4,13 +4,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FundingOpportunityCard, FundingResults } from './FundingExperience';
+import { FundingExperience, FundingOpportunityCard, FundingResults } from './FundingExperience';
 import { fundingFingerprint, requestFunding, restoreFundingNeed } from './funding';
+import { normalizeFundingPurpose, fundingTaskLabel, fundingPurposes } from '../../api-server/funding-catalog/purposes';
 import { emptyFundingNeed } from '../../api-server/funding-catalog/types';
 import { FundingCatalogService } from '../../api-server/funding-catalog/service';
 
 const service = new FundingCatalogService(() => new Date('2026-09-22T12:00:00Z'), { getCatalog: () => structuredClone(demoFundingCatalog) });
-const need = { ...emptyFundingNeed, purpose: 'покупка оборудования', amount: 10000000,
+const need = { ...emptyFundingNeed, purpose: 'Оборудование и модернизация', amount: 10000000,
   preferredTermMonths: 60, needsCollateralSupport: true };
 const result = service.match({ profile: demoProfile, need });
 
@@ -56,7 +57,7 @@ test('saved need survives reload; corrupted or invalid saved data defaults safel
   assert.deepEqual(restoreFundingNeed(JSON.stringify(need)), need);
   for (const saved of [null, '{broken', '[]', '{}', '{"purpose":"SECRET"}', '{"purpose":"покупка оборудования","amount":-1}'])
     assert.deepEqual(restoreFundingNeed(saved), emptyFundingNeed);
-  assert.deepEqual(restoreFundingNeed('{"purpose":"экспорт"}'), { ...emptyFundingNeed, purpose: 'экспорт' });
+  assert.deepEqual(restoreFundingNeed('{"purpose":"экспорт"}'), { ...emptyFundingNeed, purpose: 'Продажи, продвижение и экспорт' });
 });
 test('list cards show essential facts, while conditions are reserved for the detail screen', () => {
   const match = result.matches.find((m) => m.opportunity.id === 'demo-sme-loan')!;
@@ -76,4 +77,21 @@ test('rendered guarantee and strategy do not represent support limits as cash or
   assert.doesNotMatch(strategy, /совместимость подтверждена|финансирование гарантировано/i);
   assert.match(strategy, /Сопутствующая поддержка/);
   assert.match(strategy, /Учебные данные/);
+});
+
+test('funding form defaults to all purposes and keeps optional refinements in a closed disclosure', () => {
+  const html = renderToStaticMarkup(createElement(FundingExperience, { onApply() {} }));
+  assert.match(html, /<option value="Все цели" selected="">Все цели<\/option>/);
+  assert.match(html, /<details class="info-disclosure funding-refinements">/);
+  assert.doesNotMatch(html, /<details[^>]*\bopen/);
+  for (const label of ['Уточняющие параметры', 'Желаемый срок, месяцев', 'Собственные средства, ₽', 'Нужна помощь с обеспечением / залогом?'])
+    assert.ok(html.includes(label));
+  assert.equal(fundingPurposes.length, 8);
+  assert.equal(fundingTaskLabel(emptyFundingNeed), 'Все цели · сумма не указана');
+  assert.equal(fundingTaskLabel({ ...emptyFundingNeed, amount: 5000000 }).replace(/\u00a0/g, ' '), 'Все цели · 5 000 000 ₽');
+  assert.equal(fundingTaskLabel({ ...emptyFundingNeed, purpose: 'сельхозтехника' }), 'Оборудование и модернизация · сумма не указана');
+});
+test('legacy saved purpose migrates without losing optional financing values', () => {
+  const old = { ...emptyFundingNeed, purpose: 'сельхозтехника', amount: null, ownFunds: 0, preferredTermMonths: 36, needsCollateralSupport: false };
+  assert.deepEqual(restoreFundingNeed(JSON.stringify(old)), { ...old, purpose: normalizeFundingPurpose(old.purpose) });
 });

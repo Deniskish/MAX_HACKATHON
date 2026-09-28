@@ -32,7 +32,7 @@ const workspace = {
     },
     projectProfile: null,
     fundingNeed: {
-      purpose: "покупка оборудования",
+      purpose: "", // Legacy unset purpose must open as «Все цели».
       amount: null,
       ownFunds: null,
       preferredTermMonths: null,
@@ -485,9 +485,57 @@ async function snapshot(page, name) {
             await close(page);
             assert.match(
               await page.locator(".catalog-task").innerText(),
-              /покупка оборудования/,
+              /Все цели · сумма не указана/,
             );
             await page.locator(".catalog-task").click();
+            const purposeField = page.getByLabel("Цель", { exact: true });
+            const amountField = page.getByRole('spinbutton', { name: 'Требуемое финансирование, ₽', exact: true });
+            const termField = page.getByRole('spinbutton', { name: 'Желаемый срок, месяцев', exact: true });
+            const ownFundsField = page.getByRole('spinbutton', { name: 'Собственные средства, ₽', exact: true });
+            const collateralField = page.getByLabel('Нужна помощь с обеспечением / залогом?', { exact: true });
+            assert.equal(await purposeField.inputValue(), 'Все цели');
+            assert.equal(await page.locator('.funding-refinements').evaluate(e => e.open), false);
+            assert.equal(await termField.isVisible(), false);
+            assert.ok(await page.locator('.funding-refinements > summary').evaluate(e => e.getBoundingClientRect().height >= 44));
+            await amountField.fill('5000000');
+            await disclosure(page, '.funding-refinements', true);
+            await termField.fill('36');
+            await ownFundsField.fill('1000000');
+            await collateralField.selectOption('true');
+            assert.ok(await page.locator('.funding-refinements .opora-input-body, .funding-refinements select').evaluateAll(nodes =>
+              nodes.every(e => e.getBoundingClientRect().height >= 44)));
+            await snapshot(page, name + '-funding-refinements');
+            await disclosure(page, '.funding-refinements', false);
+            await page.emulateMedia({ reducedMotion: 'reduce' });
+            await disclosure(page, '.funding-refinements', true);
+            assert.equal(await termField.inputValue(), '36');
+            await disclosure(page, '.funding-refinements', false);
+            await page.emulateMedia({ reducedMotion: 'no-preference' });
+            await page.getByRole('button', { name: 'Найти варианты', exact: true }).click();
+            await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+            assert.match((await page.locator('.catalog-task').innerText()).replace(/\u00a0/g, ' '), /Все цели · 5 000 000 ₽/);
+            assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('opora.workspace')).data.profile.goals), []);
+            await load(page);
+            await nav(page, 1);
+            await page.locator('.catalog-task').click();
+            assert.equal(await purposeField.inputValue(), 'Все цели');
+            assert.equal(await amountField.inputValue(), '5000000');
+            assert.equal(await page.locator('.funding-refinements').evaluate(e => e.open), false);
+            await disclosure(page, '.funding-refinements', true);
+            assert.equal(await termField.inputValue(), '36');
+            assert.equal(await ownFundsField.inputValue(), '1000000');
+            assert.equal(await collateralField.inputValue(), 'true');
+            await amountField.fill('');
+            await purposeField.selectOption('Оборудование и модернизация');
+            await page.getByRole('button', { name: 'Найти варианты', exact: true }).click();
+            await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+            assert.match(await page.locator('.catalog-task').innerText(), /Оборудование и модернизация · сумма не указана/);
+            await page.getByRole('button', { name: 'Все меры', exact: true }).click();
+            const equipmentTitles = catalog.filter(o => o.status !== 'closed' && o.purposes.some(p =>
+              ['покупка оборудования', 'сельхозтехника'].includes(p))).map(o => o.title).sort();
+            assert.deepEqual((await page.locator('.funding-card > h3').allTextContents()).sort(), equipmentTitles);
+            await page.locator('.catalog-task').click();
+            await purposeField.selectOption('Все цели');
             await page
               .getByRole("button", { name: "Найти варианты", exact: true })
               .click();

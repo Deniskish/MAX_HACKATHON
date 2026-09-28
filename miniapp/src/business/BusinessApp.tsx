@@ -6,6 +6,7 @@ import { BusinessInformation } from './BusinessInformation';
 import { CalendarPage } from './CalendarPage';
 import { ApplicationsPage } from './ApplicationsPage';
 import { CompanyProfileForm } from './CompanyProfileForm';
+import { isAllFundingPurposes } from '../../api-server/funding-catalog/purposes';
 import { matchesCatalogRegion } from './catalog-filters';
 import type { FundingKind, FundingOpportunity } from '../../api-server/funding-catalog/types';
 import { AssistantPage } from './AssistantPage';
@@ -283,6 +284,7 @@ export default function BusinessApp() {
   const visiblePrograms = matches.map(m => ({ p: programsById.get(m.opportunity.id)!, m }))
     .filter(({p, m}) => p && (!selectedKinds.length || selectedKinds.includes(p.kind)) && (!onlySaved || saved.includes(p.id)) &&
       (!profile || catalogScope !== 'personal' || personalIds.has(p.id)) &&
+      (isAllFundingPurposes(need.purpose) || m.purposeFit) &&
       (profile && catalogScope === 'personal' || matchesCatalogRegion(p, selectedRegion)) &&
       (availability ? m.opportunity.status === availability : onlySaved || m.opportunity.status !== 'closed') &&
       `${p.title} ${p.description} ${fundingKindLabels[p.kind]}`.toLowerCase().includes(query.toLowerCase()))
@@ -616,8 +618,8 @@ export default function BusinessApp() {
           <ActionButton className="secondary" onClick={() => { setHomePanel(null); setProjectOnboard(true); }}>У меня пока нет компании</ActionButton>
         </div>}
         {homePanel === 'funding' && profile && <>
-          <FundingExperience key={companyProfile?.inn ?? 'project'} initialNeed={need} goals={profile.goals}
-            onAsk={() => void ask('Помоги уточнить цель и параметры подбора.', null, 'intake')} onApply={nextNeed => {
+          <FundingExperience key={companyProfile?.inn ?? 'project'} initialNeed={need}
+            onApply={nextNeed => {
               setNeed(nextNeed); setHomePanel(null); setCatalogScope('personal'); setOnlySaved(false); setSelectedKinds([]); setSelectedRegion(''); setQuery(''); setAvailability(''); setPage('programs');
             }} />
         </>}

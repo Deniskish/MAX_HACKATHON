@@ -1,8 +1,10 @@
 import type { FundingMatch, FundingNeed, FundingOpportunity, FundingProfile,
   FundingRequirement, FundingStatus, RequirementCheck } from './types';
-import { fundingStatusLabels, hasTerm, isLoan, isSupporting, lenderNotice } from './presentation';
+import { fundingStatusLabels, isLoan, isSupporting, lenderNotice } from './presentation';
+import { fundingPurposeFit } from './purposes';
 import { normalizeRegion } from './source-registry';
 
+const hasRepaymentTerm = (kind: FundingOpportunity['kind']) => isLoan(kind) || kind === 'lease';
 const unknown = (value: unknown) => value === undefined || value === null || value === ''
   || value === 'unknown' || (Array.isArray(value) && value.length === 0)
   || (typeof value === 'number' && (!Number.isFinite(value) || value < 0));
@@ -64,7 +66,7 @@ export function fundingAmountFit(need: FundingNeed, o: FundingOpportunity): Fund
 }
 function fundingTermFit(need: FundingNeed, o: FundingOpportunity): FundingMatch['termFit'] {
   const term = need.preferredTermMonths;
-  if (!hasTerm(o.kind) || term === null || !Number.isFinite(term) || term <= 0) return 'unknown';
+  if (!hasRepaymentTerm(o.kind) || term === null || !Number.isFinite(term) || term <= 0) return 'unknown';
   if (o.termMonthsMin !== null && term < o.termMonthsMin) return 'no';
   if (o.termMonthsMax === null) return 'unknown';
   return term > o.termMonthsMax ? 'partial' : 'yes';
@@ -97,8 +99,7 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
   if (opportunity.imported && !opportunity.sectors.length && !opportunity.okvedPrefixes.length
     && !coreChecks.some(r => r.field === 'industry' || r.field === 'okved'))
     addUnknownCore('industry', 'Отраслевые условия ещё не проверены');
-  if (!opportunity.purposes.length || !need.purpose)
-    addUnknownCore('goals', 'Цель поддержки или потребность не подтверждена');
+
   if (profile.companyStatus && profile.companyStatus !== 'active') checks.push({ field: 'companyStatus', operator: 'eq', value: 'active', required: true, label: 'Действующий статус регистрации', status: 'missing' });
   for (const label of opportunity.manualConditions ?? []) {
     checks.push({ field: 'industry', operator: 'eq', value: '', required: true, label, status: 'unknown' });
@@ -119,7 +120,9 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
   const fulfilledRequirements = checks.filter((r) => r.status === 'fulfilled');
   const missingRequirements = checks.filter((r) => r.status === 'missing');
   const unknownRequirements = checks.filter((r) => r.status === 'unknown');
-  const purposeFit = opportunity.purposes.includes(need.purpose);
+  const purposeAssessment = fundingPurposeFit(need.purpose, opportunity.purposes);
+  const purposeFit = purposeAssessment === 'match';
+  const allPurposes = purposeAssessment === 'unrestricted';
   const amountFit = fundingAmountFit(need, opportunity);
   const termFit = fundingTermFit(need, opportunity);
   const missingDocuments = opportunity.requiredDocuments.filter((d) => !options.preparedDocuments?.includes(d));
@@ -127,32 +130,34 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
     && new Date(`${opportunity.deadline}T23:59:59+03:00`).getTime() < (options.now ?? new Date()).getTime();
   const status: FundingStatus = expired ? 'expired'
     : opportunity.status === 'upcoming' ? 'upcoming'
-    : missingRequirements.some((r) => r.required) || (!!need.purpose && opportunity.purposes.length > 0 && !purposeFit) || amountFit === 'no' || termFit === 'no'
+    : missingRequirements.some((r) => r.required) || purposeAssessment === 'mismatch' || amountFit === 'no' || termFit === 'no'
       ? 'not_eligible'
-      : opportunity.status === 'unknown' || unknownRequirements.some((r) => r.required) || !need.purpose
+      : opportunity.status === 'unknown' || unknownRequirements.some((r) => r.required) || !purposeFit
         || (need.amount !== null && !isSupporting(opportunity.kind) && amountFit === 'unknown')
-        || (need.preferredTermMonths !== null && hasTerm(opportunity.kind) && termFit === 'unknown')
+        || (need.preferredTermMonths !== null && hasRepaymentTerm(opportunity.kind) && termFit === 'unknown')
         ? 'need_more_data'
         : amountFit === 'partial' || termFit === 'partial' || missingRequirements.length
           ? 'almost_eligible' : 'eligible';
   const points: number[] = checks.map((c) => c.status === 'fulfilled' ? 1 : 0);
-  points.push(purposeFit ? 1 : 0);
+  if (!allPurposes) points.push(purposeFit ? 1 : 0);
   if (need.amount !== null && !isSupporting(opportunity.kind)) points.push(amountFit === 'full' ? 1 : amountFit === 'partial' ? 0.5 : 0);
-  if (need.preferredTermMonths !== null && hasTerm(opportunity.kind)) points.push(termFit === 'yes' ? 1 : termFit === 'partial' ? 0.5 : 0);
-  const score = Math.round(points.reduce((sum, p) => sum + p, 0) / points.length * 100);
+  if (need.preferredTermMonths !== null && hasRepaymentTerm(opportunity.kind)) points.push(termFit === 'yes' ? 1 : termFit === 'partial' ? 0.5 : 0);
+  const score = Math.round(points.reduce((sum, p) => sum + p, 0) / Math.max(1, points.length) * 100);
   const explanations = [fundingStatusLabels[status] + '.'];
   if (purposeFit) explanations.push('Цель соответствует назначению инструмента.');
   if (fulfilledRequirements.length) explanations.push(`Выполнено: ${fulfilledRequirements.map((r) => r.label).join('; ')}.`);
   if (missingRequirements.length) explanations.push(`Не выполнено: ${missingRequirements.map((r) => r.label).join('; ')}.`);
   if (unknownRequirements.length) explanations.push(`Неизвестно: ${unknownRequirements.map((r) => r.label).join('; ')}.`);
-  if (!purposeFit) explanations.push('Цель не соответствует назначению или не указана.');
+  if (!purposeFit) explanations.push(allPurposes
+    ? 'Все цели: ограничение по назначению отключено; соответствие конкретной цели не подтверждено.'
+    : purposeAssessment === 'mismatch' ? 'Цель не соответствует назначению инструмента.' : 'Назначение программы требует уточнения.');
   if (amountFit === 'partial') explanations.push('Лимит покрывает только часть запрошенной суммы.');
   if (amountFit === 'full') explanations.push('Запрошенная сумма находится в пределах опубликованного лимита.');
   if (amountFit === 'no') explanations.push('Запрошенная сумма меньше минимальной суммы инструмента.');
   if (amountFit === 'unknown' && !isSupporting(opportunity.kind)) explanations.push('Полнота покрытия суммы не определена.');
   if (termFit === 'partial') explanations.push('Доступный срок короче желаемого.');
   if (termFit === 'no') explanations.push('Желаемый срок меньше минимального.');
-  if (termFit === 'unknown' && hasTerm(opportunity.kind)) explanations.push('Соответствие срока не определено.');
+  if (termFit === 'unknown' && hasRepaymentTerm(opportunity.kind)) explanations.push('Соответствие срока не определено.');
   if (missingDocuments.length) explanations.push('Документы ещё не отмечены подготовленными.');
   if (isLoan(opportunity.kind)) explanations.push(lenderNotice);
   if (opportunity.kind === 'guarantee') explanations.push('Поручительство обеспечивает обязательства и не является выдачей денег.');
@@ -162,18 +167,21 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
     ...missingRequirements.map((r) => `Проверить несоответствие: ${r.label}`),
     ...missingDocuments.map((d) => `Подготовить: ${d}`),
   ];
-  if (!purposeFit) nextActions.push('Уточнить цель или выбрать другой инструмент.');
+  if (!purposeFit) nextActions.push(allPurposes ? 'Уточнить назначение программы и расходы проекта у оператора.' : 'Уточнить цель или выбрать другой инструмент.');
   if (amountFit === 'partial') nextActions.push('Уточнить источник покрытия оставшейся потребности и совместимость инструментов.');
   if (amountFit === 'no') nextActions.push('Рассмотреть инструмент с меньшей минимальной суммой.');
   if (amountFit === 'unknown' && !isSupporting(opportunity.kind)) nextActions.push('Уточнить требуемую сумму или лимиты инструмента.');
-  if (hasTerm(opportunity.kind) && termFit !== 'yes') nextActions.push('Уточнить приемлемый срок финансирования.');
+  if (hasRepaymentTerm(opportunity.kind) && termFit !== 'yes') nextActions.push('Уточнить приемлемый срок финансирования.');
   if (opportunity.kind === 'guarantee') nextActions.push('Проверить требования кредитора к поручительству.');
   if (expired) nextActions.unshift('Приём завершён; проверить новую версию программы.');
   if (!nextActions.length) nextActions.push('Проверить актуальные условия и порядок рассмотрения.');
   if (personalReasons.length && status === 'need_more_data') explanations.push('Недостаточно подтверждённых данных для персональной рекомендации.');
   return { opportunity, status, score,
-    personalEligibility: { confirmed: personalReasons.length === 0 && purposeFit
-      && !['not_eligible', 'expired', 'upcoming'].includes(status), reasons: personalReasons },
+    personalEligibility: {
+      confirmed: personalReasons.length === 0 && purposeFit && !['not_eligible', 'expired', 'upcoming'].includes(status),
+      candidate: personalReasons.length === 0 && (purposeFit || allPurposes) && !['not_eligible', 'expired', 'upcoming'].includes(status),
+      reasons: [...personalReasons, ...(!purposeFit ? ['Соответствие конкретной цели не подтверждено'] : [])],
+    },
     relevance: score + (opportunity.kind === 'guarantee' && need.needsCollateralSupport === true ? 20 : 0),
     fulfilledRequirements, missingRequirements, unknownRequirements, missingDocuments,
     purposeFit, amountFit, termFit, explanation: explanations.join(' '), nextActions };

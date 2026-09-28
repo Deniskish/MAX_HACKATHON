@@ -1,4 +1,5 @@
 import type { FundingMatch, FundingNeed, FundingProfile, FundingStrategy } from './types';
+import { normalizeFundingPurpose, allFundingPurposes } from './purposes';
 import { rankFundingMatches } from './matching';
 import { amountLabel, compatibilityNotice, fundingKindLabels, fundingStatusLabels,
   isSupporting, rateLabel, termLabel } from './presentation';
@@ -6,14 +7,14 @@ import { amountLabel, compatibilityNotice, fundingKindLabels, fundingStatusLabel
 export function buildFundingStrategy(_profile: FundingProfile, need: FundingNeed,
   matches: FundingMatch[]): FundingStrategy {
   const candidates = rankFundingMatches(matches)
-    .filter((m) => m.purposeFit && m.status !== 'not_eligible' && m.status !== 'expired' && m.status !== 'upcoming' && m.opportunity.status !== 'unknown');
+    .filter((m) => (m.personalEligibility?.candidate ?? m.personalEligibility?.confirmed) && m.status !== 'not_eligible' && m.status !== 'expired' && m.status !== 'upcoming' && m.opportunity.status !== 'unknown');
   const financing = candidates.filter((m) => !isSupporting(m.opportunity.kind)).slice(0, 4);
   const support = candidates.filter((m) => isSupporting(m.opportunity.kind))
     .sort((a, b) => Number(need.needsCollateralSupport === true && b.opportunity.kind === 'guarantee')
       - Number(need.needsCollateralSupport === true && a.opportunity.kind === 'guarantee')).slice(0, 3);
   const selected = [...financing, ...support];
   return {
-    summary: `Потребность: ${need.purpose}${need.amount !== null ? ` — ${need.amount.toLocaleString('ru-RU')} ₽` : '; сумма не указана'}${need.preferredTermMonths !== null ? `, желаемый срок ${need.preferredTermMonths} мес.` : ''}.`,
+    summary: `Потребность: ${normalizeFundingPurpose(need.purpose) ?? allFundingPurposes}${need.amount !== null ? ` — ${need.amount.toLocaleString('ru-RU')} ₽` : '; сумма не указана'}${need.preferredTermMonths !== null ? `, желаемый срок ${need.preferredTermMonths} мес.` : ''}.`,
     options: selected.map((m) => ({ opportunityId: m.opportunity.id,
       role: isSupporting(m.opportunity.kind) ? 'support' : 'financing',
       text: [fundingKindLabels[m.opportunity.kind], m.opportunity.title, amountLabel(m.opportunity),

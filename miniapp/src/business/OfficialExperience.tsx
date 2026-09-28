@@ -1,3 +1,4 @@
+import { normalizeFundingPurpose, allFundingPurposes } from '../../api-server/funding-catalog/purposes';
 import { displayDate } from './display';
 import React, { type FormEvent } from 'react';
 import type { FundingMatch, ProjectProfile } from '../../api-server/funding-catalog/types';
@@ -24,7 +25,7 @@ export function OfficialDetails({ match, onAsk, personalized = true }: { match: 
   </section>;
 }
 export function ProjectOnboarding({ initial, onSave, onCancel, onRemove }: { initial: ProjectProfile | null; onSave: (project: ProjectProfile) => void; onCancel: () => void; onRemove?: () => void }) {
-  const [form, setForm] = React.useState<ProjectProfile>(initial ?? { name: '', region: '', industry: '', stage: 'idea', teamSize: null, fundingNeed: null, fundingPurpose: '', hasLegalEntity: false });
+  const [form, setForm] = React.useState<ProjectProfile>(() => initial ? { ...initial, fundingPurpose: normalizeFundingPurpose(initial.fundingPurpose) ?? allFundingPurposes } : { name: '', region: '', industry: '', stage: 'idea', teamSize: null, fundingNeed: null, fundingPurpose: allFundingPurposes, hasLegalEntity: false });
   const [error, setError] = React.useState('');
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -40,7 +41,7 @@ export function ProjectOnboarding({ initial, onSave, onCancel, onRemove }: { ini
       {(['name', 'region', 'industry'] as const).map((key) => <label className="field" key={key}>{{ name: 'Название проекта', region: 'Регион', industry: 'Отрасль / направление' }[key]}<BusinessInput required maxLength={120} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} /></label>)}
       <label className="field">Стадия<select value={form.stage} onChange={(e) => setForm({ ...form, stage: e.target.value as ProjectProfile['stage'] })}><option value="idea">Идея</option><option value="prototype">Прототип</option><option value="mvp">MVP</option><option value="revenue">Есть выручка проекта</option></select></label>
       <label className="field">Команда, человек<BusinessInput type="number" min="1" max="10000" step="1" value={form.teamSize ?? ''} onChange={(e) => setForm({ ...form, teamSize: e.target.value ? Number(e.target.value) : null })} /></label>
-      <label className="field">Цель<select value={form.fundingPurpose} onChange={(e) => setForm({ ...form, fundingPurpose: e.target.value })}><option value="">Укажу позже</option>{fundingPurposes.map((p) => <option key={p}>{p}</option>)}</select></label>
+      <label className="field">Цель<select value={form.fundingPurpose} onChange={(e) => setForm({ ...form, fundingPurpose: e.target.value })}>{fundingPurposes.map((p) => <option key={p}>{p}</option>)}</select></label>
       <label className="field">Сумма финансирования, ₽<BusinessInput type="number" min="1" step="1" value={form.fundingNeed ?? ''} onChange={(e) => setForm({ ...form, fundingNeed: e.target.value ? Number(e.target.value) : null })} /></label>
     </div>{error && <p className="muted">Заполните название, регион и направление проекта.</p>}<div className="modal-actions"><ActionButton type="button" className="secondary" onClick={onCancel}>Отмена</ActionButton><ActionButton className="primary" type="submit">Сохранить проект</ActionButton></div></form>
     {onRemove && <div className="business-removal">

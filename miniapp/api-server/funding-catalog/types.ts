@@ -1,3 +1,5 @@
+import { allFundingPurposes } from './purposes';
+export { fundingPurposes } from './purposes';
 import type { Profile } from '../business-model';
 
 export type FundingKind = 'grant' | 'subsidy' | 'preferential_loan' | 'commercial_loan' | 'loan'
@@ -54,9 +56,6 @@ export type FundingOpportunity = {
     checkedAt?: string; factsVersion?: 1; kindEvidence?: { kind: FundingKind; quote: string; field: string }; ongoing?: boolean; verification?: 'verified' | 'pending'; evidence?: Record<string, string>;
     detail?: { text: string; complete: boolean; version: string; checkedAt: string; startsAt: string; endsAt: string; accepting: boolean; geography: string[]; kindEvidence?: { kind: FundingKind; quote: string; field: string } } };
 };
-export const fundingPurposes = ['покупка оборудования', 'оборотные средства', 'разработка продукта',
-  'найм сотрудников', 'экспорт', 'аренда / недвижимость', 'сельхозтехника',
-  'запуск производства', 'масштабирование'] as const;
 export type FundingNeed = {
   purpose: string;
   amount: number | null;
@@ -65,7 +64,7 @@ export type FundingNeed = {
   needsCollateralSupport: boolean | null;
 };
 export const emptyFundingNeed: FundingNeed = {
-  purpose: '', amount: null, ownFunds: null, preferredTermMonths: null, needsCollateralSupport: null,
+  purpose: allFundingPurposes, amount: null, ownFunds: null, preferredTermMonths: null, needsCollateralSupport: null,
 };
 export type RequirementCheck = FundingRequirement & { status: 'fulfilled' | 'missing' | 'unknown' };
 export type FundingStatus = 'eligible' | 'almost_eligible' | 'need_more_data' | 'not_eligible' | 'expired' | 'upcoming';
@@ -73,7 +72,7 @@ export type FundingMatch = {
   opportunity: FundingOpportunity;
   status: FundingStatus;
   /** Core eligibility is separate from missing secondary preparation data. */
-  personalEligibility?: { confirmed: boolean; reasons: string[] };
+  personalEligibility?: { confirmed: boolean; candidate?: boolean; reasons: string[] };
   score: number;
   // Приоритет отдельно от score: обеспечение не улучшает соответствие требованиям.
   relevance: number;

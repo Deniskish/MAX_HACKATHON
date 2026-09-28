@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { loadWorkspace, saveWorkspace, removeBusiness, businessAddedNotice, type Workspace, applicationStatus, filterFunding, calendarICS, fundingEvents, projectAsProfile, personalFunding, trackedFunding } from './workspace';
 import { officialFundingCatalog } from '../../api-server/funding-catalog/official-catalog';
 import { matchFundingOpportunity } from '../../api-server/funding-catalog/matching';
+import { normalizeFundingPurpose, programmePurposeCategories } from '../../api-server/funding-catalog/purposes';
 import { emptyFundingNeed, type FundingOpportunity, type FundingProfile } from '../../api-server/funding-catalog/types';
 import { OfficialDetails, ProjectOnboarding } from './OfficialExperience';
 import { inspectDocumentText, emptyProfile, type Application } from './domain';
@@ -36,19 +37,19 @@ test('personal selection hides ineligible and closed measures and never counts u
   });
   await t.test('eligible with confirmed core criteria enters candidates and confirmed', () => {
     assert.equal(eligible.status, 'eligible');
-    assert.deepEqual(eligible.personalEligibility, { confirmed: true, reasons: [] });
+    assert.deepEqual(eligible.personalEligibility, { confirmed: true, candidate: true, reasons: [] });
     assert.deepEqual(personalFunding([eligible], true), { candidates: [eligible], confirmed: [eligible], pending: [] });
   });
   await t.test('partial amount coverage enters candidates and pending, not confirmed', () => {
     assert.equal(almost.status, 'almost_eligible');
     assert.equal(almost.amountFit, 'partial');
-    assert.deepEqual(almost.personalEligibility, { confirmed: true, reasons: [] });
+    assert.deepEqual(almost.personalEligibility, { confirmed: true, candidate: true, reasons: [] });
     assert.deepEqual(personalFunding([almost], true), { candidates: [almost], confirmed: [], pending: [almost] });
   });
   await t.test('unknown secondary data keeps confirmed core eligibility but not full confirmation', () => {
     assert.equal(secondaryUnknown.status, 'need_more_data');
     assert.deepEqual(secondaryUnknown.unknownRequirements.map(r => r.field), ['revenue']);
-    assert.deepEqual(secondaryUnknown.personalEligibility, { confirmed: true, reasons: [] });
+    assert.deepEqual(secondaryUnknown.personalEligibility, { confirmed: true, candidate: true, reasons: [] });
     assert.deepEqual(personalFunding([secondaryUnknown], true), { candidates: [secondaryUnknown], confirmed: [], pending: [secondaryUnknown] });
   });
 
@@ -120,7 +121,7 @@ test('versioned workspace migrates bookmarks and drops synthetic profiles/unknow
   const storage = memory(); storage.setItem('opora.saved.v1', JSON.stringify([ids[0], ids[0], 'removed-program']));
   storage.setItem('opora.profile.v1', JSON.stringify({ inn: '9900000031', name: 'Учебная компания', goals: [] }));
   const data = loadWorkspace(storage, ids); assert.equal(data.profile, null); assert.deepEqual(data.saved, [ids[0]]);
-  data.fundingNeed = { ...emptyFundingNeed, purpose: 'экспорт' }; saveWorkspace(storage, data);
+  data.fundingNeed = { ...emptyFundingNeed, purpose: 'Продажи, продвижение и экспорт' }; saveWorkspace(storage, data);
   assert.deepEqual(loadWorkspace(storage, ids), data);
   storage.setItem('opora.workspace', '{broken'); assert.doesNotThrow(() => loadWorkspace(storage, ids));
 });
@@ -179,7 +180,7 @@ test('official details show source/date, unknown criteria and next actions; proj
 const deletionWorkspace = (): Workspace => ({
   profile: { ...emptyProfile, inn: '7707083893', name: 'Прежняя компания', region: 'Москва', goals: ['экспорт'] },
   projectProfile: { name: 'Прежний проект', region: 'Москва', industry: 'Мебель', stage: 'mvp', hasLegalEntity: false, teamSize: 3, fundingNeed: 1000000, fundingPurpose: 'оборудование' },
-  fundingNeed: { ...emptyFundingNeed, purpose: 'экспорт', amount: 1000000, ownFunds: 500000 }, saved: [ids[0]],
+  fundingNeed: { ...emptyFundingNeed, purpose: 'Продажи, продвижение и экспорт', amount: 1000000, ownFunds: 500000 }, saved: [ids[0]],
   applications: [{ id: 'preserved', programId: ids[0], project: 'Описание прежней компании', budget: '1000000', createdAt: '2026-09-26', documents: { 'Смета': 'Исходный текст' }, documentFiles: { 'Смета': 'budget.pdf' }, generatedDraft: 'Сохранённый черновик', reviewConfirmed: true }],
 });
 test('business deletion clears profiles and AI context, preserves every draft field and bookmark, and survives reload', () => {
@@ -223,4 +224,37 @@ test('company-added notice persists its read state and disappears with the busin
   original.businessNotice.readAt = Date.now(); saveWorkspace(storage, original);
   assert.equal(loadWorkspace(storage, ids).businessNotice!.readAt, original.businessNotice.readAt);
   removeBusiness(storage, original); assert.equal(loadWorkspace(storage, ids).businessNotice, null);
+});
+
+test('legacy workspace migrates the task while preserving profile goals and optional refinements', () => {
+  const storage = memory();
+  const legacy = deletionWorkspace();
+  legacy.profile!.goals = ['сельхозтехника'];
+  legacy.fundingNeed = { ...emptyFundingNeed, purpose: 'сельхозтехника', amount: null, ownFunds: 250000, preferredTermMonths: 36, needsCollateralSupport: true };
+  saveWorkspace(storage, legacy);
+  const restored = loadWorkspace(storage, ids);
+  assert.deepEqual(restored.fundingNeed, { ...legacy.fundingNeed, purpose: normalizeFundingPurpose('сельхозтехника') });
+  assert.deepEqual(restored.profile!.goals, ['сельхозтехника']);
+  saveWorkspace(storage, restored);
+  assert.deepEqual(loadWorkspace(storage, ids), restored);
+  const project = { ...legacy.projectProfile!, fundingPurpose: emptyFundingNeed.purpose };
+  assert.deepEqual(projectAsProfile(project).goals, []);
+});
+test('all purposes admits only company-relevant pending candidates without confusing them with confirmed matches', () => {
+  const profile = { region: 'Москва', applicantType: 'legal_entity' as const, industry: 'Промышленность', okved: '28.41' };
+  const o: FundingOpportunity = { ...officialFundingCatalog[0], amountMin: null, amountMax: null,
+    manualConditions: [], manualEligibilityConditions: [], projectBudgetMin: null, cofinancingPercent: null,
+    purposes: ['покупка оборудования'], deadline: null, status: 'active' };
+  const confirmed = matchFundingOpportunity(profile, { ...emptyFundingNeed, purpose: 'Оборудование и модернизация' }, o);
+  const pending = matchFundingOpportunity(profile, emptyFundingNeed, { ...o, purposes: [] });
+  const closed = matchFundingOpportunity(profile, emptyFundingNeed, { ...o, status: 'closed' });
+  const otherRegion = matchFundingOpportunity(profile, emptyFundingNeed, { ...o, regions: ['Республика Татарстан'] });
+  assert.equal(confirmed.status, 'eligible');
+  assert.equal(pending.status, 'need_more_data');
+  assert.equal(pending.purposeFit, false);
+  assert.equal(pending.personalEligibility?.confirmed, false);
+  assert.deepEqual(personalFunding([confirmed, pending, closed, otherRegion], true), {
+    candidates: [confirmed, pending], confirmed: [confirmed], pending: [pending],
+  });
+  assert.deepEqual(programmePurposeCategories(o.purposes), ['Оборудование и модернизация']);
 });

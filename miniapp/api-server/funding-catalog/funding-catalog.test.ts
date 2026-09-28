@@ -9,7 +9,8 @@ import { buildFundingStrategy } from './strategy';
 import { FundingCatalogService } from './service';
 import { parseFundingNeed, parseFundingProfile } from './input';
 import { fundingCatalogRouter } from './router';
-import { emptyFundingNeed, fundingPurposes, type FundingOpportunity, type FundingProfile, type FundingRequirement } from './types';
+import { emptyFundingNeed, type FundingOpportunity, type FundingProfile, type FundingRequirement } from './types';
+import { legacyFundingPurposes, normalizeFundingPurpose } from './purposes';
 import { amountLabel, compatibilityNotice, fundingStatusLabels, isLoan, rateLabel } from './presentation';
 
 const now = new Date('2026-09-22T12:00:00Z');
@@ -30,7 +31,7 @@ test('catalog has 14 distinct demo opportunities, all ten kinds, valid numeric r
     assert.equal(o.source.type, 'demo');
     assert.equal(o.source.url, null);
     assert.match(o.providerName, /Учебн|демонстрация/);
-    assert.ok(o.purposes.every((p) => fundingPurposes.some((value) => value === p)));
+    assert.ok(o.purposes.every((p) => legacyFundingPurposes.some((value) => value === p)));
     assert.ok(o.version && o.source.updatedAt);
     for (const [min, max] of [[o.amountMin, o.amountMax], [o.rateMin, o.rateMax], [o.termMonthsMin, o.termMonthsMax]]) {
       if (min !== null) assert.ok(Number.isFinite(min) && min >= 0);
@@ -214,7 +215,7 @@ test('matching is deterministic and pure, and core accepts a profile without INN
 });
 test('purpose alone is valid; all optional need fields are null and no profile is required by core', () => {
   const need = parseFundingNeed({ purpose: 'покупка оборудования' });
-  assert.deepEqual(need, { ...emptyFundingNeed, purpose: 'покупка оборудования' });
+  assert.deepEqual(need, { ...emptyFundingNeed, purpose: normalizeFundingPurpose('покупка оборудования') });
   assert.equal(parseFundingNeed({ purpose: 'покупка оборудования', ownFunds: 0, needsCollateralSupport: false }).ownFunds, 0);
   const result = service.match({ profile: {}, need });
   assert.equal(result.mode, 'demo');
@@ -224,7 +225,7 @@ test('malformed numeric inputs, unknown purposes and spoofed profile values are 
   for (const patch of [{ amount: -1 }, { amount: 0 }, { amount: NaN }, { amount: Infinity }, { amount: '1000' },
     { ownFunds: -1 }, { preferredTermMonths: 1.5 }, { preferredTermMonths: 601 }, { needsCollateralSupport: 'yes' }, { purpose: 'SECRET' }])
     assert.throws(() => parseFundingNeed({ purpose: 'покупка оборудования', ...patch }));
-  for (const input of [null, [], {}, { purpose: '' }]) assert.throws(() => parseFundingNeed(input));
+  for (const input of [null, [], {}]) assert.throws(() => parseFundingNeed(input));
   for (const profile of [[], null, { isSme: true }, { companyType: 'SECRET' }, { ageMonths: -1 }, { employees: '12' }, { goals: 'bad' }])
     assert.throws(() => parseFundingProfile(profile));
 });
@@ -266,7 +267,7 @@ test('HTTP catalog and matching work without external providers; invalid input r
     assert.equal((await fetch(url + '/calendar.ics?ids=a&ids=b')).status, 400);
     for (const [data, status] of [[{ profile: await techProfile(), need: techNeed }, 200],
       [{ profile: {}, need: { purpose: 'масштабирование' } }, 200],
-      [{ profile: {}, need: { purpose: '' } }, 400], [{ profile: [], need: techNeed }, 400]] as const) {
+      [{ profile: {}, need: { purpose: '' } }, 200], [{ profile: [], need: techNeed }, 400]] as const) {
       const response = await fetch(url + '/match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       assert.equal(response.status, status);
     }

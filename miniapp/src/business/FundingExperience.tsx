@@ -9,14 +9,17 @@ import { emptyFundingNeed, fundingPurposes, type FundingMatch, type FundingNeed,
 import { amountLabel, fundingKindLabels, fundingStatusLabels,
   rateLabel, termLabel } from '../../api-server/funding-catalog/presentation';
 
+import { normalizeFundingPurpose, allFundingPurposes } from '../../api-server/funding-catalog/purposes';
 import { displayDate } from './display';
 
 
 export function FundingOpportunityCard({ match, onOpen, onSave, saved, personalized = true }: { match: FundingMatch; onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: boolean; personalized?: boolean }) {
   const o = match.opportunity;
   const rate = rateLabel(o), term = termLabel(o);
-  const matchLabel = match.status === 'need_more_data' && match.personalEligibility?.confirmed === false
-    ? 'Недостаточно данных для персонального подбора' : fundingStatusLabels[match.status];
+  const matchLabel = match.status === 'need_more_data' && match.personalEligibility?.confirmed === false && !match.personalEligibility.candidate
+    ? 'Недостаточно данных для персонального подбора'
+    : match.status === 'need_more_data' && match.personalEligibility?.candidate && !match.personalEligibility.confirmed
+      ? 'Нужно уточнить' : fundingStatusLabels[match.status];
   return <article className="widget funding-card">
     <div className="funding-card-heading">
       <div className="funding-card-tags">
@@ -60,10 +63,10 @@ export function FundingResults({ result, onOpen, onSave, saved = [] }: { result:
 }
 
 // The form edits a draft task; confirmation updates the same catalogue matching used everywhere.
-export function FundingExperience({ initialNeed, onApply, onAsk, goals = [] }: {
-  initialNeed?: FundingNeed; onApply: (need: FundingNeed) => void; onAsk?: () => void; goals?: string[];
+export function FundingExperience({ initialNeed, onApply }: {
+  initialNeed?: FundingNeed; onApply: (need: FundingNeed) => void;
 }) {
-  const [need, setNeed] = useState<FundingNeed>(() => initialNeed ?? { ...emptyFundingNeed });
+  const [need, setNeed] = useState<FundingNeed>(() => ({ ...(initialNeed ?? emptyFundingNeed), purpose: normalizeFundingPurpose(initialNeed?.purpose ?? '') ?? allFundingPurposes }));
   const [loading, setLoading] = useState(false);
   const pending = React.useRef<AbortController | null>(null);
   const panel = React.useRef<HTMLElement | null>(null);
@@ -80,30 +83,35 @@ export function FundingExperience({ initialNeed, onApply, onAsk, goals = [] }: {
     <ActionButton className="secondary" onClick={() => { pending.current?.abort(); pending.current = null; setLoading(false); }}>Отменить подбор</ActionButton>
   </section>;
   return <section ref={panel} className="funding-experience">
-    {onAsk && <ActionButton className="text-button" onClick={onAsk}>Обсудить задачу с AI</ActionButton>}
     <form className="widget" onSubmit={submit}>
       <h2>Что нужно вашему бизнесу?</h2>
-      {!need.purpose && goals.length > 0 && <div className="filter-chips">{fundingPurposes.filter(purpose => goals.some(goal => goal.toLocaleLowerCase('ru-RU') === purpose.toLocaleLowerCase('ru-RU'))).map(purpose => <button type="button" key={purpose} onClick={() => setNeed({ ...need, purpose })}>{purpose}</button>)}</div>}
       <div className="form-grid">
         <label className="field">Цель
-          <select aria-label="Цель" required value={need.purpose} onChange={(e) => setNeed({ ...need, purpose: e.target.value })}>
-            <option value="">Выберите цель</option>
+          <select aria-label="Цель" value={need.purpose} onChange={(e) => setNeed({ ...need, purpose: e.target.value })}>
             {fundingPurposes.map((purpose) => <option key={purpose} value={purpose}>{purpose}</option>)}
           </select>
         </label>
-        {(['amount', 'preferredTermMonths', 'ownFunds'] as const).map((field) => <label className="field" key={field}>
-          {{ amount: 'Требуемое финансирование, ₽', preferredTermMonths: 'Желаемый срок, месяцев', ownFunds: 'Собственные средства, ₽' }[field]}
-          <BusinessInput type="number" min={field === 'ownFunds' ? 0 : 1}
-            max={field === 'preferredTermMonths' ? 600 : 1e15} step="1" placeholder="Необязательно"
-            value={need[field] ?? ''} onChange={(e) => setNeed({ ...need, [field]: e.target.value === '' ? null : Number(e.target.value) })} />
-        </label>)}
-        <label className="field">Нужна помощь с обеспечением / залогом?
-          <select value={need.needsCollateralSupport === null ? '' : String(need.needsCollateralSupport)}
-            onChange={(e) => setNeed({ ...need, needsCollateralSupport: e.target.value === '' ? null : e.target.value === 'true' })}>
-            <option value="">Пока не знаю</option><option value="true">Да</option><option value="false">Нет</option>
-          </select>
+        <label className="field">Требуемое финансирование, ₽
+          <BusinessInput aria-label="Требуемое финансирование, ₽" type="number" min={1} max={1e15} step="1" placeholder="Необязательно"
+            value={need.amount ?? ''} onChange={(e) => setNeed({ ...need, amount: e.target.value === '' ? null : Number(e.target.value) })} />
         </label>
       </div>
+      <InfoDisclosure className="funding-refinements" summary={<InfoDisclosureRow as="summary" label="Уточняющие параметры" />}>
+        <div className="form-grid">
+          {(['preferredTermMonths', 'ownFunds'] as const).map((field) => <label className="field" key={field}>
+            {{ preferredTermMonths: 'Желаемый срок, месяцев', ownFunds: 'Собственные средства, ₽' }[field]}
+            <BusinessInput aria-label={field === 'preferredTermMonths' ? 'Желаемый срок, месяцев' : 'Собственные средства, ₽'}
+              type="number" min={field === 'ownFunds' ? 0 : 1} max={field === 'preferredTermMonths' ? 600 : 1e15} step="1" placeholder="Необязательно"
+              value={need[field] ?? ''} onChange={(e) => setNeed({ ...need, [field]: e.target.value === '' ? null : Number(e.target.value) })} />
+          </label>)}
+          <label className="field">Нужна помощь с обеспечением / залогом?
+            <select aria-label="Нужна помощь с обеспечением / залогом?" value={need.needsCollateralSupport === null ? '' : String(need.needsCollateralSupport)}
+              onChange={(e) => setNeed({ ...need, needsCollateralSupport: e.target.value === '' ? null : e.target.value === 'true' })}>
+              <option value="">Пока не знаю</option><option value="true">Да</option><option value="false">Нет</option>
+            </select>
+          </label>
+        </div>
+      </InfoDisclosure>
       <ActionButton type="submit" className="primary" disabled={loading}>
         {loading ? 'Подбираем варианты…' : 'Найти варианты'}
       </ActionButton>
