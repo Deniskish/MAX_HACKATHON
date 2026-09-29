@@ -8,9 +8,28 @@ React/Vite miniapp и MAX chatbot используют общий Express/TypeSc
 
 ## Production
 
-Miniapp: **https://business-opora.ru**
+Miniapp: [https://business-opora.ru](https://business-opora.ru)
 
-MAX bot: публичный username/deep link здесь не указан, поскольку в репозитории нет подтверждённого имени зарегистрированного бота. `MAX_BOT_USERNAME` задаётся после проверки в MAX.
+MAX bot: [@t230_hakaton_max_bot](https://max.ru/t230_hakaton_max_bot)
+
+## Проверка решения
+
+- MAX bot: [https://max.ru/t230_hakaton_max_bot](https://max.ru/t230_hakaton_max_bot)
+- Miniapp: [https://business-opora.ru](https://business-opora.ru)
+- Демо-пароль miniapp: `20042004`
+
+Основной сценарий проверки:
+
+1. Открыть бота в MAX.
+2. Перейти в miniapp.
+3. Ввести пароль `20042004`.
+4. Добавить компанию по ИНН либо выбрать проект без юрлица.
+5. Указать потребность.
+6. Нажать «Найти варианты».
+7. Открыть карточку меры поддержки.
+8. Проверить условия, официальный источник и AI-помощника.
+
+Заявка автоматически не отправляется; пользователь переходит на официальный сайт оператора.
 
 ## Быстрый запуск Docker
 
@@ -114,9 +133,9 @@ API → company data / funding / GigaChat
 
 ## API
 
-- [openapi.yaml](openapi.yaml) — контракт API.
-- [DATA-API.yaml](DATA-API.yaml) — публичные проверочные запросы; `api.baseUrl` пока шаблонный и требует отдельного исправления перед сдачей.
-- Production origin: https://business-opora.ru; API доступен через `/api/`.
+- [openapi.yaml](openapi.yaml) — OpenAPI 3.0.3 контракт production API.
+- [DATA-API.yaml](DATA-API.yaml) — 6 публичных повторяемых проверок API; настроен на [https://business-opora.ru](https://business-opora.ru) и проверен официальным валидатором формата DATA-API.
+- Production origin: [https://business-opora.ru](https://business-opora.ru); API доступен через `/api/`.
 
 ## Tests
 
@@ -311,7 +330,7 @@ FNS volume read-only: импорт выполняется отдельно на 
 
 ## API, DATA-API и deployment
 
-`openapi.yaml` описывает runtime endpoints, JSON errors `{error, code}`, nullable поля и iCalendar. `DATA-API.yaml` содержит шесть повторяемых публичных проверок в формате [reference организаторов](https://gitverse.ru/stasnorman/example-data-api), проверен его валидатором. **В `DATA-API.yaml` пока остался шаблонный `api.baseUrl`; перед сдачей его нужно отдельно заменить на `https://business-opora.ru`.** Company check намеренно отсутствует до наполнения реального индекса. Проверка `/api/ai/status` не расходует токены и не утверждает готовность AI.
+`openapi.yaml` описывает runtime endpoints, JSON errors `{error, code}`, nullable поля и iCalendar. `DATA-API.yaml` содержит 6 публичных воспроизводимых проверок в формате [reference организаторов](https://gitverse.ru/stasnorman/example-data-api), настроен на production [https://business-opora.ru](https://business-opora.ru) и проверен официальным валидатором формата DATA-API. Company check намеренно отсутствует до наполнения реального индекса. Проверка `/api/ai/status` не расходует токены и не утверждает готовность AI.
 
 Автодеплой на `main`: установка зависимостей, проверка production-сервера, сборка frontend, запуск `opora-frontend` через `ecosystem.config.cjs`, перезапуск API и существующего `opora-bot`. Frontend обслуживает только `miniapp/dist` с gzip и кешированием; `/api/` проксируется на `127.0.0.1:3002`. Vite dev server в публичном окружении не используется. Проверка после запуска требует production HTML, сжатый JS, кеширование и работающий API. На сервере нужны Node 22+, переменные окружения и официальный индекс. Изменённые ENV применяйте согласно конфигурации PM2 (`--update-env` при необходимости).
 
