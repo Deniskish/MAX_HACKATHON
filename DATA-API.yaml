@@ -1,11 +1,9 @@
-# Перед передачей организаторам укажите публичный HTTPS origin в api.baseUrl.
-# Сейчас адрес не предоставлен; этот файл не утверждает доступность deployment.
 # Company lookup не включён: реальный индекс ФНС ещё не наполнен.
 schemaVersion: '1.0'
 solution:
   name: Опора / MAX_HACKATHON
 api:
-  baseUrl: https://your-public-domain.example
+  baseUrl: https://business-opora.ru
   openapi: ./openapi.yaml
   defaultHeaders:
     Accept: application/json
@@ -52,6 +50,8 @@ checks:
     - total
     - active
     - closed
+    - upcoming
+    - unknown
     - snapshotVersion
     - verifiedAt
     - sources
@@ -93,7 +93,7 @@ checks:
     body:
       profile: {}
       need:
-        purpose: покупка оборудования
+        purpose: Оборудование и модернизация
         amount: 10000000
         preferredTermMonths: 60
 - id: ai-status
@@ -110,5 +110,10 @@ checks:
     - provider
     - model
     - status
+    - checked
+    - lastSuccess
+    - lastFailure
+    - tasks
+    - reason
   timeoutMs: 5000
   repeatable: true

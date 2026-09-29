@@ -3,7 +3,10 @@
 **/dist
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
+!**/.env.example
 fns-data
 **/source-data
 miniapp/public/ocr

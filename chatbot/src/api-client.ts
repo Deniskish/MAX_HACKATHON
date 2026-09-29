@@ -8,8 +8,10 @@ export class OporaAPI implements BotAPI {
   constructor(private readonly base: string, private readonly token: string, private readonly user: string,
     private readonly http: typeof fetch = fetch) {
     const url = new URL(base);
-    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)))
-      throw new Error('BOT_API_URL must use HTTPS or loopback');
+    const localHTTP = url.protocol === 'http:' && (['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)
+      || url.hostname === 'api' && url.port === '3002');
+    if (url.protocol !== 'https:' && !localHTTP)
+      throw new Error('BOT_API_URL must use HTTPS, loopback or Docker service http://api:3002');
     if (url.username || url.password || url.search || url.hash || !/^[1-9]\d{0,15}$/.test(user)) throw new Error('INVALID_BOT_API_CONFIG');
   }
   async request<T>(method: string, route: string, body?: unknown): Promise<T> {

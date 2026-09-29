@@ -7,11 +7,17 @@ services:
       PORT: 3002
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
       FNS_DATA_DIR: /data/fns
+      DADATA_API_KEY: ${DADATA_API_KEY:-}
+      BOT_TOKEN: ${BOT_TOKEN:-}
+      MINIAPP_URL: ${MINIAPP_URL:-}
+      MAX_BOT_USERNAME: ${MAX_BOT_USERNAME:-}
       GIGACHAT_AUTH_KEY: ${GIGACHAT_AUTH_KEY:-}
       GIGACHAT_SCOPE: ${GIGACHAT_SCOPE:-GIGACHAT_API_PERS}
       GIGACHAT_MODEL: ${GIGACHAT_MODEL:-GigaChat-2-Pro}
       OPORA_SOURCE_DIR: /data/sources
+      OPORA_FUNDING_DIR: /data/sources/funding
       AI_SOURCE_SYNC: ${AI_SOURCE_SYNC:-on}
+      FUNDING_SYNC: ${FUNDING_SYNC:-on}
     volumes:
       - ${FNS_DATA_DIR:-./fns-data}:/data/fns:ro
       - opora-sources:/data/sources
@@ -32,6 +38,11 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
   chatbot:
     profiles: ["bot"]
@@ -40,8 +51,12 @@ services:
       dockerfile: chatbot/Dockerfile
     environment:
       BOT_TOKEN: ${BOT_TOKEN:-}
+      BOT_API_URL: http://api:3002
       MINIAPP_URL: ${MINIAPP_URL:-}
       MAX_BOT_USERNAME: ${MAX_BOT_USERNAME:-}
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
 volumes:
   opora-sources:

@@ -5,6 +5,8 @@ info:
   description: Официальный каталог, импортированный индекс ФНС и обезличенное объяснение.
     API не подает заявки и не принимает решения о финансировании.
 servers:
+- url: https://business-opora.ru
+  description: Production
 - url: http://localhost:3002
   description: Локальный API
 - url: http://localhost:3000
@@ -219,8 +221,10 @@ paths:
                   type: object
                   additionalProperties:
                     type: array
+                    maxItems: 30
                     items:
                       type: string
+                      maxLength: 200
               required:
               - profile
               - need
@@ -892,7 +896,17 @@ components:
       properties:
         purpose:
           type: string
+          description: Текущая категория цели. Старые значения и пустая строка принимаются для совместимости и нормализуются; пустая строка означает «Все цели».
           enum:
+          - Все цели
+          - Запуск или развитие бизнеса
+          - Оборудование и модернизация
+          - Оборотные расходы
+          - Разработка продукта / технологии
+          - Продажи, продвижение и экспорт
+          - Персонал и обучение
+          - Помещения и инфраструктура
+          - ''
           - покупка оборудования
           - оборотные средства
           - разработка продукта
@@ -903,13 +917,15 @@ components:
           - запуск производства
           - масштабирование
         amount:
-          type: number
+          type: integer
           nullable: true
           minimum: 1
+          maximum: 1000000000000000
         ownFunds:
-          type: number
+          type: integer
           nullable: true
           minimum: 0
+          maximum: 1000000000000000
         preferredTermMonths:
           type: integer
           nullable: true
@@ -1523,6 +1539,7 @@ components:
           type: string
           enum:
           - ready
+          - limited
           - not_configured
           - unavailable
         checked:
@@ -1530,6 +1547,35 @@ components:
         lastSuccess:
           type: string
           nullable: true
+        lastFailure:
+          type: object
+          nullable: true
+          properties:
+            code:
+              type: string
+            task:
+              type: string
+            at:
+              type: string
+          required:
+          - code
+          - task
+          - at
+        tasks:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [ready, limited, unavailable]
+              at:
+                type: string
+              code:
+                type: string
+            required:
+            - status
+            - at
         reason:
           type: string
           nullable: true
@@ -1540,6 +1586,8 @@ components:
       - status
       - checked
       - lastSuccess
+      - lastFailure
+      - tasks
       - reason
     FundingStatus:
       type: object
@@ -1667,6 +1715,7 @@ components:
               type: string
               enum:
               - ready
+              - limited
               - not_configured
               - unavailable
       required:
