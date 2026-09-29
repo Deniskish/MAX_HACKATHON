@@ -191,6 +191,7 @@ async function snapshot(page, name) {
             errors = [],
             requests = [];
           let failAI = false;
+          let profileDescription = null;
           page.setDefaultTimeout(12000);
           page.on("pageerror", (e) => errors.push(e.message));
           try {
@@ -250,7 +251,7 @@ async function snapshot(page, name) {
               return r.fulfill({
                 json:
                   endpoint === "/api/funding/catalog"
-                    ? { opportunities: catalog }
+                    ? { opportunities: catalog.map(o => o.id === 'fasie-start-1' && profileDescription !== null ? { ...o, description: profileDescription } : o) }
                     : endpoint.endsWith("/updates")
                       ? { updates: [] }
                       : endpoint === "/api/funding/match"
@@ -305,9 +306,30 @@ async function snapshot(page, name) {
             await load(page, profileSource.id);
             await disclosure(page, '.application-conditions', true);
             assert.equal(await page.getByRole('link', { name: 'Открыть официальный источник ↗', exact: true }).count(), 0);
+            assert.equal(await page.locator('.programme-description').innerText(), profileSource.description);
+            for (const label of ['Организация по данным источника', 'Источник данных', 'Проверено системой']) {
+              assert.equal(await page.locator('.detail-provenance dt').getByText(label, { exact: true }).count(), 1);
+            }
+            assert.equal(await page.locator('.detail-checks > section').evaluateAll(nodes => nodes.every(e =>
+              e.querySelector('li') && getComputedStyle(e).borderTopWidth === '1px')), true);
+            assert.equal(await page.locator('.detail-checks > section').last().locator('h3').innerText(), 'Следующие действия');
+            if (theme === 'dark') assert.equal(await page.locator('.programme-description').evaluate(e => getComputedStyle(e).color), 'rgb(192, 190, 205)');
             const announcementLink = page.getByRole('link', { name: 'объявлении отбора', exact: true });
             assert.equal(await announcementLink.isVisible(), true);
             assert.equal(await announcementLink.getAttribute('href'), profileSource.source.url);
+            for (const [description, visible] of [
+              [`  ${profileSource.title.replace(/ /g, ' \n\u00a0')}  `, false],
+              [profileSource.title + '. Только для новых проектов.', true],
+              [profileSource.title + '.', true],
+            ]) {
+              profileDescription = description;
+              await load(page, profileSource.id);
+              await disclosure(page, '.application-conditions', true);
+              assert.equal(await page.locator('.programme-description').count(), visible ? 1 : 0);
+              if (visible) assert.equal(await page.locator('.programme-description').innerText(), description);
+              assert.equal(await page.locator('.modal > h2').innerText(), profileSource.title);
+            }
+            profileDescription = null;
             // Unknown documents stay incomplete, but do not block the official operator handoff.
             await load(page, withoutDocs.id);
             assert.equal(await page.locator('.modal > h2').evaluate(e => getComputedStyle(e).textAlign), 'left');
@@ -474,6 +496,31 @@ async function snapshot(page, name) {
             assert.ok(['left', 'start'].includes(await page.locator('.funding-card > p.muted').first().evaluate(e => getComputedStyle(e).textAlign)));
             await disclosure(page, '.catalog-tools', true);
             await snapshot(page, name + '-filters');
+            // Exercise a dated card, including the long agricultural measure title.
+            await page.locator('.catalog-status-trigger').click();
+            await page.getByRole('option', { name: 'Приём завершён', exact: true }).click();
+            await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+            const datedCard = page.locator('.funding-card').filter({ has: page.locator('.funding-card-deadline') }).first();
+            await datedCard.scrollIntoViewIfNeeded();
+            assert.equal(await datedCard.evaluate(card => {
+              const date = card.querySelector('.funding-card-deadline').getBoundingClientRect();
+              const save = card.querySelector('.save-program').getBoundingClientRect();
+              const title = card.querySelector('h3').getBoundingClientRect();
+              const status = card.querySelector('.funding-status').getBoundingClientRect();
+              const facts = card.querySelector('.funding-key-facts').getBoundingClientRect();
+              return date.right <= save.left && date.bottom <= title.top && status.top >= facts.bottom &&
+                card.scrollWidth <= card.clientWidth + 1 && save.width >= 44 && save.height >= 44;
+            }), true);
+            await snapshot(page, name + '-dated-card');
+            await datedCard.getByRole('button', { name: 'Подробнее', exact: true }).click();
+            await disclosure(page, '.application-conditions', true);
+            await page.locator('.detail-provenance').last().scrollIntoViewIfNeeded();
+            await snapshot(page, name + '-source-labels');
+            await close(page);
+            await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+            await page.locator('.catalog-status-trigger').click();
+            await page.getByRole('option', { name: 'Без завершённых', exact: true }).click();
+            await page.waitForFunction(() => !document.querySelector('dialog[open]'));
             await nav(page, 3);
             await nav(page, 1);
             assert.equal(await page.locator('.catalog-tools').evaluate(e => e.open), true);

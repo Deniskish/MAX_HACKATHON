@@ -167,7 +167,7 @@ test('notifications report actual closed bookmarks and snapshot updates only on 
 test('official details show source/date, unknown criteria and next actions; project onboarding requires no INN', () => {
   const match = matchFundingOpportunity({}, { ...emptyFundingNeed, purpose: 'покупка оборудования' }, officialFundingCatalog[0]);
   const html = renderToStaticMarkup(React.createElement(OfficialDetails, { match, onAsk() {} }));
-  for (const label of ['Следующие действия', match.opportunity.source.name, '22 сентября 2026']) assert.ok(html.includes(label));
+  for (const label of ['Следующие действия', 'Организация по данным источника', 'Источник данных', 'Проверено системой', match.opportunity.source.name, '22 сентября 2026']) assert.ok(html.includes(label));
   assert.ok(!html.includes('Открыть официальный источник'));
   for (const [label, checks] of [['Почему подходит', match.fulfilledRequirements], ['Что нужно уточнить', match.unknownRequirements], ['Что не соответствует', match.missingRequirements]] as const) {
     assert.equal(html.includes(`<h3>${label}</h3>`), checks.length > 0);
@@ -178,6 +178,14 @@ test('official details show source/date, unknown criteria and next actions; proj
   assert.equal(projectAsProfile(project).inn, '');
   const form = renderToStaticMarkup(React.createElement(ProjectOnboarding, { initial: project, onSave() {}, onCancel() {} }));
   assert.ok(form.includes('Сохранить проект')); assert.doesNotMatch(form, /placeholder="10 или 12 цифр"/);
+});
+
+test('empty requirement and action arrays do not create empty check cards', () => {
+  const original = matchFundingOpportunity({}, emptyFundingNeed, officialFundingCatalog[0]);
+  const emptyChecks = renderToStaticMarkup(React.createElement(OfficialDetails, {
+    match: { ...original, fulfilledRequirements: [], unknownRequirements: [], missingRequirements: [], nextActions: [] }, onAsk() {},
+  }));
+  assert.doesNotMatch(emptyChecks, /<section><h3>/);
 });
 
 const deletionWorkspace = (): Workspace => ({

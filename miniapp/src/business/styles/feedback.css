@@ -99,6 +99,21 @@ main {
   padding-left: 22px;
   line-height: 1.7;
 }
+.detail-provenance {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  color: var(--muted);
+}
+.detail-provenance dt {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.detail-provenance dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
 .official-link {
   display: inline-block;
   margin: 12px 0;

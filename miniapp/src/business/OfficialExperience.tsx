@@ -11,15 +11,18 @@ export const opportunityStateLabels = { active: 'Приём открыт', close
 export function OfficialDetails({ match, onAsk, personalized = true }: { match: FundingMatch; onAsk: () => void; personalized?: boolean }) {
   const o = match.opportunity;
   return <section className="official-details">
-    <p>{o.providerName}</p>
+    <dl className="detail-provenance"><div><dt>Организация по данным источника</dt><dd>{o.providerName}</dd></div></dl>
     <div className="detail-facts"><strong>{amountLabel(o)}</strong>{rateLabel(o) && <span>{rateLabel(o)}</span>}{termLabel(o) && <span>{termLabel(o)}</span>}</div>
     <p>{opportunityStateLabels[o.status ?? 'unknown']}{o.deadline ? ` · до ${displayDate(o.deadline)}` : ''}</p>
-    <p className="widget-footnote">{o.source.name}{o.source.verifiedAt ? ` · ${displayDate(o.source.verifiedAt)}` : ''}</p>
+    <dl className="detail-provenance">
+      <div><dt>Источник данных</dt><dd>{o.source.name}</dd></div>
+      {o.source.verifiedAt && <div><dt>Проверено системой</dt><dd>{displayDate(o.source.verifiedAt)}</dd></div>}
+    </dl>
     {personalized ? <><h3>{fundingStatusLabels[match.status]}</h3>
     <div className="detail-checks">
       {([['Почему подходит', match.fulfilledRequirements], ['Что нужно уточнить', match.unknownRequirements], ['Что не соответствует', match.missingRequirements]] as const).filter(([, checks]) => checks.length).map(([title, checks]) => <section key={title}><h3>{title}</h3><ul>{checks.map((c, i) => <li key={i}>{c.label}</li>)}</ul></section>)}
+      {!!match.nextActions.length && <section><h3>Следующие действия</h3><ul>{match.nextActions.map((action) => <li key={action}>{action}</li>)}</ul></section>}
     </div>
-    <h3>Следующие действия</h3><ul>{match.nextActions.map((action) => <li key={action}>{action}</li>)}</ul>
     <ActionButton className="secondary" onClick={onAsk}>Объяснить с AI</ActionButton></> : <p className="data-note">Это общие условия. Добавьте бизнес для проверки соответствия.</p>}
   </section>;
 }

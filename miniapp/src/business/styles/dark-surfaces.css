@@ -1,4 +1,19 @@
 /* Explicit palette avoids WebView auto-darkening white cards and form controls. */
+:root[data-theme="dark"] .opora-theme .opportunity-dialog :is(
+  .programme-description,
+  .detail-provenance,
+  .official-details .data-note,
+  .modal > p,
+  .application-workspace .field,
+  .application-workspace .field > .muted,
+  .application-workspace .widget-footnote,
+  .application-workspace .checklist-title small,
+  .application-workspace .checklist-item dd,
+  .application-workspace .readiness-list,
+  .application-workspace .submission-actions > p
+) {
+  color: var(--detail-secondary);
+}
 body {
   background: var(--canvas);
 }

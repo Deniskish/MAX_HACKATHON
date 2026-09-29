@@ -26,7 +26,10 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved, personali
       <span className="tag">{fundingKindLabels[o.kind]}</span>
       {o.source.type === 'demo' && <span className="tag">Учебные данные</span>}
       </div>
-      {onSave && <button className={`save-program${saved ? ' is-saved' : ''}`} aria-label={`${saved ? 'Убрать из сохранённых' : 'Сохранить'}: ${o.title}`} aria-pressed={Boolean(saved)} onClick={() => onSave(o.id)}><Icon name="bookmark" size={19} /></button>}
+      <div className={`funding-card-meta${o.deadline ? ' has-deadline' : ''}`}>
+        {o.deadline && <p className="widget-footnote funding-card-deadline">Приём до {displayDate(o.deadline)}</p>}
+        {onSave && <button className={`save-program${saved ? ' is-saved' : ''}`} aria-label={`${saved ? 'Убрать из сохранённых' : 'Сохранить'}: ${o.title}`} aria-pressed={Boolean(saved)} onClick={() => onSave(o.id)}><Icon name="bookmark" size={19} /></button>}
+      </div>
     </div>
     <h3>{o.title}</h3>
     <p className="muted">{o.providerName}</p>
@@ -34,7 +37,6 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved, personali
     <div className="funding-key-facts">{rate && <span>{rate}</span>}{term && <span>Срок: {term}</span>}</div>
     <span className={`funding-status funding-status-${personalized ? displayStatus : o.status}`}>{personalized ? matchLabel : { active: 'Приём открыт', closed: 'Приём завершён', upcoming: 'Ожидается открытие', unknown: 'Статус уточняется' }[o.status ?? 'unknown']}</span>
 
-    {o.deadline && <p className="widget-footnote">Приём до {displayDate(o.deadline)}</p>}
     {onOpen && <ActionButton className="primary" onClick={() => onOpen(o.id)}>Подробнее</ActionButton>}
   </article>;
 }

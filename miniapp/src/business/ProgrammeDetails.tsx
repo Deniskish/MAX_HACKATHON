@@ -37,6 +37,8 @@ export function ProgrammeDetails({
   onPrepare: () => void;
 }) {
   const selected = match.opportunity;
+  const normalizeText = (text: string) => text.trim().replace(/\s+/g, ' ');
+  const showDescription = normalizeText(selected.description) !== normalizeText(selected.title);
   return (
     <>
       {
@@ -54,7 +56,7 @@ export function ProgrammeDetails({
             className="application-conditions"
             summary={<InfoDisclosureRow as="summary" label="Условия программы" />}
           >
-            <p className="muted">{selected.description}</p>
+            {showDescription && <p className="muted programme-description">{selected.description}</p>}
             <OfficialDetails
               personalized={!!profile}
               match={match}
