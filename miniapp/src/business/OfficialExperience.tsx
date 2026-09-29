@@ -14,7 +14,6 @@ export function OfficialDetails({ match, onAsk, personalized = true }: { match: 
     <p>{o.providerName}</p>
     <div className="detail-facts"><strong>{amountLabel(o)}</strong>{rateLabel(o) && <span>{rateLabel(o)}</span>}{termLabel(o) && <span>{termLabel(o)}</span>}</div>
     <p>{opportunityStateLabels[o.status ?? 'unknown']}{o.deadline ? ` · до ${displayDate(o.deadline)}` : ''}</p>
-    <a className="official-link" href={o.source.url!} target="_blank" rel="noreferrer">Открыть официальный источник ↗</a>
     <p className="widget-footnote">{o.source.name}{o.source.verifiedAt ? ` · ${displayDate(o.source.verifiedAt)}` : ''}</p>
     {personalized ? <><h3>{fundingStatusLabels[match.status]}</h3>
     <div className="detail-checks">

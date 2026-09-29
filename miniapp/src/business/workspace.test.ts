@@ -167,7 +167,8 @@ test('notifications report actual closed bookmarks and snapshot updates only on 
 test('official details show source/date, unknown criteria and next actions; project onboarding requires no INN', () => {
   const match = matchFundingOpportunity({}, { ...emptyFundingNeed, purpose: 'покупка оборудования' }, officialFundingCatalog[0]);
   const html = renderToStaticMarkup(React.createElement(OfficialDetails, { match, onAsk() {} }));
-  for (const label of ['Следующие действия', 'Открыть официальный источник', '22 сентября 2026']) assert.ok(html.includes(label));
+  for (const label of ['Следующие действия', match.opportunity.source.name, '22 сентября 2026']) assert.ok(html.includes(label));
+  assert.ok(!html.includes('Открыть официальный источник'));
   for (const [label, checks] of [['Почему подходит', match.fulfilledRequirements], ['Что нужно уточнить', match.unknownRequirements], ['Что не соответствует', match.missingRequirements]] as const) {
     assert.equal(html.includes(`<h3>${label}</h3>`), checks.length > 0);
     for (const check of checks) assert.ok(html.includes(check.label));

@@ -585,7 +585,7 @@ export default function BusinessApp() {
             <Icon name="close" />
           </IconButton>
           <span>{onboard ? 'Профиль бизнеса' : activeApp ? 'Подготовка заявки' : 'Мера поддержки'}</span>
-          {selected && <button
+          {selected && !onboard && <button
             className={'save-program ' + (saved.includes(selected.id) ? 'is-saved' : '')}
             aria-label={saved.includes(selected.id) ? 'Убрать из сохранённых' : 'Сохранить программу'}
             aria-pressed={saved.includes(selected.id)}
@@ -599,7 +599,7 @@ export default function BusinessApp() {
               error={error} setError={setError} account={account} saveProfile={saveProfile}
               onRemove={companyProfile ? requestBusinessRemoval : undefined} />
           )}
-          {selected && <ProgrammeDetails match={matchesById.get(selected.id)!} profile={profile} activeApp={activeApp}
+          {selected && !onboard && <ProgrammeDetails match={matchesById.get(selected.id)!} profile={profile} activeApp={activeApp}
             detached={!!activeApp && detachedApplicationIds.includes(activeApp.id)}
             onUpdate={patch => { if (activeApp) updateApp(activeApp.id, patch); }}
             onDocuments={next => { if (activeApp) setApps(old => old.map(a => a.id === activeApp.id ? { ...a, reviewConfirmed: false,

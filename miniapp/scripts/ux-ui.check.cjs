@@ -262,10 +262,57 @@ async function snapshot(page, name) {
                         : { configured: true, status: "ready" },
               });
             });
+            // Editing from a measure must replace its content inside the shared dialog.
+            const profileSource = catalog.find(o => o.id === 'fasie-start-1');
+            await load(page, profileSource.id);
+            await page.getByRole('button', { name: 'Уточнить профиль', exact: true }).click();
+            const profileDialog = page.getByRole('dialog', { name: 'Профиль бизнеса', exact: true });
+            await profileDialog.locator('.company-profile-form').waitFor();
+            assert.equal(await profileDialog.locator('.detail-emblem, .application-conditions, .save-program').count(), 0);
+            assert.equal(await profileDialog.getByRole('heading', { name: profileSource.title, exact: true }).count(), 0);
+            assert.equal(await profileDialog.getByRole('button', { name: 'Начать подготовку', exact: true }).count(), 0);
+            const backgroundScroll = await page.evaluate(() => ({
+              page: window.scrollY,
+              content: document.querySelector('.app-shell > .app-content').scrollTop,
+            }));
+            const profileScroll = profileDialog.locator('.modal');
+            await profileDialog.getByRole('button', { name: 'Удалить бизнес', exact: true }).scrollIntoViewIfNeeded();
+            assert.equal(await profileScroll.evaluate(e => e.scrollTop > 0), true);
+            // Native modal isolation and scroll boundaries, including mobile WebKit
+            // (Playwright does not support mouse.wheel in that configuration).
+            assert.equal(await profileDialog.evaluate(e => e.matches(':modal')), true);
+            assert.equal(await profileScroll.evaluate(e => getComputedStyle(e).overscrollBehaviorY), 'contain');
+            await profileScroll.focus();
+            await page.keyboard.press('End');
+            await page.waitForFunction(() => {
+              const e = document.querySelector('dialog[open] .modal');
+              return Math.abs(e.scrollHeight - e.clientHeight - e.scrollTop) < 2;
+            });
+            await snapshot(page, name + '-profile-from-measure-bottom');
+            await page.keyboard.press('Home');
+            await page.waitForFunction(() => document.querySelector('dialog[open] .modal').scrollTop === 0);
+            assert.deepEqual(await page.evaluate(() => ({
+              page: window.scrollY,
+              content: document.querySelector('.app-shell > .app-content').scrollTop,
+            })), backgroundScroll);
+            assert.equal(await profileDialog.evaluate(e => {
+              const box = e.getBoundingClientRect();
+              return box.top <= 1 && box.bottom >= innerHeight - 1 &&
+                e.contains(document.elementFromPoint(innerWidth / 2, innerHeight - 2));
+            }), true);
+            await close(page);
+            await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+            await load(page, profileSource.id);
+            await disclosure(page, '.application-conditions', true);
+            assert.equal(await page.getByRole('link', { name: 'Открыть официальный источник ↗', exact: true }).count(), 0);
+            const announcementLink = page.getByRole('link', { name: 'объявлении отбора', exact: true });
+            assert.equal(await announcementLink.isVisible(), true);
+            assert.equal(await announcementLink.getAttribute('href'), profileSource.source.url);
             // Unknown documents stay incomplete, but do not block the official operator handoff.
             await load(page, withoutDocs.id);
             assert.equal(await page.locator('.modal > h2').evaluate(e => getComputedStyle(e).textAlign), 'left');
             await disclosure(page, '.application-conditions', true);
+            assert.equal(await page.getByRole('link', { name: 'Открыть официальный источник ↗', exact: true }).count(), 0);
             await snapshot(page, name + '-conditions');
             await disclosure(page, '.application-conditions', false);
             await page.emulateMedia({ reducedMotion: 'reduce' });
