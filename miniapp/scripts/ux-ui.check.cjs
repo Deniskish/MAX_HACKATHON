@@ -804,6 +804,9 @@ async function snapshot(page, name) {
             const retained = await page.evaluate(() => { const { applications, saved } = JSON.parse(localStorage.getItem('opora.workspace')).data; return { applications, saved }; });
             await page.getByRole('dialog', { name: 'Удалить бизнес?', exact: true }).getByRole('button', { name: 'Удалить', exact: true }).click();
             await page.locator('.guest-hub').waitFor();
+            // Guest UI commits before the profile dialog's useEffect calls close().
+            // Wait for the actual dialog state; a persistently open dialog must still fail.
+            await page.waitForFunction(() => !document.querySelector('dialog[open]'));
             assert.equal(await page.locator('dialog[open]').count(), 0);
             assert.deepEqual(await page.evaluate(() => { const { profile, applications, saved } = JSON.parse(localStorage.getItem('opora.workspace')).data; return { profile, applications, saved }; }), { profile: null, ...retained });
             // A project without a legal entity exposes the same safe removal path.
