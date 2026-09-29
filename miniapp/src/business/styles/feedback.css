@@ -156,49 +156,6 @@ main {
   text-align: center;
 }
 
-/* Пароль появляется до монтирования рабочего пространства и его запросов. */
-.access-screen {
-  min-height: 100dvh;
-  max-width: none;
-  padding: 40px 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 32px;
-  background:
-    radial-gradient(ellipse at 90% 0, #d5d9e2, transparent 60%), #f7f8fb;
-}
-.access-card {
-  width: 100%;
-  max-width: 440px;
-  padding: 36px;
-  box-shadow: 0 20px 70px #12141608;
-}
-.access-card > .color-orb {
-  margin-bottom: 28px;
-}
-.access-card .eyebrow {
-  font-size: 10px;
-  letter-spacing: 1.2px;
-}
-.access-card h1 {
-  font-size: 32px;
-  margin: 14px 0;
-}
-.access-card p {
-  font-size: 14px;
-}
-.access-card .opora-input-body {
-  background: #f2f4f8;
-}
-.access-card .opora-action {
-  width: 100%;
-}
-.access-card .error {
-  color: #ba303f;
-}
-
 @media (max-width: 600px) {
   .funding-card h3 {
     font-size: 20px;
@@ -245,16 +202,5 @@ main {
   }
   .project-dialog .field .opora-input-body {
     background: #fff;
-  }
-  .access-screen {
-    padding: max(28px, env(safe-area-inset-top)) 20px
-      calc(28px + env(safe-area-inset-bottom));
-    gap: 28px;
-  }
-  .access-card {
-    padding: 28px 22px;
-  }
-  .access-card h1 {
-    font-size: 30px;
   }
 }

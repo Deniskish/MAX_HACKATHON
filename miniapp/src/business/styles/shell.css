@@ -145,8 +145,7 @@ textarea:focus {
   outline-color: #8064ff;
 }
 .home-wordmark img,
-.profile-briefcase,
-.access-symbol {
+.profile-briefcase {
   object-fit: contain;
   pointer-events: none;
   user-select: none;
@@ -224,7 +223,6 @@ textarea:focus {
 }
 .opora-theme .opora-input-body,
 .opora-theme .field .opora-input-body,
-.opora-theme .access-card .opora-input-body,
 .opora-theme .chat-input .opora-input-body,
 .field select,
 .funding-experience .field select,
@@ -704,8 +702,7 @@ dialog .modal,
 .checklist-item input[type="file"] {
   max-width: 100%;
 }
-.error,
-.access-card .error {
+.error {
   background: #38282d;
   border: 1px solid #d5a6ae26;
   color: #e7b5bd;
@@ -724,38 +721,6 @@ dialog .modal,
   color: var(--ink);
   border-radius: 16px;
   box-shadow: 0 18px 45px #0003;
-}
-.access-screen {
-  width: 100%;
-  max-width: 430px;
-  min-height: var(--app-height, 100dvh);
-  margin: 0 auto;
-  padding: calc(28px + var(--app-safe-top)) 20px
-    calc(28px + var(--app-safe-bottom));
-  gap: 28px;
-  background:
-    radial-gradient(ellipse at 0% 70%, #7337ff14, transparent 50%), #191a1f;
-}
-.access-wordmark {
-  width: 120px;
-  flex-shrink: 0;
-  align-self: flex-start;
-}
-.access-card {
-  border-radius: 26px;
-  padding: 26px 22px;
-}
-.access-symbol {
-  display: block;
-  margin: -12px 0 12px -12px;
-}
-.access-card h1 {
-  font-size: 28px;
-  line-height: 1.2;
-  letter-spacing: -0.8px;
-}
-.access-card .eyebrow {
-  color: var(--muted);
 }
 @media (max-width: 359px) {
   .app-shell > .app-content {
@@ -828,4 +793,61 @@ dialog .modal,
 .retained-application-text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* Shown only while the application module loads; no minimum display time. */
+.startup-screen {
+  min-height: var(--app-height, 100dvh);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: calc(28px + var(--app-safe-top)) 24px
+    calc(28px + var(--app-safe-bottom));
+  background: radial-gradient(ellipse at 50% 40%, #8064ff12, transparent 60%), var(--canvas);
+  color: var(--ink);
+}
+.startup-screen .startup-wordmark {
+  width: min(200px, 65vw);
+  flex-shrink: 0;
+  animation: startup-appear 320ms ease-out both;
+}
+.startup-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.startup-indicator {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: startup-spin 900ms linear infinite;
+}
+.startup-error {
+  max-width: 340px;
+  text-align: center;
+}
+.startup-error .opora-action {
+  min-height: 44px;
+}
+@keyframes startup-appear {
+  from { opacity: 0; transform: translateY(4px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes startup-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .startup-screen .startup-wordmark,
+  .startup-indicator {
+    animation: none;
+  }
 }

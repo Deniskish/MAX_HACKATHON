@@ -3068,8 +3068,7 @@ components:
       type: apiKey
       in: header
       name: X-Max-Init-Data
-      description: Исходный подписанный MAX WebApp initData. Проверяются HMAC, auth_date (не старше 24 часов) и
-        user.id. Пароль demo-экрана не является API-авторизацией.
+      description: Исходный подписанный MAX WebApp initData. Проверяются HMAC, auth_date (не старше 24 часов) и user.id.
     BotUser:
       type: apiKey
       in: header

@@ -31,7 +31,6 @@ jobs:
         env:
           PORT: 3021
           OPORA_UI_URL: http://127.0.0.1:3021
-          OPORA_TEST_PASSWORD: '20042004'
           OPORA_UI_OUTPUT: ${{ github.workspace }}/test-results/ux
         run: |
           node miniapp/scripts/serve.cjs &

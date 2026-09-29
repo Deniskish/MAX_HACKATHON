@@ -1,12 +1,10 @@
 // Run against a freshly built Vite preview. Requires Playwright Chromium/WebKit.
-// OPORA_TEST_PASSWORD=... OPORA_UI_URL=http://localhost:3021 node scripts/business-ui.check.cjs
+// OPORA_UI_URL=http://localhost:3021 node scripts/business-ui.check.cjs
 const { chromium, webkit } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const url = process.env.OPORA_UI_URL || 'http://localhost:3021';
-const password = process.env.OPORA_TEST_PASSWORD;
-if (!password) throw new Error('Set OPORA_TEST_PASSWORD for the local access screen');
 const output = process.env.OPORA_UI_OUTPUT || '/tmp/opora-business-ui';
 fs.mkdirSync(output, { recursive: true });
 const programId = JSON.parse(fs.readFileSync(path.join(__dirname, '../api-server/funding-catalog/official-funding.snapshot.json')))[0].id;
@@ -66,7 +64,7 @@ async function composer(page, title) {
           if (r.request().url().endsWith('/ai/assist')) { const data = r.request().postDataJSON(); requests.push(data); return r.fulfill({ json: { ...answer, mode: data.task === 'workspace' ? 'local' : 'llm' } }); }
           return r.fulfill({ json: r.request().url().includes('updates') ? { updates: [] } : { status: 'ready', configured: true } });
         });
-        await page.goto(url); await page.locator('#access-password').fill(password); await page.getByRole('button', { name: 'Войти', exact: true }).click();
+        await page.goto(url); await page.locator('.app-shell').waitFor();
         await navigate(page, 3);
         const padding = await page.locator('.app-shell > .app-content').evaluate(e => parseFloat(getComputedStyle(e).paddingLeft)); assert.ok(padding >= 16 && padding <= 20);
         await composer(page, 'План развития'); await noOverflow(page);
@@ -92,7 +90,7 @@ async function composer(page, title) {
         assert.equal(cleared.profile, null); assert.equal(cleared.projectProfile, null); assert.deepEqual(cleared.fundingNeed, need);
         assert.deepEqual(cleared.applications, [draft]); assert.deepEqual(cleared.saved, [programId]); assert.deepEqual(cleared.detachedApplicationIds, [draft.id]);
         assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('opora.ai.history.v2') || '[]')), []);
-        await page.reload(); if (await page.locator('#access-password').count()) { await page.locator('#access-password').fill(password); await page.getByRole('button', { name: 'Войти', exact: true }).click(); }
+        await page.reload(); await page.locator('.app-shell').waitFor();
         await navigate(page, 3); await page.locator('.guest-hub').waitFor(); assert.equal((await workspace(page)).profile, null);
         await navigate(page, 1); await page.locator('.catalog-guest-context').waitFor(); assert.ok(await page.locator('.funding-card').count());
         await navigate(page, 2); await page.locator('.application-row').waitFor(); await noOverflow(page); await page.getByRole('button', { name: /Продолжить/ }).click();

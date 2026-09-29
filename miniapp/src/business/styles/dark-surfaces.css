@@ -33,8 +33,7 @@ body {
   --icon-themed: #b39bff;
   --stroke-themed: #b39bff;
 }
-.app-shell,
-.access-screen {
+.app-shell {
   background:
     radial-gradient(ellipse 100% 400px at 90% 0, #34373f 0, transparent 90%),
     var(--canvas);
@@ -129,7 +128,6 @@ footer {
 .funding-experience .field select,
 .funding-experience .field .opora-input-body,
 .project-dialog .field .opora-input-body,
-.access-card .opora-input-body,
 .opora-theme .chat-input .opora-input-body {
   background: #292c35;
 }
@@ -204,8 +202,7 @@ dialog,
   background: #292c35;
   color: var(--ink);
 }
-.error,
-.access-card .error {
+.error {
   background: #45262a;
   color: #ffc3c8;
 }

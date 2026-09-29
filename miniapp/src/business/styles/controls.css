@@ -34,7 +34,6 @@
     .catalog-guest-context,
     .catalog-glass-context,
     .funding-result-intro,
-    .access-card,
     .ai-entry,
     .adaptive-insight,
     .priority-card,
@@ -220,7 +219,7 @@
     .segmented-control,
     .catalog-scopes
   ),
-.opora-theme :is(.field, .access-card, .chat-input) .opora-input-body {
+.opora-theme :is(.field, .chat-input) .opora-input-body {
   background: var(--glass-inset);
   border: 1px solid #d7d0ee24;
   box-shadow:

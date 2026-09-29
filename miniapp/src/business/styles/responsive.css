@@ -601,16 +601,6 @@ footer {
   padding: 18px 0 0;
   gap: 8px;
 }
-.access-screen {
-  min-height: 100dvh;
-  padding: 24px 16px;
-}
-.access-card {
-  padding: 24px 20px;
-}
-.access-card h1 {
-  font-size: 28px;
-}
 
 @media (max-width: 359px) {
   .widget,

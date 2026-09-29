@@ -74,15 +74,32 @@ const answer = {
   },
   results = [];
 async function load(page, id) {
-  await page.goto(url + (id ? `?program=${id}` : ""));
-  if (await page.locator("#access-password").count()) {
-    assert.ok(process.env.OPORA_TEST_PASSWORD);
-    await page
-      .locator("#access-password")
-      .fill(process.env.OPORA_TEST_PASSWORD);
-    await page.getByRole("button", { name: "Войти", exact: true }).click();
+  if (page.url() === "about:blank") {
+    // Hold only the lazy module: startup must render without asking for access.
+    let release;
+    const pendingModule = new Promise((resolve) => { release = resolve; });
+    const moduleRoute = "**/assets/BusinessApp-*.js";
+    const holdModule = async (route) => { await pendingModule; await route.continue(); };
+    await page.route(moduleRoute, holdModule);
+    try {
+      await page.goto(url + (id ? `?program=${id}` : ""), { waitUntil: "domcontentloaded" });
+      await page.getByRole("status").filter({ hasText: "Открываем Опору" }).waitFor();
+      assert.equal(await page.locator('input[type="password"]').count(), 0);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      for (const selector of [".startup-wordmark", ".startup-indicator"])
+        assert.equal(await page.locator(selector).evaluate((node) => getComputedStyle(node).animationName), "none");
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+    } finally {
+      release();
+    }
+    await page.locator(".app-shell").waitFor();
+    await page.unroute(moduleRoute, holdModule);
+  } else {
+    await page.goto(url + (id ? `?program=${id}` : ""));
   }
   await page.locator(".app-shell").waitFor();
+  assert.equal(await page.locator('.startup-screen, input[type="password"]').count(), 0);
 }
 async function nav(page, index) {
   await page.locator(".home-nav button").nth(index).click();

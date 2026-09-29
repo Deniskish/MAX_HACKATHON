@@ -37,8 +37,7 @@
   --glass-control-shadow: 0 1px 3px #20263204;
 }
 :where(html[data-theme="light"]) .opora-theme .app-shell,
-:where(html[data-theme="light"]) .opora-theme .app-shell:not(.page-overview),
-:where(html[data-theme="light"]) .opora-theme .access-screen {
+:where(html[data-theme="light"]) .opora-theme .app-shell:not(.page-overview) {
   color: var(--ink);
   color-scheme: light;
   background: var(--canvas);
@@ -165,7 +164,7 @@
 }
 :where(html[data-theme="light"])
   .opora-theme
-  :is(.home-orb, .access-symbol, .assistant-orb) {
+  :is(.home-orb, .assistant-orb) {
   filter: drop-shadow(0 4px 8px #693e7112);
 }
 :where(html[data-theme="light"]) .opora-theme .home-document {
@@ -282,17 +281,10 @@
 }
 :where(html[data-theme="light"])
   .opora-theme
-  :is(
-    .opora-input-body,
-    .opora-native-textarea,
-    .search-box,
-    .assistant-input-wrap,
-    .segmented-control,
-    .catalog-scopes
-  ),
+  :is(.opora-input-body, .opora-native-textarea, .search-box, .assistant-input-wrap, .segmented-control, .catalog-scopes),
 :where(html[data-theme="light"])
   .opora-theme
-  :is(.field, .access-card, .chat-input)
+  :is(.field, .chat-input)
   .opora-input-body {
   border-color: var(--line);
   box-shadow: none;
@@ -302,7 +294,7 @@
   :is(.opora-input-body, .opora-native-textarea, .field select),
 :where(html[data-theme="light"])
   .opora-theme
-  :is(.field, .access-card, .chat-input)
+  :is(.field, .chat-input)
   .opora-input-body {
   border-radius: 16px;
 }
@@ -321,7 +313,7 @@
   :is(.opora-input-body, .search-box, .assistant-input-wrap):focus-within,
 :where(html[data-theme="light"])
   .opora-theme
-  :is(.field, .access-card, .chat-input)
+  :is(.field, .chat-input)
   .opora-input-body:focus-within,
 :where(html[data-theme="light"])
   .opora-theme
@@ -372,7 +364,7 @@
   color: #795519;
   border-color: #79551926;
 }
-:where(html[data-theme="light"]) .opora-theme :is(.error, .access-card .error) {
+:where(html[data-theme="light"]) .opora-theme :is(.error) {
   background: #f8e7eb;
   color: #98334b;
   border-color: #98334b33;
