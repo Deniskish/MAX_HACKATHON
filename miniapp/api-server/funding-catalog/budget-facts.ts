@@ -1,3 +1,4 @@
+import { explicitEligibilityFacts } from './eligibility-facts';
 import type { FundingKind, FundingOpportunity } from './types';
 
 type KindEvidence = NonNullable<FundingOpportunity['imported']>['kindEvidence'];
@@ -35,6 +36,10 @@ export function withBudgetFacts(o: FundingOpportunity): FundingOpportunity {
   const regions = geography
     ? geography.some(s => /^(?:Российская Федерация|вся Россия|все регионы России)$/i.test(s)) ? 'all' : geography
     : o.imported.factsVersion === 1 ? o.regions : [];
+  const eligibility = detail?.eligibilityFacts ?? (detail ? explicitEligibilityFacts(detail.text) : undefined);
   return { ...o, kind: evidence?.kind ?? 'unknown', regions,
+    status: o.status === 'active' && detail?.accepting === false ? 'unknown' : o.status,
+    applicantTypes: eligibility?.applicantTypes.length ? eligibility.applicantTypes : o.applicantTypes,
+    okvedPrefixes: eligibility?.okvedPrefixes ?? [],
     imported: { ...o.imported, factsVersion: 1, kindEvidence: evidence } };
 }

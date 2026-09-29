@@ -2,6 +2,7 @@ import { InfoDisclosure } from './InfoDisclosure';
 import type { Dispatch, SetStateAction, ReactNode } from "react";
 import type {
   FundingKind,
+  FundingMatch,
   FundingNeed,
   FundingOpportunity,
 } from "../../api-server/funding-catalog/types";
@@ -58,7 +59,7 @@ export function CataloguePage({
   catalogToolsOpen: boolean;
   setCatalogToolsOpen: Setter<boolean>;
   officialFundingCatalog: FundingOpportunity[];
-  visiblePrograms: { p: FundingOpportunity }[];
+  visiblePrograms: { p: FundingOpportunity; m?: FundingMatch }[];
   catalogLimit: number;
   setCatalogLimit: Setter<number>;
   programCard: (p: FundingOpportunity) => ReactNode;
@@ -159,7 +160,7 @@ export function CataloguePage({
             onChange={setAvailability}
             includeClosedByDefault={onlySaved}
           />
-          {personal ? <p className="muted">Территория подбирается по региону вашего бизнеса.</p> : (
+          {personal ? <p className="muted">Базовый подбор учитывает тип заявителя и основной ОКВЭД. Территорию действия нужно проверить в условиях программы.</p> : (
             <label className="field">Территория действия
               <select value={selectedRegion} onChange={event => setSelectedRegion(event.target.value)}>
                 <option value="">Все территории</option>
@@ -212,9 +213,19 @@ export function CataloguePage({
           </button>
         )}
       </div>
-      <div className="program-grid catalog">
+      {personal ? <>
+        {!visiblePrograms.some(({ m }) => m?.personalEligibility?.confirmed) && <p>Подтверждённых вариантов пока нет</p>}
+        {[true, false].map(confirmed => {
+          const group = visiblePrograms.filter(({ m }) => Boolean(m?.personalEligibility?.confirmed) === confirmed);
+          const displayed = visiblePrograms.slice(0, catalogLimit).filter(({ m }) => Boolean(m?.personalEligibility?.confirmed) === confirmed);
+          return group.length > 0 && <section key={String(confirmed)}>
+            <h3>{confirmed ? 'Подходит по базовым данным' : 'Нужно уточнить'} · {group.length}</h3>
+            <div className="program-grid catalog">{displayed.map(({ p }) => programCard(p))}</div>
+          </section>;
+        })}
+      </> : <div className="program-grid catalog">
         {visiblePrograms.slice(0, catalogLimit).map(({ p }) => programCard(p))}
-      </div>
+      </div>}
       {visiblePrograms.length > catalogLimit && (
         <ActionButton
           className="secondary"

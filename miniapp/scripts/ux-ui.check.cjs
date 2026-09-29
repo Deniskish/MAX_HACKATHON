@@ -407,9 +407,17 @@ async function snapshot(page, name) {
             assert.equal(await page.getByText(/Заявка принята/).count(), 0);
             await snapshot(page, name + "-submission");
             await close(page);
-            // Public catalogue survives AI outage even when personal eligibility is unconfirmed.
-            // Filters and scroll survive navigation.
+            // Base personal candidates stay visible even with manual conditions / unknown OKVED.
             await nav(page, 1);
+            await page.getByRole('button', { name: 'Для вас', exact: true }).click();
+            await page.getByText('Подтверждённых вариантов пока нет', { exact: true }).waitFor();
+            const personalTitles = catalog.filter(o => !['closed', 'upcoming'].includes(o.status) &&
+              o.applicantTypes.includes('legal_entity')).map(o => o.title).sort();
+            assert.deepEqual((await page.locator('.funding-card > h3').allTextContents()).sort(), personalTitles);
+            assert.ok((await page.locator('.funding-status').allTextContents()).every(text => text === 'Нужно уточнить'));
+            await page.getByRole('heading', { name: 'Нужно уточнить · ' + personalTitles.length, exact: true }).waitFor();
+            await snapshot(page, name + '-personal-pending');
+            // Public catalogue and filters survive AI outage and navigation.
             await page
               .getByRole("button", { name: "Все меры", exact: true })
               .click();
@@ -530,6 +538,8 @@ async function snapshot(page, name) {
             await page.getByRole('button', { name: 'Найти варианты', exact: true }).click();
             await page.waitForFunction(() => !document.querySelector('dialog[open]'));
             assert.match(await page.locator('.catalog-task').innerText(), /Оборудование и модернизация · сумма не указана/);
+            await page.getByRole('button', { name: 'Для вас', exact: true }).click();
+            assert.deepEqual((await page.locator('.funding-card > h3').allTextContents()).sort(), personalTitles);
             await page.getByRole('button', { name: 'Все меры', exact: true }).click();
             const equipmentTitles = catalog.filter(o => o.status !== 'closed' && o.purposes.some(p =>
               ['покупка оборудования', 'сельхозтехника'].includes(p))).map(o => o.title).sort();

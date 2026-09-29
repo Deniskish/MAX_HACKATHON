@@ -152,3 +152,33 @@ test('team monitoring is protected and regional interest accepts no arbitrary so
     assert.deepEqual(web.status().unsupportedRegions,[]);
   }finally{await new Promise<void>(r=>{server.close(()=>r());server.closeAllConnections();});rmSync(dir,{recursive:true,force:true});}
 });
+
+test('FSI discovers public competition announcements without visiting applicant accounts', async () => {
+  const fasie = fundingSources.find(s => s.id === 'fasie')!;
+  assert.ok(fasie.seeds.includes('https://fasie.ru/competitions/'));
+  const url = 'https://fasie.ru/press/fund/test-competition/';
+  assert.equal(sourceUrl(url, fasie), url);
+  assert.equal(sourceUrl('https://online.fasie.ru/', fasie), null);
+  const html = `<html><body><main><p>${text}</p><a href="${url}">Конкурс Старт</a><a href="https://online.fasie.ru/">Подать заявку</a></main></body></html>`;
+  const result = await readProgrammePage(fasie.seeds[0], fasie, async () => new Response(html, { headers: { 'Content-Type': 'text/html' } }));
+  assert.deepEqual(result.links, [url]);
+});
+test('explicitly ended intake stays closed even without a machine-readable date', () => {
+  const closure = 'Приём заявок завершён.';
+  const value = { ...extraction(), ongoing: false, accepting: false, closed: true,
+    evidence: { ...extraction().evidence, acceptance: closure } };
+  const result = verifiedOpportunity(value, { ...page, text: page.text + closure }, source)!;
+  assert.equal(result.status, 'closed'); assert.equal(result.imported?.detail?.accepting, false);
+});
+test('a mention of projects does not prove permission for applicants without legal entities', () => {
+  const quote = 'Финансируются проекты юридических лиц.';
+  assert.throws(() => verifiedOpportunity({ ...extraction(), applicantTypes: ['project'], evidence: { ...extraction().evidence, applicants: quote } },
+    { ...page, text: page.text + quote }, source), /EXTRACTION_APPLICANTS/);
+});
+test('unknown instrument kind is allowed without guessing; negated recipient permission is not', () => {
+  const value = { ...extraction(), kind: 'unknown', evidence: { ...extraction().evidence, kind: '' } };
+  assert.equal(verifiedOpportunity(value, page, source)?.kind, 'unknown');
+  const quote = 'Физические лица не допускаются к участию.';
+  assert.throws(() => verifiedOpportunity({ ...extraction(), applicantTypes: ['individual'], evidence: { ...extraction().evidence, applicants: quote } },
+    { ...page, text: page.text + quote }, source), /EXTRACTION_APPLICANTS/);
+});

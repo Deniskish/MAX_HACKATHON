@@ -5,7 +5,7 @@ export type FundingSource = { id: string; name: string; seeds: string[]; hosts: 
 export const fundingSources: FundingSource[] = [
   { id: 'corpmsp', name: 'Корпорация МСП', seeds: ['https://corpmsp.ru/to-business/'], hosts: ['corpmsp.ru', 'www.corpmsp.ru'], paths: ['/to-business/'], providerType: 'development_institution' },
   { id: 'frp', name: 'Фонд развития промышленности', seeds: ['https://frprf.ru/zaymy/'], hosts: ['frprf.ru', 'www.frprf.ru'], paths: ['/zaymy/'], providerType: 'fund' },
-  { id: 'fasie', name: 'Фонд содействия инновациям', seeds: ['https://fasie.ru/programs/'], hosts: ['fasie.ru', 'www.fasie.ru'], paths: ['/programs/'], providerType: 'fund' },
+  { id: 'fasie', name: 'Фонд содействия инновациям', seeds: ['https://fasie.ru/programs/', 'https://fasie.ru/press/fund/', 'https://fasie.ru/competitions/'], hosts: ['fasie.ru', 'www.fasie.ru'], paths: ['/programs/', '/press/fund/', '/competitions/'], providerType: 'fund' },
   { id: 'chuvashia', name: 'Мой бизнес · Чувашская Республика', seeds: ['https://mb21.ru/'], hosts: ['www.mb21.ru', 'mb21.ru'], paths: ['/services/', '/support/', '/uslugi/'], region: 'Чувашская Республика', aliases: ['Чувашия', 'Чувашская Республика - Чувашия', 'Чувашская'], providerType: 'regional' },
   { id: 'tatarstan', name: 'Фонд поддержки предпринимательства Республики Татарстан', seeds: ['https://fpprt.ru/'], hosts: ['fpprt.ru', 'www.fpprt.ru'], paths: ['/'], region: 'Республика Татарстан', aliases: ['Татарстан'], providerType: 'regional' },
   { id: 'moscow', name: 'Малый бизнес Москвы', seeds: ['https://mbm.mos.ru/'], hosts: ['mbm.mos.ru'], paths: ['/measures/', '/support/', '/subsidies/', '/money/'], region: 'Москва', aliases: ['г. Москва', 'город Москва'], providerType: 'regional' },

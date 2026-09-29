@@ -96,8 +96,8 @@ export function removeBusiness(storage: Pick<Storage, 'getItem' | 'setItem' | 'r
   }
   return next;
 }
-export function projectAsProfile(project: ProjectProfile): Profile {
-  return { ...emptyProfile, name: project.name, region: project.region, applicantType: 'project', goals: project.fundingPurpose && !isAllFundingPurposes(project.fundingPurpose) ? [project.fundingPurpose] : [] };
+export function projectAsProfile(project: ProjectProfile): Profile & Pick<ProjectProfile, 'stage'> {
+  return { ...emptyProfile, name: project.name, region: project.region, applicantType: 'project', industry: project.industry, stage: project.stage, goals: project.fundingPurpose && !isAllFundingPurposes(project.fundingPurpose) ? [project.fundingPurpose] : [] };
 }
 export function applicationStatus(app: Application, opportunity: FundingOpportunity) {
   if (applicationReadiness(app, opportunity).ready) return 'ready_for_review';
@@ -107,7 +107,7 @@ export const applicationLabels = { draft: 'Черновик', collecting_documen
 // Не смешиваем подтверждённое соответствие с вариантами, для которых не хватает данных.
 export function personalFunding(matches: FundingMatch[], hasProfile: boolean) {
   if (!hasProfile) return { candidates: [], confirmed: [], pending: [] };
-  const candidates = matches.filter((m) => (m.personalEligibility?.candidate ?? m.personalEligibility?.confirmed) === true && ['eligible', 'almost_eligible', 'need_more_data'].includes(m.status));
+  const candidates = matches.filter((m) => (m.personalEligibility?.candidate ?? m.personalEligibility?.confirmed) === true && !['expired', 'upcoming'].includes(m.status) && m.opportunity.status !== 'closed' && m.opportunity.status !== 'upcoming');
   const confirmed = candidates.filter(m => m.status === 'eligible' && m.personalEligibility?.confirmed === true);
   return { candidates, confirmed, pending: candidates.filter(m => !confirmed.includes(m)) };
 }

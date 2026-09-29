@@ -14,7 +14,7 @@ const base: Omit<FundingOpportunity, 'id' | 'title' | 'kind'> = {
   okvedPrefixes: [], companyTypes: [], requirements: [], requiredDocuments: [], deadline: null,
   // Explicit recipients of these fictional business measures, not an inferred lack of restrictions.
   applicantTypes: ['legal_entity', 'individual_entrepreneur'],
-  difficulty: 'medium', preparationDays: 10,
+  status: 'active', difficulty: 'medium', preparationDays: 10,
   source: { name: 'Каталог финансирования «Опора» — демонстрация', url: null, type: 'demo', updatedAt: '2026-09-22' },
   version: 'demo-1',
 };

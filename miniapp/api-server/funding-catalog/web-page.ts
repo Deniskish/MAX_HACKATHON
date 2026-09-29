@@ -22,7 +22,7 @@ export async function readProgrammePage(url: string, source: FundingSource, tran
     // Discover only public programme sections, never arbitrary linked hosts.
     const links = [...document.querySelectorAll('a[href]')].flatMap(a => {
       try { const next = sourceUrl(new URL(a.getAttribute('href')!, url).href, source);
-        return next && /займ|заём|грант|субсид|поддержк|программ|финанс|поручительств|лизинг/i.test(a.textContent ?? '') ? [next] : [];
+        return next && /займ|заём|грант|субсид|поддержк|программ|финанс|поручительств|лизинг|конкурс|старт|умник/i.test(a.textContent ?? '') ? [next] : [];
       } catch { return []; }
     });
     document.querySelectorAll('script,style,noscript,svg,nav,header,footer,form,iframe').forEach((e: { remove(): void }) => e.remove());

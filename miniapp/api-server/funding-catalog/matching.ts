@@ -74,8 +74,11 @@ function fundingTermFit(need: FundingNeed, o: FundingOpportunity): FundingMatch[
 export type MatchOptions = { now?: Date; preparedDocuments?: string[] };
 export function matchFundingOpportunity(profile: FundingProfile, need: FundingNeed,
   opportunity: FundingOpportunity, options: MatchOptions = {}): FundingMatch {
-  const applicantType = profile.applicantType ?? (profile.companyType === 'ИП' ? 'individual_entrepreneur' : profile.companyType && profile.companyType !== 'КФХ' ? 'legal_entity' : undefined);
-  const checks = restrictions(opportunity).map((r) => evaluateFundingRequirement(profile, r));
+  const project = profile.applicantType === 'project';
+  // A pre-incorporation project can apply only through an explicitly published category.
+  const projectApplicant = (['project', 'individual', 'team'] as const).find(type => opportunity.applicantTypes?.includes(type));
+  const applicantType = (project ? projectApplicant ?? 'project' : profile.applicantType) ?? (profile.companyType === 'ИП' ? 'individual_entrepreneur' : profile.companyType && profile.companyType !== 'КФХ' ? 'legal_entity' : undefined);
+  const checks = restrictions(opportunity).map((r) => evaluateFundingRequirement({ ...profile, applicantType }, r));
   if (opportunity.applicantTypes?.length) checks.push(evaluateFundingRequirement({ ...profile, applicantType }, {
     field: 'applicantType', operator: 'includes', value: opportunity.applicantTypes, required: true, label: 'Допустимая категория заявителя',
   }));
@@ -83,27 +86,22 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
   if (opportunity.sectors.length) checks.push(evaluateFundingRequirement(profile, {
     field: 'industry', operator: 'includes', value: opportunity.sectors, required: true, label: `Отрасль: ${opportunity.sectors.join(' / ')}`,
   }));
-  const coreFields = new Set(['region', 'applicantType', 'companyType', 'industry', 'okved', 'goals', 'stage']);
-  const coreChecks = checks.filter(r => r.required && coreFields.has(r.field));
-  const personalReasons = coreChecks.filter(r => r.status !== 'fulfilled').map(r => r.label);
-  const addUnknownCore = (field: FundingRequirement['field'], label: string) => {
-    personalReasons.push(label);
+  const addUnknown = (field: FundingRequirement['field'], label: string) => {
     checks.push({ field, label, required: true, operator: 'eq', value: '', status: 'unknown' });
   };
   if (opportunity.regions !== 'all' && !opportunity.regions.length)
-    addUnknownCore('region', 'Территория действия не подтверждена');
-  if (!opportunity.applicantTypes?.length && !opportunity.companyTypes.length
-    && !coreChecks.some(r => r.field === 'applicantType' || r.field === 'companyType'))
-    addUnknownCore('applicantType', 'Категория заявителя не подтверждена');
-  // Empty imported restrictions mean unparsed conditions, not an unrestricted measure.
-  if (opportunity.imported && !opportunity.sectors.length && !opportunity.okvedPrefixes.length
-    && !coreChecks.some(r => r.field === 'industry' || r.field === 'okved'))
-    addUnknownCore('industry', 'Отраслевые условия ещё не проверены');
+    addUnknown('region', 'Территория действия не подтверждена');
+  if (!opportunity.applicantTypes?.length)
+    addUnknown('applicantType', 'Категория заявителя не подтверждена');
+  if (!project && !opportunity.okvedPrefixes.length && !checks.some(r => r.field === 'okved' && r.required))
+    addUnknown('okved', 'Ограничения по основному ОКВЭД не подтверждены в структурированных данных');
+  // Only explicit base contradictions exclude a potential measure. Secondary
+  // failures remain in the full assessment and must never be presented as fulfilled.
+  const baseMismatch = checks.some(r => r.required && ['applicantType', 'okved'].includes(r.field) && r.status === 'missing');
 
   if (profile.companyStatus && profile.companyStatus !== 'active') checks.push({ field: 'companyStatus', operator: 'eq', value: 'active', required: true, label: 'Действующий статус регистрации', status: 'missing' });
-  for (const label of opportunity.manualConditions ?? []) {
+  for (const label of new Set([...(opportunity.manualConditions ?? []), ...(opportunity.manualEligibilityConditions ?? [])])) {
     checks.push({ field: 'industry', operator: 'eq', value: '', required: true, label, status: 'unknown' });
-    if (opportunity.manualEligibilityConditions?.includes(label)) personalReasons.push(label);
   }
   if (opportunity.projectBudgetMin != null) {
     const budget = need.amount !== null && need.ownFunds !== null ? need.amount + need.ownFunds : null;
@@ -128,11 +126,12 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
   const missingDocuments = opportunity.requiredDocuments.filter((d) => !options.preparedDocuments?.includes(d));
   const expired = opportunity.status === 'closed' || !!opportunity.imported?.endsAt && Date.parse(opportunity.imported.endsAt) < (options.now ?? new Date()).getTime() || opportunity.deadline !== null
     && new Date(`${opportunity.deadline}T23:59:59+03:00`).getTime() < (options.now ?? new Date()).getTime();
+  const upcoming = opportunity.status === 'upcoming' || !!opportunity.imported?.startsAt && Date.parse(opportunity.imported.startsAt) > (options.now ?? new Date()).getTime();
   const status: FundingStatus = expired ? 'expired'
-    : opportunity.status === 'upcoming' ? 'upcoming'
+    : upcoming ? 'upcoming'
     : missingRequirements.some((r) => r.required) || purposeAssessment === 'mismatch' || amountFit === 'no' || termFit === 'no'
       ? 'not_eligible'
-      : opportunity.status === 'unknown' || unknownRequirements.some((r) => r.required) || !purposeFit
+      : opportunity.status !== 'active' || unknownRequirements.some((r) => r.required) || !purposeFit
         || (need.amount !== null && !isSupporting(opportunity.kind) && amountFit === 'unknown')
         || (need.preferredTermMonths !== null && hasRepaymentTerm(opportunity.kind) && termFit === 'unknown')
         ? 'need_more_data'
@@ -175,12 +174,15 @@ export function matchFundingOpportunity(profile: FundingProfile, need: FundingNe
   if (opportunity.kind === 'guarantee') nextActions.push('Проверить требования кредитора к поручительству.');
   if (expired) nextActions.unshift('Приём завершён; проверить новую версию программы.');
   if (!nextActions.length) nextActions.push('Проверить актуальные условия и порядок рассмотрения.');
-  if (personalReasons.length && status === 'need_more_data') explanations.push('Недостаточно подтверждённых данных для персональной рекомендации.');
+  const personalReasons = [...missingRequirements, ...unknownRequirements].filter(r => r.required).map(r => r.label);
+  if (!purposeFit) personalReasons.push('Соответствие конкретной цели не подтверждено');
+  if (opportunity.status !== 'active') personalReasons.push('Открытый приём заявок не подтверждён');
+  const candidate = !expired && !upcoming && !baseMismatch && (!project || !!projectApplicant);
+  const confirmed = candidate && status === 'eligible' && personalReasons.length === 0;
+  if (candidate && !confirmed) explanations.push('Потенциальный вариант по базовым данным; дополнительные условия требуют проверки, получение поддержки не гарантировано.');
   return { opportunity, status, score,
     personalEligibility: {
-      confirmed: personalReasons.length === 0 && purposeFit && !['not_eligible', 'expired', 'upcoming'].includes(status),
-      candidate: personalReasons.length === 0 && (purposeFit || allPurposes) && !['not_eligible', 'expired', 'upcoming'].includes(status),
-      reasons: [...personalReasons, ...(!purposeFit ? ['Соответствие конкретной цели не подтверждено'] : [])],
+      confirmed, candidate, reasons: personalReasons,
     },
     relevance: score + (opportunity.kind === 'guarantee' && need.needsCollateralSupport === true ? 20 : 0),
     fulfilledRequirements, missingRequirements, unknownRequirements, missingDocuments,

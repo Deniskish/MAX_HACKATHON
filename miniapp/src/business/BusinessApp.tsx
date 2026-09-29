@@ -284,7 +284,7 @@ export default function BusinessApp() {
   const visiblePrograms = matches.map(m => ({ p: programsById.get(m.opportunity.id)!, m }))
     .filter(({p, m}) => p && (!selectedKinds.length || selectedKinds.includes(p.kind)) && (!onlySaved || saved.includes(p.id)) &&
       (!profile || catalogScope !== 'personal' || personalIds.has(p.id)) &&
-      (isAllFundingPurposes(need.purpose) || m.purposeFit) &&
+      (profile && catalogScope === 'personal' || isAllFundingPurposes(need.purpose) || m.purposeFit) &&
       (profile && catalogScope === 'personal' || matchesCatalogRegion(p, selectedRegion)) &&
       (availability ? m.opportunity.status === availability : onlySaved || m.opportunity.status !== 'closed') &&
       `${p.title} ${p.description} ${fundingKindLabels[p.kind]}`.toLowerCase().includes(query.toLowerCase()))

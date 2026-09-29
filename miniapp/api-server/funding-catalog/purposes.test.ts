@@ -53,26 +53,29 @@ test('a concrete category matches mapped programme facts and rejects a different
   assert.equal(result.purposeFit, true);
   assert.equal(result.personalEligibility?.confirmed, true);
   assert.equal(match(grant, profile, 'Оборотные расходы').status, 'not_eligible');
-  assert.equal(match({ ...grant, purposes: [] }, profile, 'Оборотные расходы').personalEligibility?.candidate, false);
+  assert.equal(match({ ...grant, purposes: [] }, profile, 'Оборотные расходы').personalEligibility?.candidate, true);
 });
-test('all purposes never waives region, applicant, company type, OKVED, industry or programme status', () => {
-  const cases: [FundingOpportunity, FundingProfile][] = [
+test('all purposes hides only base contradictions and unavailable intakes from personal candidates', () => {
+  for (const [o, p] of [
+    [grant, { ...profile, applicantType: 'project' }],
+    [grant, { ...profile, okved: '01.11' }],
+    [{ ...grant, status: 'closed' }, profile],
+    [{ ...grant, status: 'upcoming' }, profile],
+  ] as [FundingOpportunity, FundingProfile][]) {
+    assert.equal(match(o, p).personalEligibility?.candidate, false);
+  }
+  for (const [o, p] of [
     [{ ...grant, regions: ['Республика Татарстан'] }, profile],
     [{ ...grant, regions: [] }, profile],
-    [grant, { ...profile, applicantType: 'project' }],
     [grant, { ...profile, companyType: 'АО' }],
-    [grant, { ...profile, okved: '01.11' }],
     [grant, { ...profile, okved: undefined }],
     [grant, { ...profile, industry: 'Сельское хозяйство' }],
     [grant, { ...profile, industry: undefined }],
     [{ ...grant, applicantTypes: [], companyTypes: [] }, profile],
-    [{ ...grant, status: 'closed' }, profile],
-    [{ ...grant, status: 'upcoming' }, profile],
     [{ ...grant, imported: { provider: 'budget', startsAt: '', endsAt: '' }, sectors: [], okvedPrefixes: [] }, profile],
-  ];
-  for (const [o, p] of cases) {
+  ] as [FundingOpportunity, FundingProfile][]) {
     const result = match(o, p);
-    assert.equal(result.personalEligibility?.candidate, false, JSON.stringify({ o, p }));
+    assert.equal(result.personalEligibility?.candidate, true);
     assert.equal(result.personalEligibility?.confirmed, false);
   }
 });

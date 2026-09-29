@@ -1,3 +1,4 @@
+import type { EligibilityFacts } from './eligibility-facts';
 import { allFundingPurposes } from './purposes';
 export { fundingPurposes } from './purposes';
 import type { Profile } from '../business-model';
@@ -41,7 +42,7 @@ export type FundingOpportunity = {
   applicantTypes?: ApplicantType[];
   status?: OpportunityState;
   manualConditions?: string[];
-  /** Subset of manualConditions that prevents personal selection until verified. */
+  /** Conditions requiring operator verification, never an automatic exclusion from personal candidates. */
   manualEligibilityConditions?: string[];
   projectBudgetMin?: number | null;
   cofinancingPercent?: number | null;
@@ -54,7 +55,7 @@ export type FundingOpportunity = {
   version: string;
   imported?: { provider: string; startsAt: string; endsAt: string; firstSeenAt?: string;
     checkedAt?: string; factsVersion?: 1; kindEvidence?: { kind: FundingKind; quote: string; field: string }; ongoing?: boolean; verification?: 'verified' | 'pending'; evidence?: Record<string, string>;
-    detail?: { text: string; complete: boolean; version: string; checkedAt: string; startsAt: string; endsAt: string; accepting: boolean; geography: string[]; kindEvidence?: { kind: FundingKind; quote: string; field: string } } };
+    detail?: { text: string; complete: boolean; version: string; checkedAt: string; startsAt: string; endsAt: string; accepting: boolean; geography: string[]; eligibilityFacts?: EligibilityFacts; kindEvidence?: { kind: FundingKind; quote: string; field: string } } };
 };
 export type FundingNeed = {
   purpose: string;
@@ -71,7 +72,7 @@ export type FundingStatus = 'eligible' | 'almost_eligible' | 'need_more_data' | 
 export type FundingMatch = {
   opportunity: FundingOpportunity;
   status: FundingStatus;
-  /** Core eligibility is separate from missing secondary preparation data. */
+  /** MVP candidate uses applicant type and primary OKVED; confirmed requires the full assessment. */
   personalEligibility?: { confirmed: boolean; candidate?: boolean; reasons: string[] };
   score: number;
   // Приоритет отдельно от score: обеспечение не улучшает соответствие требованиям.

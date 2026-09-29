@@ -10,7 +10,7 @@ import { emptyFundingNeed, type FundingOpportunity, type FundingProfile } from '
 import { OfficialDetails, ProjectOnboarding } from './OfficialExperience';
 import { inspectDocumentText, emptyProfile, type Application } from './domain';
 const ids = officialFundingCatalog.map((o) => o.id);
-test('personal selection hides ineligible and closed measures and never counts unknown conditions as confirmed', async (t) => {
+test('personal selection separates base candidates from complete confirmation', async (t) => {
   // Isolated programme facts keep eligibility tests independent of the live official snapshot.
   const opportunity: FundingOpportunity = {
     id: 'personal-selection-test', title: 'Тестовая мера', kind: 'grant',
@@ -43,13 +43,15 @@ test('personal selection hides ineligible and closed measures and never counts u
   await t.test('partial amount coverage enters candidates and pending, not confirmed', () => {
     assert.equal(almost.status, 'almost_eligible');
     assert.equal(almost.amountFit, 'partial');
-    assert.deepEqual(almost.personalEligibility, { confirmed: true, candidate: true, reasons: [] });
+    assert.equal(almost.personalEligibility?.confirmed, false);
+    assert.equal(almost.personalEligibility?.candidate, true);
     assert.deepEqual(personalFunding([almost], true), { candidates: [almost], confirmed: [], pending: [almost] });
   });
-  await t.test('unknown secondary data keeps confirmed core eligibility but not full confirmation', () => {
+  await t.test('unknown secondary data keeps the candidate without full confirmation', () => {
     assert.equal(secondaryUnknown.status, 'need_more_data');
     assert.deepEqual(secondaryUnknown.unknownRequirements.map(r => r.field), ['revenue']);
-    assert.deepEqual(secondaryUnknown.personalEligibility, { confirmed: true, candidate: true, reasons: [] });
+    assert.equal(secondaryUnknown.personalEligibility?.confirmed, false);
+    assert.equal(secondaryUnknown.personalEligibility?.candidate, true);
     assert.deepEqual(personalFunding([secondaryUnknown], true), { candidates: [secondaryUnknown], confirmed: [], pending: [secondaryUnknown] });
   });
 
@@ -62,18 +64,18 @@ test('personal selection hides ineligible and closed measures and never counts u
     { name: 'required OKVED', field: 'okved', profile: { ...profile, okved: undefined } },
     { name: 'required industry', field: 'industry', profile: { ...profile, industry: undefined } },
   ];
-  for (const scenario of unknownCases) await t.test(`unknown ${scenario.name} excludes the measure from personal selection`, () => {
+  for (const scenario of unknownCases) await t.test(`unknown ${scenario.name} remains pending without becoming confirmed`, () => {
     const match = matchFundingOpportunity(scenario.profile ?? profile, need, scenario.opportunity ?? opportunity, options);
     assert.equal(match.status, 'need_more_data');
     assert.equal(match.personalEligibility?.confirmed, false);
     assert.ok(match.personalEligibility!.reasons.length > 0);
     assert.ok(match.unknownRequirements.some(r => r.field === scenario.field && r.required));
-    // The confirmed positive control must survive while the unknown measure is excluded.
-    assert.deepEqual(personalFunding([eligible, match], true), { candidates: [eligible], confirmed: [eligible], pending: [] });
+    // Unknown facts remain visible separately from the confirmed positive control.
+    assert.deepEqual(personalFunding([eligible, match], true), { candidates: [eligible, match], confirmed: [eligible], pending: [match] });
   });
 
   const excluded = [
-    matchFundingOpportunity({ ...profile, region: 'Республика Татарстан' }, need, opportunity, options),
+    matchFundingOpportunity({ ...profile, okved: '01.11' }, need, opportunity, options),
     matchFundingOpportunity(profile, need, { ...opportunity, status: 'closed' }, options),
     matchFundingOpportunity(profile, need, { ...opportunity, status: 'upcoming' }, options),
   ];
@@ -244,7 +246,7 @@ test('all purposes admits only company-relevant pending candidates without confu
   const profile = { region: 'Москва', applicantType: 'legal_entity' as const, industry: 'Промышленность', okved: '28.41' };
   const o: FundingOpportunity = { ...officialFundingCatalog[0], amountMin: null, amountMax: null,
     manualConditions: [], manualEligibilityConditions: [], projectBudgetMin: null, cofinancingPercent: null,
-    purposes: ['покупка оборудования'], deadline: null, status: 'active' };
+    purposes: ['покупка оборудования'], okvedPrefixes: ['28'], deadline: null, status: 'active' };
   const confirmed = matchFundingOpportunity(profile, { ...emptyFundingNeed, purpose: 'Оборудование и модернизация' }, o);
   const pending = matchFundingOpportunity(profile, emptyFundingNeed, { ...o, purposes: [] });
   const closed = matchFundingOpportunity(profile, emptyFundingNeed, { ...o, status: 'closed' });
@@ -254,7 +256,7 @@ test('all purposes admits only company-relevant pending candidates without confu
   assert.equal(pending.purposeFit, false);
   assert.equal(pending.personalEligibility?.confirmed, false);
   assert.deepEqual(personalFunding([confirmed, pending, closed, otherRegion], true), {
-    candidates: [confirmed, pending], confirmed: [confirmed], pending: [pending],
+    candidates: [confirmed, pending, otherRegion], confirmed: [confirmed], pending: [pending, otherRegion],
   });
   assert.deepEqual(programmePurposeCategories(o.purposes), ['Оборудование и модернизация']);
 });

@@ -386,11 +386,6 @@
   text-align: center;
   cursor: pointer;
 }
-.company-fields-section {
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 16px;
-  margin-bottom: 20px;
-}
 .company-fields-section > summary {
   min-height: 44px;
   padding-block: 10px;
@@ -401,7 +396,6 @@
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 20px;
-  margin-bottom: 16px;
 }
 .company-loaded-summary h3 {
   margin: 10px 0;

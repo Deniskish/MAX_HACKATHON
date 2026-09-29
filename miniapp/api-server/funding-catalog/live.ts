@@ -1,3 +1,4 @@
+import { explicitEligibilityFacts } from './eligibility-facts';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -104,6 +105,7 @@ export class BudgetSource {
     return { text: text.slice(0, 48000), complete: text.length <= 48000 && !!activity.whoCanApply,
       version: `${version}:${activityVersion}`, checkedAt: new Date().toISOString(),
       kindEvidence: budgetKindEvidence({ description: strip(activity.description), whatCanBeUsedFor: strip(activity.whatCanBeUsedFor) }),
+      eligibilityFacts: explicitEligibilityFacts([strip(activity.whoCanApply), ...requirements.map((r: any) => strip(r.userItemName || r.itemName))].join('\n')),
       geography: activity.geography.filter((g: unknown): g is string => typeof g === 'string'),
       accepting: competitionStatus?.selectionAcceptingApplicationInfo?.canCreateApplication === true,
       startsAt: basic.beginDateCompetition as string, endsAt: basic.endDateCompetition as string };

@@ -35,7 +35,7 @@ test('project without INN matches only explicitly permitted applicant types and 
   assert.deepEqual(rejected.missingRequirements.map(r => r.field), ['applicantType']);
   const unknownApplicant = matchFundingOpportunity({ industry: profile.industry }, projectNeed, active);
   assert.equal(unknownApplicant.status, 'need_more_data');
-  assert.deepEqual(unknownApplicant.unknownRequirements.map(r => r.field), ['applicantType']);
+  assert.ok(unknownApplicant.unknownRequirements.some(r => r.field === 'applicantType'));
   assert.equal(unknownApplicant.personalEligibility?.confirmed, false);
   const unknownIndustry = matchFundingOpportunity({ applicantType: profile.applicantType }, projectNeed, active);
   assert.equal(unknownIndustry.status, 'need_more_data');

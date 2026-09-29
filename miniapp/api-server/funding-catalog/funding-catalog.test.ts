@@ -145,7 +145,7 @@ test('documents are separate from criteria and only named documents count', asyn
   assert.deepEqual(pending.missingDocuments, grant.requiredDocuments);
 });
 test('term fit handles minimum, maximum, partial and unknown; grants do not require a repayment term', async () => {
-  const p = await techProfile(), loan = opportunity('demo-sme-loan');
+  const p = await techProfile(), loan = { ...opportunity('demo-sme-loan'), okvedPrefixes: ['62'] }; // Fully known synthetic eligibility isolates term fit.
   for (const [months, fit, status] of [[6, 'no', 'not_eligible'], [12, 'yes', 'eligible'], [60, 'yes', 'eligible'], [72, 'partial', 'almost_eligible']] as const) {
     const match = matchFundingOpportunity(p, { ...techNeed, preferredTermMonths: months }, loan,
       { now, preparedDocuments: loan.requiredDocuments });
@@ -158,7 +158,7 @@ test('term fit handles minimum, maximum, partial and unknown; grants do not requ
 });
 test('loan statuses and explanation never promise approval and preserve lender decision', async () => {
   for (const o of demoFundingCatalog.filter((o) => isLoan(o.kind))) {
-    const match = matchFundingOpportunity(await techProfile(), techNeed, o, { now, preparedDocuments: o.requiredDocuments });
+    const match = matchFundingOpportunity(await techProfile(), techNeed, { ...o, okvedPrefixes: ['62'] }, { now, preparedDocuments: o.requiredDocuments });
     assert.equal(match.status, 'eligible');
     assert.deepEqual(match.unknownRequirements, []);
     assert.equal(match.personalEligibility?.confirmed, true);
@@ -209,7 +209,7 @@ test('matching is deterministic and pure, and core accepts a profile without INN
   assert.equal(match.personalEligibility?.confirmed, true);
   assert.deepEqual(match, matchFundingOpportunity(profile, techNeed, grant, options));
   assert.equal(JSON.stringify({ profile, techNeed, grant }), before);
-  const advice = matchFundingOpportunity(profile, { ...emptyFundingNeed, purpose: 'масштабирование' }, opportunity('demo-advice'), options);
+  const advice = matchFundingOpportunity(profile, { ...emptyFundingNeed, purpose: 'масштабирование' }, { ...opportunity('demo-advice'), okvedPrefixes: ['62'] }, options);
   assert.equal(advice.status, 'eligible');
   assert.deepEqual(advice.unknownRequirements, []);
 });

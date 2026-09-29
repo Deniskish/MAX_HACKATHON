@@ -16,10 +16,10 @@ import { displayDate } from './display';
 export function FundingOpportunityCard({ match, onOpen, onSave, saved, personalized = true }: { match: FundingMatch; onOpen?: (id: string) => void; onSave?: (id: string) => void; saved?: boolean; personalized?: boolean }) {
   const o = match.opportunity;
   const rate = rateLabel(o), term = termLabel(o);
-  const matchLabel = match.status === 'need_more_data' && match.personalEligibility?.confirmed === false && !match.personalEligibility.candidate
-    ? 'Недостаточно данных для персонального подбора'
-    : match.status === 'need_more_data' && match.personalEligibility?.candidate && !match.personalEligibility.confirmed
-      ? 'Нужно уточнить' : fundingStatusLabels[match.status];
+  const displayStatus = match.personalEligibility?.candidate && !match.personalEligibility.confirmed ? 'need_more_data' : match.status;
+  const matchLabel = match.personalEligibility?.candidate
+    ? match.personalEligibility.confirmed ? 'Подходит по базовым данным' : 'Нужно уточнить'
+    : fundingStatusLabels[match.status];
   return <article className="widget funding-card">
     <div className="funding-card-heading">
       <div className="funding-card-tags">
@@ -32,7 +32,7 @@ export function FundingOpportunityCard({ match, onOpen, onSave, saved, personali
     <p className="muted">{o.providerName}</p>
     <strong>{amountLabel(o)}</strong>
     <div className="funding-key-facts">{rate && <span>{rate}</span>}{term && <span>Срок: {term}</span>}</div>
-    <span className={`funding-status funding-status-${personalized ? match.status : o.status}`}>{personalized ? matchLabel : { active: 'Приём открыт', closed: 'Приём завершён', upcoming: 'Ожидается открытие', unknown: 'Статус уточняется' }[o.status ?? 'unknown']}</span>
+    <span className={`funding-status funding-status-${personalized ? displayStatus : o.status}`}>{personalized ? matchLabel : { active: 'Приём открыт', closed: 'Приём завершён', upcoming: 'Ожидается открытие', unknown: 'Статус уточняется' }[o.status ?? 'unknown']}</span>
 
     {o.deadline && <p className="widget-footnote">Приём до {displayDate(o.deadline)}</p>}
     {onOpen && <ActionButton className="primary" onClick={() => onOpen(o.id)}>Подробнее</ActionButton>}

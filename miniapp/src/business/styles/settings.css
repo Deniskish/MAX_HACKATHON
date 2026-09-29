@@ -332,9 +332,6 @@
 .info-disclosure-content > :last-child {
   margin-bottom: 0;
 }
-.opora-theme .company-fields-section.info-disclosure {
-  margin-top: 16px;
-}
 .opora-theme .company-fields-section .info-disclosure-content > .form-grid {
   margin: 16px 0 0;
   padding: 0;
